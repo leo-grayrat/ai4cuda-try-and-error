@@ -1,0 +1,5 @@
+# Additional packages used by the local KernelBench/CuPy pilot.
+# Install in a Python environment that already has CUDA-enabled PyTorch.
+litellm==1.102.1
+cupy-cuda12x==14.2.0
+ninja==1.13.2

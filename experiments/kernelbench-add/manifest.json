@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "experiment_id": "kernelbench-format-vector-add-pilot",
+  "description": "One controlled 2x2 CUDA pilot; A unrolls two elements, B uses 256 threads per block.",
+  "evaluator": "kernelbench",
+  "reference_path": "reference.py",
+  "workload": {"seed": 42, "correct_trials": 5, "perf_trials": 30},
+  "factors": ["unroll_two", "block_256"],
+  "candidates": [
+    {"id": "base", "changes": [], "source_path": "base.py"},
+    {"id": "A", "changes": ["unroll_two"], "source_path": "A.py"},
+    {"id": "B", "changes": ["block_256"], "source_path": "B.py"},
+    {"id": "AB", "changes": ["unroll_two", "block_256"], "source_path": "AB.py"}
+  ]
+}

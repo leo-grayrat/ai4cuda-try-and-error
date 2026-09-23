@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "experiment_id": "replace-with-problem-and-intervention-id",
+  "description": "Replace paths with a real KernelBench reference and four valid candidate programs.",
+  "evaluator": "kernelbench",
+  "reference_path": "reference.py",
+  "workload": {"seed": 42, "correct_trials": 5, "perf_trials": 100},
+  "factors": ["A_change", "B_change"],
+  "candidates": [
+    {"id": "base", "changes": [], "source_path": "base.py"},
+    {"id": "A", "changes": ["A_change"], "source_path": "A.py"},
+    {"id": "B", "changes": ["B_change"], "source_path": "B.py"},
+    {"id": "AB", "changes": ["A_change", "B_change"], "source_path": "AB.py"}
+  ]
+}

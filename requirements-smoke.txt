@@ -1,0 +1,4 @@
+# Smoke evaluator only. KernelBench uses its own upstream environment.
+numba-cuda[cu12]==0.30.4
+numpy>=2.3,<2.4
+pytest>=9,<10

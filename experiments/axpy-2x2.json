@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "experiment_id": "axpy-unroll-blocksize-smoke",
+  "description": "Pipeline smoke test only; not evidence about KernelBench or agent learning.",
+  "evaluator": "numba_axpy",
+  "workload": {"size": 4194304, "seed": 42, "warmups": 5, "trials": 20},
+  "factors": ["unroll_two", "block_256"],
+  "candidates": [
+    {"id": "base", "changes": [], "unroll_two": false, "block_size": 128},
+    {"id": "A", "changes": ["unroll_two"], "unroll_two": true, "block_size": 128},
+    {"id": "B", "changes": ["block_256"], "unroll_two": false, "block_size": 256},
+    {"id": "AB", "changes": ["unroll_two", "block_256"], "unroll_two": true, "block_size": 256}
+  ]
+}
