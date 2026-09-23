@@ -7,6 +7,8 @@
 - 第 1 项（性能信用分配）：已用上游 KernelBench 评测器完成一组包含 base、A、B、AB 的 CUDA 先导实验，三轮运行，每轮每候选 30 次原始计时；结果见 [先导实验记录](results/pilot.md)。研究阶段还需要把候选换成真实 Agent 轨迹中可独立重放的修改，并扩展到多道题。
 - 第 2 项（跨 GPU 泛化）：能保存设备身份和候选源码哈希，拒绝拿同一 GPU 或不同代码伪装成跨设备对比；第二台 GPU 可用时，在其上运行同一清单并执行 `compare`。目前只有一块 RTX 5060，因此没有跨 GPU 结果。
 
+真实候选数据的可用性与评测风险见[公开档案核查](results/source-audit.md)。现有 KernelBench 先导实验只能说明本地流程跑通；正式研究需增加更广的输入与初始化检查，并复核异常加速。
+
 ## 本机最小运行
 
 Windows PowerShell 中，使用 NVIDIA 维护的 `numba-cuda`，不要使用系统环境里旧版 Numba 内置 CUDA 后端：
