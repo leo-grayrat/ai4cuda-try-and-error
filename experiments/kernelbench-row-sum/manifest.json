@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "experiment_id": "kernelbench-format-row-sum-pilot",
+  "description": "One row-reduction 2x2: A loads two elements per thread per iteration; B uses 256 threads per row.",
+  "evaluator": "kernelbench",
+  "reference_path": "reference.py",
+  "workload": {"seed": 42, "correct_trials": 5, "perf_trials": 30},
+  "factors": ["two_loads", "block_256"],
+  "candidates": [
+    {"id": "base", "changes": [], "source_path": "base.py"},
+    {"id": "A", "changes": ["two_loads"], "source_path": "A.py"},
+    {"id": "B", "changes": ["block_256"], "source_path": "B.py"},
+    {"id": "AB", "changes": ["two_loads", "block_256"], "source_path": "AB.py"}
+  ]
+}
