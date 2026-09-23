@@ -32,7 +32,7 @@ def main() -> None:
     run.add_argument("output")
     run.add_argument("--kernelbench-root", help="path to an upstream KernelBench checkout")
     run.add_argument("--evaluator-python", help="Python executable with KernelBench and CUDA dependencies")
-    run.add_argument("--evaluator-source", help="replay a saved Numba evaluator source file")
+    run.add_argument("--evaluator-source", help="replay a saved evaluator source file")
     run.add_argument("--order-seed", type=int, help="shuffle candidate evaluation order")
     credit = commands.add_parser("credit", help="analyze a measured 2x2 intervention")
     credit.add_argument("record")
@@ -83,6 +83,10 @@ def main() -> None:
                 raise ValueError("--kernelbench-root is required for KernelBench experiments")
             from kernel_lab import kernelbench_adapter
 
+            evaluator_path = Path(args.evaluator_source).resolve() if args.evaluator_source else Path(kernelbench_adapter.__file__).resolve()
+            source = evaluator_path.read_bytes()
+            source_paths["evaluator"] = evaluator_path
+
             root = Path(args.kernelbench_root).resolve()
             manifest_dir = Path(args.manifest).resolve().parent
             reference = (manifest_dir / manifest["reference_path"]).resolve()
@@ -106,7 +110,7 @@ def main() -> None:
                 source_paths[candidate["id"]] = candidate_path
                 next(item for item in snapshot_manifest["candidates"] if item["id"] == candidate["id"])["source_path"] = f"{candidate['id']}{candidate_path.suffix}"
                 command = [
-                    evaluator_python, "-m", "kernel_lab.kernelbench_adapter",
+                    evaluator_python, str(evaluator_path),
                     "--reference", str(reference), "--candidate", str(candidate_path),
                     "--seed", str(manifest["workload"].get("seed", 42)),
                     "--correct-trials", str(manifest["workload"].get("correct_trials", 5)),
@@ -120,7 +124,6 @@ def main() -> None:
                 result["code_hash"] = hashlib.sha256(candidate_path.read_bytes()).hexdigest()
                 measurements.append(result)
             runtime = measurements[0].get("runtime_versions", runtime)
-            source = Path(kernelbench_adapter.__file__).read_bytes()
         else:
             raise ValueError(f"Unknown evaluator: {manifest['evaluator']}")
         result = make_record(

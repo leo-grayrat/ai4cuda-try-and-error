@@ -59,6 +59,14 @@ $env:CUPY_CACHE_DIR = (Join-Path (Get-Location) '.cache\cupy')
 
 重复实验可加 `--order-seed 1`、`--order-seed 2` 改变四个候选的评测顺序，并用 `lab.py credit-series <多份运行记录>` 汇总每轮贡献及轮间波动。
 
+新运行会把 KernelBench 适配器也保存到 `.assets/evaluator.py`。从同一份快照重跑时指定它，且继续使用记录对应的上游 KernelBench 修订：
+
+```powershell
+.venv-kb\Scripts\python.exe lab.py run runs/gpu-a.assets/manifest.json runs/gpu-a-replay.json `
+  --kernelbench-root .cache/KernelBench --evaluator-python .venv-kb\Scripts\python.exe `
+  --evaluator-source runs/gpu-a.assets/evaluator.py
+```
+
 [KernelBlaster](https://github.com/NVlabs/KernelBlaster) 已在每个 `trajectory_*` 目录保存逐步 `.cu` 候选和日志，适合用来**寻找**真实的优化修改。但它使用 `init.cu`、`driver.cpp` 格式；上面的 KernelBench Python 适配器接收 `ModelNew` 文件，不能直接把这些 `.cu` 文件交给它。正式实验可选择沿用 KernelBlaster 自己的编译与评测环境重测，或先在 KernelBench 格式中构造同一组受控候选。连续两步修改也不能自动当作独立的 A、B：必须额外构造并验证“只做 B”的版本。
 
 ## 第二台 GPU 可用时
