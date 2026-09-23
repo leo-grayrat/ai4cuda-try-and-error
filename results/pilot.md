@@ -14,6 +14,8 @@
 
 本机原始 JSON 与源代码快照保存在被 Git 忽略的 `runs/kernelbench-add-rtx5060-raw.*`、`runs/kernelbench-add-rtx5060-order-1.*` 和 `runs/kernelbench-add-rtx5060-order-2.*`。实验清单与四份候选源码在 `experiments/kernelbench-add/`。上游 KernelBench 修订：`423217d9fda91e0c2d67e4a43bf62f96f6d104f1`。
 
+计时口径是上游 KernelBench 的 CUDA Event 围住整个 `ModelNew.forward` 调用；每次计时前，上游会用一个大张量冲刷 L2 缓存。记录中的延迟因此是这个评测口径下的冷缓存候选调用，不宜直接解释成单条 CUDA kernel 指令的纯执行时间。评测时没有持续采集 GPU 时钟和功耗，不能把后续跨轮差异归因到某个确定的硬件状态。
+
 ## 第二题：逐行求和
 
 同日又在 4096×1024 的 float32 逐行求和上运行四版本实验。A 每线程每轮读取相邻两个元素，B 将每行线程数从 128 改为 256，AB 同时施加两项修改。三轮分别按原顺序、顺序种子 1、顺序种子 2 运行；每轮每候选保存 30 个 CUDA Event 样本，四个版本均通过五次正确性检查。源代码和清单位于 `experiments/kernelbench-row-sum/`，原始记录位于忽略版本控制的 `runs/row-sum-rtx5060-{0,1,2}.json` 及对应快照。

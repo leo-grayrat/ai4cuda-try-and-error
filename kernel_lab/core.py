@@ -17,6 +17,11 @@ def stable_hash(value: object) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def source_hash(source: bytes) -> str:
+    """Hash source text consistently across Windows and Unix checkouts."""
+    return hashlib.sha256(source.replace(b"\r\n", b"\n")).hexdigest()
+
+
 def hardware_info() -> dict:
     command = [
         "nvidia-smi",
@@ -58,12 +63,12 @@ def make_record(
     by_id = {item["id"]: item for item in measurements}
     if set(by_id) != {item["id"] for item in manifest["candidates"]}:
         raise ValueError("Evaluator did not return every candidate exactly once")
-    source_hash = hashlib.sha256(evaluator_source).hexdigest()
+    evaluator_hash = source_hash(evaluator_source)
     candidates = []
     for item in manifest["candidates"]:
         measurement = by_id[item["id"]]
         candidate_config = {key: value for key, value in item.items() if key not in ("id", "changes")}
-        code_hash = measurement.get("code_hash") or stable_hash({"source": source_hash, "config": candidate_config})
+        code_hash = measurement.get("code_hash") or stable_hash({"source": evaluator_hash, "config": candidate_config})
         candidates.append(
             {
                 **measurement,
@@ -79,7 +84,7 @@ def make_record(
         "factors": manifest.get("factors", []),
         "workload": manifest["workload"],
         "workload_hash": stable_hash(manifest["workload"]),
-        "evaluator_source_sha256": source_hash,
+        "evaluator_source_sha256": evaluator_hash,
         "reference_sha256": reference_sha256,
         "upstream_revision": upstream_revision,
         "runtime": runtime or {},

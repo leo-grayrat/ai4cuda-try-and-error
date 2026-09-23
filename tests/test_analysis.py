@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from kernel_lab.core import compare_hardware, credit_analysis, credit_series
+from kernel_lab.core import compare_hardware, credit_analysis, credit_series, source_hash
 
 
 def sample_record(uuid, times):
@@ -69,3 +69,8 @@ def test_credit_series_requires_same_code_and_device():
     b["hardware"]["uuid"] = "gpu-b"
     with pytest.raises(ValueError, match="same GPU"):
         credit_series([a, b])
+
+
+def test_source_hash_ignores_only_line_endings():
+    assert source_hash(b"a\r\nb\r\n") == source_hash(b"a\nb\n")
+    assert source_hash(b"a\r\nb\r\n") != source_hash(b"a\nc\n")

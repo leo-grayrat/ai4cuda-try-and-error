@@ -2,7 +2,6 @@
 
 import argparse
 import copy
-import hashlib
 import importlib.util
 import importlib.metadata
 import json
@@ -19,6 +18,7 @@ from kernel_lab.core import (
     hardware_info,
     make_record,
     read_json,
+    source_hash,
     validate_manifest,
     write_json,
 )
@@ -90,7 +90,7 @@ def main() -> None:
             root = Path(args.kernelbench_root).resolve()
             manifest_dir = Path(args.manifest).resolve().parent
             reference = (manifest_dir / manifest["reference_path"]).resolve()
-            reference_hash = hashlib.sha256(reference.read_bytes()).hexdigest()
+            reference_hash = source_hash(reference.read_bytes())
             source_paths["reference"] = reference
             snapshot_manifest["reference_path"] = "reference.py"
             revision_result = subprocess.run(
@@ -121,7 +121,7 @@ def main() -> None:
                     raise RuntimeError(f"KernelBench candidate {candidate['id']} failed:\n{completed.stderr[-4000:]}")
                 result = json.loads(completed.stdout)
                 result["id"] = candidate["id"]
-                result["code_hash"] = hashlib.sha256(candidate_path.read_bytes()).hexdigest()
+                result["code_hash"] = source_hash(candidate_path.read_bytes())
                 measurements.append(result)
             runtime = measurements[0].get("runtime_versions", runtime)
         else:
