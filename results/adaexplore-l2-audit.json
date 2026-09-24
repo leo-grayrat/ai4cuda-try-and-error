@@ -1,0 +1,592 @@
+{
+  "archive": "adaexplore-l2.tar.gz",
+  "counts": {
+    "tasks": 100,
+    "candidate_nodes": 18581,
+    "candidate_code_files": 18581,
+    "explicit_parent_edges": 18581,
+    "correct_timed_nodes": 11060,
+    "correct_timed_parent_child_edges": 8999,
+    "same_device_edges": 2962,
+    "same_device_correct_two_step_chains": 878,
+    "two_step_chains_with_two_code_changes": 797,
+    "identical_code_correct_edges": 468,
+    "same_device_identical_code_edges": 144
+  },
+  "hardware_labels": {
+    "NVIDIA RTX A6000": 18462
+  },
+  "same_device_edge_examples": [
+    {
+      "task": "2_1",
+      "parent": 8,
+      "child": 11,
+      "parent_runtime": 19.7,
+      "child_runtime": 19.7,
+      "device": "0"
+    },
+    {
+      "task": "2_1",
+      "parent": 8,
+      "child": 16,
+      "parent_runtime": 19.7,
+      "child_runtime": 19.9,
+      "device": "0"
+    },
+    {
+      "task": "2_1",
+      "parent": 4,
+      "child": 24,
+      "parent_runtime": 110.0,
+      "child_runtime": 32.6,
+      "device": "0"
+    },
+    {
+      "task": "2_1",
+      "parent": 26,
+      "child": 27,
+      "parent_runtime": 116.0,
+      "child_runtime": 229.0,
+      "device": "1"
+    },
+    {
+      "task": "2_1",
+      "parent": 25,
+      "child": 29,
+      "parent_runtime": 117.0,
+      "child_runtime": 117.0,
+      "device": "1"
+    },
+    {
+      "task": "2_1",
+      "parent": 24,
+      "child": 34,
+      "parent_runtime": 32.6,
+      "child_runtime": 78.0,
+      "device": "0"
+    },
+    {
+      "task": "2_1",
+      "parent": 34,
+      "child": 35,
+      "parent_runtime": 78.0,
+      "child_runtime": 93.2,
+      "device": "0"
+    },
+    {
+      "task": "2_1",
+      "parent": 4,
+      "child": 36,
+      "parent_runtime": 110.0,
+      "child_runtime": 114.0,
+      "device": "0"
+    },
+    {
+      "task": "2_1",
+      "parent": 36,
+      "child": 37,
+      "parent_runtime": 114.0,
+      "child_runtime": 107.0,
+      "device": "0"
+    },
+    {
+      "task": "2_1",
+      "parent": 11,
+      "child": 47,
+      "parent_runtime": 19.7,
+      "child_runtime": 19.8,
+      "device": "0"
+    },
+    {
+      "task": "2_1",
+      "parent": 51,
+      "child": 53,
+      "parent_runtime": 20.2,
+      "child_runtime": 19.7,
+      "device": "1"
+    },
+    {
+      "task": "2_1",
+      "parent": 117,
+      "child": 119,
+      "parent_runtime": 19.7,
+      "child_runtime": 22.7,
+      "device": "0"
+    }
+  ],
+  "largest_same_device_identical_code_differences": [
+    {
+      "task": "2_23",
+      "parent": 29,
+      "child": 45,
+      "parent_runtime": 0.0198,
+      "child_runtime": 0.0172,
+      "multiplicative_difference": 1.1511627906976745,
+      "device": "1"
+    },
+    {
+      "task": "2_62",
+      "parent": 141,
+      "child": 142,
+      "parent_runtime": 6.53,
+      "child_runtime": 7.4,
+      "multiplicative_difference": 1.1332312404287903,
+      "device": "2"
+    },
+    {
+      "task": "2_23",
+      "parent": 26,
+      "child": 30,
+      "parent_runtime": 0.191,
+      "child_runtime": 0.178,
+      "multiplicative_difference": 1.0730337078651686,
+      "device": "1"
+    },
+    {
+      "task": "2_13",
+      "parent": 40,
+      "child": 86,
+      "parent_runtime": 211.0,
+      "child_runtime": 225.0,
+      "multiplicative_difference": 1.066350710900474,
+      "device": "1"
+    },
+    {
+      "task": "2_23",
+      "parent": 20,
+      "child": 24,
+      "parent_runtime": 0.0196,
+      "child_runtime": 0.0209,
+      "multiplicative_difference": 1.066326530612245,
+      "device": "1"
+    },
+    {
+      "task": "2_12",
+      "parent": 77,
+      "child": 164,
+      "parent_runtime": 1.51,
+      "child_runtime": 1.45,
+      "multiplicative_difference": 1.0413793103448277,
+      "device": "2"
+    },
+    {
+      "task": "2_45",
+      "parent": 181,
+      "child": 184,
+      "parent_runtime": 4.9,
+      "child_runtime": 5.1,
+      "multiplicative_difference": 1.040816326530612,
+      "device": "1"
+    },
+    {
+      "task": "2_91",
+      "parent": 87,
+      "child": 88,
+      "parent_runtime": 51.5,
+      "child_runtime": 49.8,
+      "multiplicative_difference": 1.034136546184739,
+      "device": "1"
+    },
+    {
+      "task": "2_23",
+      "parent": 7,
+      "child": 15,
+      "parent_runtime": 0.098,
+      "child_runtime": 0.101,
+      "multiplicative_difference": 1.030612244897959,
+      "device": "1"
+    },
+    {
+      "task": "2_68",
+      "parent": 84,
+      "child": 85,
+      "parent_runtime": 1.37,
+      "child_runtime": 1.41,
+      "multiplicative_difference": 1.0291970802919708,
+      "device": "0"
+    },
+    {
+      "task": "2_63",
+      "parent": 128,
+      "child": 132,
+      "parent_runtime": 1.43,
+      "child_runtime": 1.39,
+      "multiplicative_difference": 1.0287769784172662,
+      "device": "2"
+    },
+    {
+      "task": "2_94",
+      "parent": 87,
+      "child": 90,
+      "parent_runtime": 7.81,
+      "child_runtime": 7.61,
+      "multiplicative_difference": 1.026281208935611,
+      "device": "1"
+    }
+  ],
+  "top_same_device_two_step_chains": [
+    {
+      "task": "2_80",
+      "nodes": [
+        1,
+        5,
+        16
+      ],
+      "runtimes": [
+        7.36,
+        0.0604,
+        0.0166
+      ],
+      "device": "0",
+      "speedup_first_to_last": 443.3734939759036
+    },
+    {
+      "task": "2_80",
+      "nodes": [
+        1,
+        37,
+        38
+      ],
+      "runtimes": [
+        7.36,
+        0.0814,
+        0.0524
+      ],
+      "device": "0",
+      "speedup_first_to_last": 140.45801526717557
+    },
+    {
+      "task": "2_80",
+      "nodes": [
+        1,
+        37,
+        49
+      ],
+      "runtimes": [
+        7.36,
+        0.0814,
+        0.0534
+      ],
+      "device": "0",
+      "speedup_first_to_last": 137.82771535580525
+    },
+    {
+      "task": "2_56",
+      "nodes": [
+        4,
+        5,
+        7
+      ],
+      "runtimes": [
+        1240.0,
+        42.7,
+        16.3
+      ],
+      "device": "1",
+      "speedup_first_to_last": 76.07361963190183
+    },
+    {
+      "task": "2_44",
+      "nodes": [
+        1,
+        80,
+        129
+      ],
+      "runtimes": [
+        9.09,
+        0.129,
+        0.123
+      ],
+      "device": "0",
+      "speedup_first_to_last": 73.90243902439025
+    },
+    {
+      "task": "2_44",
+      "nodes": [
+        1,
+        80,
+        100
+      ],
+      "runtimes": [
+        9.09,
+        0.129,
+        0.163
+      ],
+      "device": "0",
+      "speedup_first_to_last": 55.76687116564417
+    },
+    {
+      "task": "2_42",
+      "nodes": [
+        1,
+        40,
+        44
+      ],
+      "runtimes": [
+        44.0,
+        1.65,
+        0.855
+      ],
+      "device": "1",
+      "speedup_first_to_last": 51.461988304093566
+    },
+    {
+      "task": "2_83",
+      "nodes": [
+        127,
+        128,
+        174
+      ],
+      "runtimes": [
+        0.634,
+        0.634,
+        0.0168
+      ],
+      "device": "2",
+      "speedup_first_to_last": 37.73809523809524
+    },
+    {
+      "task": "2_70",
+      "nodes": [
+        3,
+        34,
+        35
+      ],
+      "runtimes": [
+        28.9,
+        2.51,
+        1.51
+      ],
+      "device": "0",
+      "speedup_first_to_last": 19.13907284768212
+    },
+    {
+      "task": "2_70",
+      "nodes": [
+        3,
+        34,
+        37
+      ],
+      "runtimes": [
+        28.9,
+        2.51,
+        1.57
+      ],
+      "device": "0",
+      "speedup_first_to_last": 18.40764331210191
+    },
+    {
+      "task": "2_70",
+      "nodes": [
+        3,
+        20,
+        24
+      ],
+      "runtimes": [
+        28.9,
+        2.53,
+        1.73
+      ],
+      "device": "0",
+      "speedup_first_to_last": 16.705202312138727
+    },
+    {
+      "task": "2_70",
+      "nodes": [
+        3,
+        20,
+        145
+      ],
+      "runtimes": [
+        28.9,
+        2.53,
+        1.74
+      ],
+      "device": "0",
+      "speedup_first_to_last": 16.609195402298848
+    }
+  ],
+  "two_step_review_candidates": [
+    {
+      "task": "2_18",
+      "nodes": [
+        185,
+        188,
+        189
+      ],
+      "runtimes": [
+        0.535,
+        0.147,
+        0.102
+      ],
+      "device": "0",
+      "speedup_first_to_last": 5.245098039215687
+    },
+    {
+      "task": "2_9",
+      "nodes": [
+        18,
+        19,
+        23
+      ],
+      "runtimes": [
+        7.15,
+        2.03,
+        1.45
+      ],
+      "device": "0",
+      "speedup_first_to_last": 4.931034482758621
+    },
+    {
+      "task": "2_9",
+      "nodes": [
+        18,
+        19,
+        28
+      ],
+      "runtimes": [
+        7.15,
+        2.03,
+        1.5
+      ],
+      "device": "0",
+      "speedup_first_to_last": 4.766666666666667
+    },
+    {
+      "task": "2_12",
+      "nodes": [
+        6,
+        13,
+        17
+      ],
+      "runtimes": [
+        7.34,
+        2.12,
+        1.54
+      ],
+      "device": "1",
+      "speedup_first_to_last": 4.766233766233766
+    },
+    {
+      "task": "2_63",
+      "nodes": [
+        9,
+        10,
+        14
+      ],
+      "runtimes": [
+        7.15,
+        2.57,
+        1.52
+      ],
+      "device": "0",
+      "speedup_first_to_last": 4.703947368421053
+    },
+    {
+      "task": "2_63",
+      "nodes": [
+        2,
+        89,
+        90
+      ],
+      "runtimes": [
+        7.15,
+        2.75,
+        1.53
+      ],
+      "device": "1",
+      "speedup_first_to_last": 4.673202614379085
+    },
+    {
+      "task": "2_59",
+      "nodes": [
+        14,
+        15,
+        19
+      ],
+      "runtimes": [
+        16.3,
+        12.9,
+        3.57
+      ],
+      "device": "0",
+      "speedup_first_to_last": 4.5658263305322135
+    },
+    {
+      "task": "2_18",
+      "nodes": [
+        66,
+        71,
+        72
+      ],
+      "runtimes": [
+        0.526,
+        0.348,
+        0.119
+      ],
+      "device": "2",
+      "speedup_first_to_last": 4.420168067226891
+    },
+    {
+      "task": "2_39",
+      "nodes": [
+        68,
+        74,
+        75
+      ],
+      "runtimes": [
+        31.5,
+        13.0,
+        7.16
+      ],
+      "device": "2",
+      "speedup_first_to_last": 4.399441340782123
+    },
+    {
+      "task": "2_44",
+      "nodes": [
+        22,
+        23,
+        24
+      ],
+      "runtimes": [
+        9.03,
+        3.82,
+        2.28
+      ],
+      "device": "1",
+      "speedup_first_to_last": 3.960526315789474
+    },
+    {
+      "task": "2_85",
+      "nodes": [
+        13,
+        17,
+        18
+      ],
+      "runtimes": [
+        24.4,
+        8.14,
+        6.44
+      ],
+      "device": "1",
+      "speedup_first_to_last": 3.788819875776397
+    },
+    {
+      "task": "2_37",
+      "nodes": [
+        16,
+        38,
+        41
+      ],
+      "runtimes": [
+        17.4,
+        8.27,
+        4.84
+      ],
+      "device": "1",
+      "speedup_first_to_last": 3.5950413223140494
+    }
+  ],
+  "interpretation": "Parent links are explicit. Reported runtimes are archived summaries, not local remeasurements or independent 2x2 interventions."
+}
