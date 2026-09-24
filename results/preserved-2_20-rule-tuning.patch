@@ -1,0 +1,108 @@
+diff --git a/kernel_lab/code_credit.py b/kernel_lab/code_credit.py
+index 08d9cdf..4efcad4 100644
+--- a/kernel_lab/code_credit.py
++++ b/kernel_lab/code_credit.py
+@@ -15,7 +15,7 @@ _RUNTIME_CONFIG = re.compile(r"(?:torch\.backends|allow_tf32|cudnn\.|set_float32
+ _PRECISION = re.compile(r"(?:autocast|\b(?:float16|bfloat16|float32|fp16|bf16|tf32)\b|\.half\()", re.IGNORECASE)
+ _MEMORY = re.compile(r"(?:tl\.(?:load|store)|__shared__|shared_memory|cudaMemcpy|ldg\b|stg\b)")
+ _SYNC = re.compile(r"(?:__syncthreads|__syncwarp|tl\.debug_barrier|atomic(?:Add|CAS|Max|Min)?)")
+-_LAUNCH = re.compile(r"(?:<<<|>>>|num_warps|num_stages|blockDim|grid\s*=|threads_per_block|\b\w*kernel\s*\[)")
++_LAUNCH = re.compile(r"(?:<<<|>>>|num_warps|num_stages|blockDim|grid\s*=|threads_per_block|\b\w*kernel\s*\[|['\"]BLOCK(?:_[A-Z]+)?['\"]\s*:)")
+ _TRANSFER = re.compile(r"(?:\.cuda\(|\.to\(|\.is_cuda\b|cudaMemcpy|\.device\b)")
+ _HOST_COMPUTE = re.compile(r"(?:torch\.|\.relu_?\(|\.matmul\(|\bmatmul\b|\bmm\(|\.softmax\(|\.sum\(|\.view\(|\.reshape\(|\.contiguous\(|\.launch\(|\bhasattr\(|\.register_buffer\()")
+ 
+diff --git a/scripts/prepare_credit_case.py b/scripts/prepare_credit_case.py
+index 2ea26af..619284f 100644
+--- a/scripts/prepare_credit_case.py
++++ b/scripts/prepare_credit_case.py
+@@ -8,7 +8,9 @@ import json
+ import tarfile
+ from pathlib import Path
+ 
+-from kernel_lab.code_credit import locate_actions, revert_action
++from kernel_lab.code_credit import (
++    _active_slice_text, _python_docstring_lines, locate_actions, revert_action,
++)
+ from kernel_lab.core import source_hash
+ 
+ 
+@@ -62,7 +64,23 @@ def prepare_case(
+         raise FileExistsError(out_dir)
+     actions = locate_actions(parent_source, child_source, language="python")
+     selected = [action for action in actions if action["score"] > 0][:3]
+-    control = next((action for action in actions if action["score"] == 0), None)
++    before_lines = parent_source.splitlines(keepends=True)
++    after_lines = child_source.splitlines(keepends=True)
++    before_docs = _python_docstring_lines(parent_source)
++    after_docs = _python_docstring_lines(child_source)
++
++    def contains_code(action: dict) -> bool:
++        for edit in action["edits"]:
++            i1, i2 = edit["parent_slice"]
++            j1, j2 = edit["child_slice"]
++            if (_active_slice_text(before_lines, i1, i2, before_docs).strip()
++                    or _active_slice_text(after_lines, j1, j2, after_docs).strip()):
++                return True
++        return False
++
++    low_score = [action for action in actions if action["score"] == 0]
++    control = next((action for action in low_score if contains_code(action)),
++                   low_score[0] if low_score else None)
+     if control is not None:
+         selected.append(control)
+     out_dir.mkdir(parents=True)
+@@ -127,7 +145,8 @@ def prepare_case(
+         "response_tokens": None,
+         "source_to_response": None,
+         "measurement_records": [],
+-        "control_status": "selected" if control is not None else "no_changed_boilerplate",
++        "control_status": ("selected_code_change" if contains_code(control) else "selected_text_change")
++                          if control is not None else "no_low_score_change",
+     }
+     (out_dir / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+     screen_manifest = {**manifest, "candidates": candidates[:2]}
+diff --git a/tests/test_code_credit.py b/tests/test_code_credit.py
+index 52cadc3..7b45704 100644
+--- a/tests/test_code_credit.py
++++ b/tests/test_code_credit.py
+@@ -82,6 +82,13 @@ def test_new_fast_path_condition_is_a_candidate() -> None:
+     assert units[0]["category"] == "host_compute"
+ 
+ 
++def test_block_shape_change_is_launch_configuration() -> None:
++    parent = "CONFIG = {'BLOCK_M': 128, 'BLOCK_N': 128}\n"
++    child = "CONFIG = {'BLOCK_M': 128, 'BLOCK_N': 256}\n"
++    units = locate_edits(parent, child, language="python")
++    assert units[0]["category"] == "kernel_launch"
++
++
+ def test_long_unchanged_host_code_is_not_returned() -> None:
+     prefix = "".join(f"def ordinary_{i}(): return {i}\n" for i in range(1000))
+     parent = prefix + "@triton.jit\ndef kernel(x, y):\n    y = x\n"
+diff --git a/tests/test_credit_case.py b/tests/test_credit_case.py
+index dfb2ab6..7979e21 100644
+--- a/tests/test_credit_case.py
++++ b/tests/test_credit_case.py
+@@ -63,3 +63,22 @@ def test_prepared_case_writes_one_selective_revert_for_separate_action(tmp_path)
+         candidate = tmp_path / "case" / f"without-{action['id']}.py"
+         assert candidate.exists()
+         assert candidate.read_text(encoding="utf-8") != child
++
++
++def test_ordinary_code_control_takes_priority_over_comment_only_change(tmp_path) -> None:
++    parent = (
++        "@triton.jit\ndef kernel(x):\n    y = x\n\n"
++        "# Old note\n"
++        "def metadata():\n    return 'old'\n"
++    )
++    child = parent.replace("y = x", "y = x + 1").replace("Old note", "New note").replace("'old'", "'new'")
++    trace = prepare_case(
++        parent_source=parent, child_source=child,
++        reference_source="class Model: pass\n",
++        out_dir=tmp_path / "case", experiment_id="ordinary-control",
++        provenance={"task": "2_1", "parent_node": 1, "child_node": 2},
++    )
++    control = next(action for action in trace["actions"] if action["score"] == 0 and action["candidate_id"])
++    reverted = (tmp_path / "case" / f"{control['candidate_id']}.py").read_text(encoding="utf-8")
++    assert "# New note" in reverted
++    assert "return 'old'" in reverted
