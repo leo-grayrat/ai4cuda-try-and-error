@@ -1,0 +1,89 @@
+{
+  "experiment_id": "ada-2_9-18-19",
+  "provenance": {
+    "archive": "adaexplore-l2.tar.gz",
+    "task": "2_9",
+    "parent_node": 18,
+    "child_node": 19,
+    "archived_hardware": {
+      "hardware": "NVIDIA RTX A6000",
+      "device": "0",
+      "correctness_trials": "(5 / 5)"
+    },
+    "archived_runtime": {
+      "parent": 7.15,
+      "child": 2.03
+    }
+  },
+  "source_sha256": {
+    "parent": "3d594ea03be700d066aaf5c87b32b100b9fabfb2850ea90d3101f93fa2229a44",
+    "child": "5924ae8bb47ef797732e85b7fdb0b235817ac36c5f6185282b7cd852ff16392b",
+    "reference": "110e75834cd898f532262ce516e318b8e7a9e85acda705baefcebe687ff85b21"
+  },
+  "candidate_sha256": {
+    "parent": "3d594ea03be700d066aaf5c87b32b100b9fabfb2850ea90d3101f93fa2229a44",
+    "child": "5924ae8bb47ef797732e85b7fdb0b235817ac36c5f6185282b7cd852ff16392b"
+  },
+  "reference_sha256": "110e75834cd898f532262ce516e318b8e7a9e85acda705baefcebe687ff85b21",
+  "evaluator_source_sha256": "616463f3c580c9937aac2e78a30ad9db6aef3ee0625f19ebca68a0031cbdb304",
+  "workload_hash": "629a5303bb69a2346463cf084db2f89085d820c96353b998ab46a5428434133e",
+  "upstream_revision": "423217d9fda91e0c2d67e4a43bf62f96f6d104f1",
+  "hardware": {
+    "uuid": "GPU-1265274a-9013-e311-19fa-35659d490047",
+    "name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+    "driver": "610.88",
+    "compute_capability": "12.0"
+  },
+  "rounds": 5,
+  "endpoint": {
+    "status": "measured",
+    "speedups": [
+      3.1293023721165176,
+      3.1409501591618545,
+      3.123177596292491,
+      3.079368442209559,
+      3.1091670065667163
+    ],
+    "median_speedup": 3.123177596292491
+  },
+  "score": "log(without_action_median_ms / child_median_ms); positive means action helped in child context",
+  "actions": [
+    {
+      "id": "action-edit-1",
+      "category": "precision",
+      "candidate_id": "parent",
+      "source_edits": [
+        {
+          "parent_lines": [
+            91,
+            93
+          ],
+          "child_lines": [
+            91,
+            97
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "measured",
+      "log_effects": [
+        1.1408100954018412,
+        1.1445253526056713,
+        1.1388509438926737,
+        1.1247245247289426,
+        1.1343548467669737
+      ],
+      "median_log_effect": 1.1388509438926737,
+      "sign_consistent": true
+    }
+  ],
+  "extra_candidate_evaluations": 0,
+  "record_paths": [
+    "runs\\ada-2_9-18-19-b2-r0.json",
+    "runs\\ada-2_9-18-19-b2-r1.json",
+    "runs\\ada-2_9-18-19-b2-r2.json",
+    "runs\\ada-2_9-18-19-b2-r3.json",
+    "runs\\ada-2_9-18-19-b2-r4.json"
+  ]
+}

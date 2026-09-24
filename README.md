@@ -1,13 +1,35 @@
-# Kernel 优化实验：信用分配与跨 GPU 排名
+# 从代码定位 Kernel 优化动作
 
-本仓库只负责**记录候选版本、分析 2×2 反事实修改、比较跨 GPU 排名**。正确性和运行时间由已有评测器负责；正式 KernelBench 实验调用其原有 `eval_kernel_against_ref`。这里的 Numba AXPY 题仅用于确认记录与分析链路能运行，不代表 Agent 优化或 kernel 特有的学习现象。
+核心问题是：一段 Agent 生成代码里，哪些少量修改真正改变了运行时间？先从父子源码找出优化动作和普通代码，再用已有 KernelBench 正确性与计时入口检查撤销该动作的后果。定位只是待验证的假设；未通过正确性检查的撤销版本没有可解释的性能贡献。早期 2×2 与跨 GPU 工具仍保留供核查，但不是当前研究主线。
 
 ## 当前状态
 
-- 第 1 项（性能信用分配）：除向量加法、逐行求和的[合成先导实验](results/pilot.md)外，已从 AdaExplore 真实 Agent 父链构造首个完整 2×2，在原始规模 MLP 上做五轮本机重测，并补查 TF32 对固定参考输出的影响；过程、数值和局限见[真实轨迹实验](results/adaexplore-mlp.md)。后续需扩展到更多算子与输入规模。
-- 第 2 项（跨 GPU 泛化）：能保存设备身份和候选源码哈希，拒绝拿同一 GPU 或不同代码伪装成跨设备对比；第二台 GPU 可用时，在其上运行同一清单并执行 `compare`。目前只有一块 RTX 5060，因此没有跨 GPU 结果。
+- 代码优先试点：真实 AdaExplore 父子版本已接入源码定位、动作撤销、普通代码对照和本机 KernelBench 重测；具体筛查与限制见[试点记录](results/code-first-pilot.md)。公开档案没有原始生成 token，不能用于 token 学习标签。
+- 早期信用分配核查：向量加法、逐行求和的[合成先导实验](results/pilot.md)，以及 MLP 的 2×2 和 TF32 测量检查见[真实轨迹实验](results/adaexplore-mlp.md)。这些不能代替多任务代码定位结论。
+- 跨 GPU 工具：仍可保存设备身份和比较排名。目前只有一块 RTX 5060，跨 GPU 实验暂停。
 
-真实候选数据的可用性与评测风险见[公开档案核查](results/source-audit.md)。AdaExplore Level 2/3 的节点关系已审计；目前完成一条可独立构造两项修改的真实链。该案例不能代替多任务结论，仍需增加更广的输入与初始化检查。
+真实候选数据的可用性与评测风险见[公开档案核查](results/source-audit.md)。AdaExplore Level 2/3 的节点关系已审计；早期 2×2 核查只完成一条可独立构造两项修改的真实链，不能代替当前多任务代码定位评测。
+
+## 代码优先试点入口
+
+从档案里选定**明确父子关系**且档案标记两者正确的一条修改。准备命令读取两份源码，按源码位置和语法上下文列出变化，写出父版本、子版本、最多三个待检验优化动作的撤销版本，以及一个普通代码对照。`screen-manifest.json` 只含父子两个版本，适合先核对本机正确性；只有父子都正确再运行完整 `manifest.json`。每个动作初始状态都是 `unverified`；大规模联动修改可能只能作为整体检验。
+
+```powershell
+.venv-kb\Scripts\python.exe -m scripts.prepare_credit_case `
+  .cache\adaexplore-l2.tar.gz 2_55 30 34 `
+  .cache\KernelBench\KernelBench\level2\55_Matmul_MaxPool_Sum_Scale.py `
+  runs\cases\example
+.venv-kb\Scripts\python.exe lab.py run runs\cases\example\manifest.json runs\example-r0.json `
+  --kernelbench-root .cache\KernelBench --evaluator-python .venv-kb\Scripts\python.exe --order-seed 0
+.venv-kb\Scripts\python.exe -m scripts.summarize_credit_case `
+  runs\cases\example\trace.json runs\example-r0.json --output runs\example-summary.json
+```
+
+重复测量时为每轮换 `--order-seed`，并把所有记录一起传给汇总命令。汇总前核对相同候选源码、参考题、评测器版本、工作量和 GPU。数值是“在子版本中撤销动作”相对于原子版本的条件效应；无法把相互依赖的源码行分别认领提速。运行记录保存在忽略目录 `runs/`，不会覆盖已有文件。
+
+新采集的模型轨迹可用 `python -m scripts.record_credit_response <trace.json> <child.py> <generation.json> <output.json>` 追加原始回复、采样 token ID 以及生成时 tokenizer 给出的字符区间。`generation.json` 需包含 `raw_response`、`token_ids` 和 `token_offsets`。只有子源码在回复中完整且唯一出现时才建立源码到 token 的对应；删除行、改写后才应用的源码或无法匹配的回复会明确标为未映射。公开 AdaExplore 档案没有这些数据，不能事后补造。
+
+进入训练的门槛是先在任务留出集比较代码定位与简单差异基线，确认相同阅读预算下关键动作召回、普通代码误报和额外测量成本有稳定优势；否则停在归因实验。当前尚未达到这个门槛。
 
 ## 本机最小运行
 

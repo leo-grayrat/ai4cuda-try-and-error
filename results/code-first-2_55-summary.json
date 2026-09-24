@@ -1,0 +1,357 @@
+{
+  "experiment_id": "ada-2_55-30-34",
+  "provenance": {
+    "archive": "adaexplore-l2.tar.gz",
+    "task": "2_55",
+    "parent_node": 30,
+    "child_node": 34,
+    "archived_hardware": {
+      "hardware": "NVIDIA RTX A6000",
+      "device": "0",
+      "correctness_trials": "(5 / 5)"
+    },
+    "archived_runtime": {
+      "parent": 17.7,
+      "child": 12.5
+    }
+  },
+  "source_sha256": {
+    "parent": "97fa09eab5d61f7b95eeb0ccd971dd699060ffb54b159b908a98621c44500d14",
+    "child": "e6214b3ea5b0991dc9d978ac398ebd0be895b86c6cfeaed4f64a48a7abedee86",
+    "reference": "ef3a425677ff103d6080f3f3eddf89cee25f5b54cfa13777de51bc0ab39b41e6"
+  },
+  "candidate_sha256": {
+    "parent": "97fa09eab5d61f7b95eeb0ccd971dd699060ffb54b159b908a98621c44500d14",
+    "child": "e6214b3ea5b0991dc9d978ac398ebd0be895b86c6cfeaed4f64a48a7abedee86",
+    "without-action-edit-1": "ac7382b914443ab67b810f0933be262ce9e8a6fe6ec19959efb9193ca1c7abb4",
+    "without-action-edit-7": "8816b41ca0d3f644d0ec4c53bbfc2eb5e8e2bc62283e114038a7b75e4351f00c"
+  },
+  "reference_sha256": "ef3a425677ff103d6080f3f3eddf89cee25f5b54cfa13777de51bc0ab39b41e6",
+  "evaluator_source_sha256": "616463f3c580c9937aac2e78a30ad9db6aef3ee0625f19ebca68a0031cbdb304",
+  "workload_hash": "629a5303bb69a2346463cf084db2f89085d820c96353b998ab46a5428434133e",
+  "upstream_revision": "423217d9fda91e0c2d67e4a43bf62f96f6d104f1",
+  "hardware": {
+    "uuid": "GPU-1265274a-9013-e311-19fa-35659d490047",
+    "name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+    "driver": "610.88",
+    "compute_capability": "12.0"
+  },
+  "rounds": 3,
+  "endpoint": {
+    "status": "measured",
+    "speedups": [
+      1.6751671038536688,
+      1.6754465104283975,
+      1.6758083723401558
+    ],
+    "median_speedup": 1.6754465104283975
+  },
+  "score": "log(without_action_median_ms / child_median_ms); positive means action helped in child context",
+  "actions": [
+    {
+      "id": "action-edit-1",
+      "category": "kernel_sync",
+      "candidate_id": "without-action-edit-1",
+      "source_edits": [
+        {
+          "parent_lines": [
+            40,
+            39
+          ],
+          "child_lines": [
+            40,
+            48
+          ]
+        },
+        {
+          "parent_lines": [
+            52,
+            52
+          ],
+          "child_lines": [
+            61,
+            61
+          ]
+        },
+        {
+          "parent_lines": [
+            56,
+            56
+          ],
+          "child_lines": [
+            65,
+            65
+          ]
+        },
+        {
+          "parent_lines": [
+            131,
+            132
+          ],
+          "child_lines": [
+            140,
+            142
+          ]
+        },
+        {
+          "parent_lines": [
+            163,
+            163
+          ],
+          "child_lines": [
+            174,
+            175
+          ]
+        },
+        {
+          "parent_lines": [
+            166,
+            167
+          ],
+          "child_lines": [
+            178,
+            179
+          ]
+        },
+        {
+          "parent_lines": [
+            173,
+            174
+          ],
+          "child_lines": [
+            184,
+            185
+          ]
+        },
+        {
+          "parent_lines": [
+            188,
+            190
+          ],
+          "child_lines": [
+            198,
+            199
+          ]
+        },
+        {
+          "parent_lines": [
+            194,
+            193
+          ],
+          "child_lines": [
+            203,
+            215
+          ]
+        },
+        {
+          "parent_lines": [
+            199,
+            199
+          ],
+          "child_lines": [
+            221,
+            221
+          ]
+        },
+        {
+          "parent_lines": [
+            206,
+            205
+          ],
+          "child_lines": [
+            228,
+            229
+          ]
+        },
+        {
+          "parent_lines": [
+            239,
+            240
+          ],
+          "child_lines": [
+            263,
+            264
+          ]
+        },
+        {
+          "parent_lines": [
+            243,
+            242
+          ],
+          "child_lines": [
+            267,
+            271
+          ]
+        },
+        {
+          "parent_lines": [
+            249,
+            248
+          ],
+          "child_lines": [
+            278,
+            280
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "measured",
+      "log_effects": [
+        0.515921808692813,
+        0.5161828334188391,
+        0.5161566642911948
+      ],
+      "median_log_effect": 0.5161566642911948,
+      "sign_consistent": true
+    },
+    {
+      "id": "action-edit-7",
+      "category": "boilerplate",
+      "candidate_id": "without-action-edit-7",
+      "source_edits": [
+        {
+          "parent_lines": [
+            65,
+            65
+          ],
+          "child_lines": [
+            74,
+            74
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "measured",
+      "log_effects": [
+        -0.00042865093407115916,
+        -6.788397667874255e-05,
+        0.00014831612147604025
+      ],
+      "median_log_effect": -6.788397667874255e-05,
+      "sign_consistent": false
+    },
+    {
+      "id": "action-edit-11",
+      "category": "boilerplate",
+      "candidate_id": null,
+      "source_edits": [
+        {
+          "parent_lines": [
+            142,
+            145
+          ],
+          "child_lines": [
+            152,
+            155
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "not_probed",
+      "log_effects": [],
+      "median_log_effect": null,
+      "sign_consistent": null
+    },
+    {
+      "id": "action-edit-13",
+      "category": "boilerplate",
+      "candidate_id": null,
+      "source_edits": [
+        {
+          "parent_lines": [
+            151,
+            151
+          ],
+          "child_lines": [
+            161,
+            162
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "not_probed",
+      "log_effects": [],
+      "median_log_effect": null,
+      "sign_consistent": null
+    },
+    {
+      "id": "action-edit-19",
+      "category": "boilerplate",
+      "candidate_id": null,
+      "source_edits": [
+        {
+          "parent_lines": [
+            171,
+            171
+          ],
+          "child_lines": [
+            183,
+            182
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "not_probed",
+      "log_effects": [],
+      "median_log_effect": null,
+      "sign_consistent": null
+    },
+    {
+      "id": "action-edit-23",
+      "category": "boilerplate",
+      "candidate_id": null,
+      "source_edits": [
+        {
+          "parent_lines": [
+            177,
+            177
+          ],
+          "child_lines": [
+            188,
+            187
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "not_probed",
+      "log_effects": [],
+      "median_log_effect": null,
+      "sign_consistent": null
+    },
+    {
+      "id": "action-edit-25",
+      "category": "boilerplate",
+      "candidate_id": null,
+      "source_edits": [
+        {
+          "parent_lines": [
+            183,
+            183
+          ],
+          "child_lines": [
+            193,
+            193
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "not_probed",
+      "log_effects": [],
+      "median_log_effect": null,
+      "sign_consistent": null
+    }
+  ],
+  "extra_candidate_evaluations": 6,
+  "record_paths": [
+    "runs\\ada-2_55-30-34-b4-r0.json",
+    "runs\\ada-2_55-30-34-b4-r1.json",
+    "runs\\ada-2_55-30-34-b4-r2.json"
+  ]
+}

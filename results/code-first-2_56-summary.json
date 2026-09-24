@@ -1,0 +1,83 @@
+{
+  "experiment_id": "ada-2_56-5-7",
+  "provenance": {
+    "archive": "adaexplore-l2.tar.gz",
+    "task": "2_56",
+    "parent_node": 5,
+    "child_node": 7,
+    "archived_hardware": {
+      "hardware": "NVIDIA RTX A6000",
+      "device": "1",
+      "correctness_trials": "(5 / 5)"
+    },
+    "archived_runtime": {
+      "parent": 42.7,
+      "child": 16.3
+    }
+  },
+  "source_sha256": {
+    "parent": "02835d5451c2374d8f1d5db1d40e738c68f0a8dd4d0b0822e245b7f1b3b0f1f8",
+    "child": "84d167ddbb376dac601a9c87bdc6c595c6fa112afb2a17c094c908a87f159eaf",
+    "reference": "00070bf8cc6a0d0ff1c4cbb78729620575164e67cb03ef1d646bbab332ae1fa3"
+  },
+  "candidate_sha256": {
+    "parent": "02835d5451c2374d8f1d5db1d40e738c68f0a8dd4d0b0822e245b7f1b3b0f1f8",
+    "child": "84d167ddbb376dac601a9c87bdc6c595c6fa112afb2a17c094c908a87f159eaf"
+  },
+  "reference_sha256": "00070bf8cc6a0d0ff1c4cbb78729620575164e67cb03ef1d646bbab332ae1fa3",
+  "evaluator_source_sha256": "616463f3c580c9937aac2e78a30ad9db6aef3ee0625f19ebca68a0031cbdb304",
+  "workload_hash": "579c81b859cf1ba794a32f6f0350e53ee8eaac44a91fd7049002281169377e3b",
+  "upstream_revision": "423217d9fda91e0c2d67e4a43bf62f96f6d104f1",
+  "hardware": {
+    "uuid": "GPU-1265274a-9013-e311-19fa-35659d490047",
+    "name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+    "driver": "610.88",
+    "compute_capability": "12.0"
+  },
+  "rounds": 3,
+  "endpoint": {
+    "status": "measured",
+    "speedups": [
+      10.336166830760392,
+      10.369792450581738,
+      10.366039064633476
+    ],
+    "median_speedup": 10.366039064633476
+  },
+  "score": "log(without_action_median_ms / child_median_ms); positive means action helped in child context",
+  "actions": [
+    {
+      "id": "action-edit-1",
+      "category": "host_compute",
+      "candidate_id": "parent",
+      "source_edits": [
+        {
+          "parent_lines": [
+            23,
+            34
+          ],
+          "child_lines": [
+            23,
+            26
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "measured",
+      "log_effects": [
+        2.3356490876569276,
+        2.3388970076324407,
+        2.3385349882953816
+      ],
+      "median_log_effect": 2.3385349882953816,
+      "sign_consistent": true
+    }
+  ],
+  "extra_candidate_evaluations": 0,
+  "record_paths": [
+    "runs\\ada-2_56-5-7-r0.json",
+    "runs\\ada-2_56-5-7-r1.json",
+    "runs\\ada-2_56-5-7-r2.json"
+  ]
+}
