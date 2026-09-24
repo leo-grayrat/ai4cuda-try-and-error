@@ -1,0 +1,265 @@
+{
+  "experiment_id": "ada-2_20-40-47-subactions",
+  "provenance": {
+    "archive": "adaexplore-l2.tar.gz",
+    "task": "2_20",
+    "parent_node": 40,
+    "child_node": 47,
+    "archived_hardware": {
+      "hardware": "NVIDIA RTX A6000",
+      "device": "0",
+      "correctness_trials": "(5 / 5)"
+    },
+    "archived_runtime": {
+      "parent": 14.2,
+      "child": 12.6
+    }
+  },
+  "source_sha256": {
+    "parent": "2fd52eeff8984398b6c71b5b9285ca9b74a87a8f3c0bc66604d96a7cc80998c3",
+    "child": "221bc1639ecdc477b87b6501b654381d01253b4f163a3ad55cf6962d5d8b9adf",
+    "reference": "d5977ca8e549aac43aa5b4fd78dcbfc11784961891668ed5008fb0978d3e4a61"
+  },
+  "candidate_sha256": {
+    "parent": "2fd52eeff8984398b6c71b5b9285ca9b74a87a8f3c0bc66604d96a7cc80998c3",
+    "child": "221bc1639ecdc477b87b6501b654381d01253b4f163a3ad55cf6962d5d8b9adf",
+    "without-clone_copy": "5c6aa405e0a760e9c580bf119e064240ef10c1a089c5ca2362d65822de6bc9bf",
+    "without-block_size": "6511b8609d5793ff78a2d55a25deb441621c059879aa1c2633d0c570e22306a8"
+  },
+  "reference_sha256": "d5977ca8e549aac43aa5b4fd78dcbfc11784961891668ed5008fb0978d3e4a61",
+  "evaluator_source_sha256": "616463f3c580c9937aac2e78a30ad9db6aef3ee0625f19ebca68a0031cbdb304",
+  "workload_hash": "629a5303bb69a2346463cf084db2f89085d820c96353b998ab46a5428434133e",
+  "upstream_revision": "423217d9fda91e0c2d67e4a43bf62f96f6d104f1",
+  "hardware": {
+    "uuid": "GPU-1265274a-9013-e311-19fa-35659d490047",
+    "name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+    "driver": "610.88",
+    "compute_capability": "12.0"
+  },
+  "rounds": 3,
+  "endpoint": {
+    "status": "measured",
+    "speedups": [
+      1.3009738883407873,
+      1.3022564225343423,
+      1.3010827038012995
+    ],
+    "median_speedup": 1.3010827038012995
+  },
+  "score": "log(without_action_median_ms / child_median_ms); positive means action helped in child context",
+  "actions": [
+    {
+      "id": "clone_copy",
+      "category": "host_copy",
+      "candidate_id": "without-clone_copy",
+      "source_edits": [
+        {
+          "parent_lines": [
+            111,
+            111
+          ],
+          "child_lines": [
+            103,
+            103
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "measured",
+      "log_effects": [
+        0.1926692051815333,
+        0.19261089974724802,
+        0.19196986302894922
+      ],
+      "median_log_effect": 0.19261089974724802,
+      "sign_consistent": true
+    },
+    {
+      "id": "block_size",
+      "category": "kernel_launch",
+      "candidate_id": "without-block_size",
+      "source_edits": [
+        {
+          "parent_lines": [
+            74,
+            74
+          ],
+          "child_lines": [
+            68,
+            68
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "measured",
+      "log_effects": [
+        0.003061004505313393,
+        0.004390509271113538,
+        0.0014738259232573328
+      ],
+      "median_log_effect": 0.003061004505313393,
+      "sign_consistent": true
+    },
+    {
+      "id": "kernel_group",
+      "category": "kernel_memory",
+      "candidate_id": null,
+      "source_edits": [
+        {
+          "parent_lines": [
+            18,
+            21
+          ],
+          "child_lines": [
+            18,
+            20
+          ]
+        },
+        {
+          "parent_lines": [
+            23,
+            24
+          ],
+          "child_lines": [
+            22,
+            23
+          ]
+        },
+        {
+          "parent_lines": [
+            29,
+            30
+          ],
+          "child_lines": [
+            28,
+            28
+          ]
+        },
+        {
+          "parent_lines": [
+            33,
+            34
+          ],
+          "child_lines": [
+            31,
+            33
+          ]
+        },
+        {
+          "parent_lines": [
+            36,
+            38
+          ],
+          "child_lines": [
+            35,
+            38
+          ]
+        },
+        {
+          "parent_lines": [
+            45,
+            45
+          ],
+          "child_lines": [
+            45,
+            45
+          ]
+        },
+        {
+          "parent_lines": [
+            51,
+            52
+          ],
+          "child_lines": [
+            50,
+            51
+          ]
+        },
+        {
+          "parent_lines": [
+            54,
+            54
+          ],
+          "child_lines": [
+            53,
+            53
+          ]
+        },
+        {
+          "parent_lines": [
+            58,
+            59
+          ],
+          "child_lines": [
+            57,
+            58
+          ]
+        },
+        {
+          "parent_lines": [
+            61,
+            61
+          ],
+          "child_lines": [
+            60,
+            60
+          ]
+        },
+        {
+          "parent_lines": [
+            63,
+            68
+          ],
+          "child_lines": [
+            62,
+            62
+          ]
+        },
+        {
+          "parent_lines": [
+            71,
+            71
+          ],
+          "child_lines": [
+            65,
+            65
+          ]
+        },
+        {
+          "parent_lines": [
+            76,
+            77
+          ],
+          "child_lines": [
+            70,
+            71
+          ]
+        },
+        {
+          "parent_lines": [
+            79,
+            80
+          ],
+          "child_lines": [
+            73,
+            74
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "not_probed",
+      "log_effects": [],
+      "median_log_effect": null,
+      "sign_consistent": null
+    }
+  ],
+  "extra_candidate_evaluations": 6,
+  "record_paths": [
+    "runs\\ada-2_20-valid-r0.json",
+    "runs\\ada-2_20-valid-r1.json",
+    "runs\\ada-2_20-valid-r2.json"
+  ]
+}
