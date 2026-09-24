@@ -21,6 +21,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--correct-trials", type=int, default=5)
     parser.add_argument("--perf-trials", type=int, default=100)
+    parser.add_argument("--backend", default="cuda", choices=["cuda", "triton"])
     args = parser.parse_args()
 
     import torch
@@ -46,7 +47,7 @@ def main() -> None:
                 measure_performance=True,
                 timing_method="cuda_event",
                 device=torch.device("cuda:0"),
-                backend="cuda",
+                backend=args.backend,
                 check_for_excessive_speedup=True,
             )
     finally:

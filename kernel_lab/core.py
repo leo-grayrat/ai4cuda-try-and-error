@@ -120,6 +120,9 @@ def credit_analysis(record: dict) -> dict:
         raise ValueError("Need base, A, B and AB measured candidates")
     base, only_a, only_b, both = (lookup[key] for key in needed)
     score = lambda item: -math.log(item["median_ms"])
+    contribution_a = score(only_a) - score(base)
+    contribution_b = score(only_b) - score(base)
+    interaction = score(both) - score(only_a) - score(only_b) + score(base)
     return {
         "experiment_id": record["experiment_id"],
         "hardware": record["hardware"],
@@ -133,9 +136,13 @@ def credit_analysis(record: dict) -> dict:
             "AB": base["median_ms"] / both["median_ms"],
         },
         "log_contribution": {
-            a: score(only_a) - score(base),
-            b: score(only_b) - score(base),
-            "interaction": score(both) - score(only_a) - score(only_b) + score(base),
+            a: contribution_a,
+            b: contribution_b,
+            "interaction": interaction,
+        },
+        "shapley_log_credit": {
+            a: contribution_a + interaction / 2,
+            b: contribution_b + interaction / 2,
         },
     }
 
@@ -214,9 +221,12 @@ def credit_series(records: list[dict]) -> dict:
         raise ValueError("Use at least two independent runs for a credit series")
     first = records[0]
     first_candidates = {item["id"]: item["code_hash"] for item in first["candidates"]}
+    first_changes = {item["id"]: frozenset(item["changes"]) for item in first["candidates"]}
     for record in records[1:]:
         if record["experiment_id"] != first["experiment_id"] or record["workload_hash"] != first["workload_hash"]:
             raise ValueError("Runs use different experiment/workload definitions")
+        if record.get("factors") != first.get("factors") or {item["id"]: frozenset(item["changes"]) for item in record["candidates"]} != first_changes:
+            raise ValueError("Runs assign different intervention factors to candidates")
         if record["hardware"]["uuid"] != first["hardware"]["uuid"]:
             raise ValueError("Credit series runs must use the same GPU")
         if {item["id"]: item["code_hash"] for item in record["candidates"]} != first_candidates:
@@ -231,12 +241,18 @@ def credit_series(records: list[dict]) -> dict:
     for term in terms:
         values = [analysis["log_contribution"][term] for analysis in analyses]
         summary[term] = {"mean": mean(values), "sample_std": stdev(values), "min": min(values), "max": max(values)}
+    shapley_summary = {}
+    for factor in analyses[0]["shapley_log_credit"]:
+        values = [analysis["shapley_log_credit"][factor] for analysis in analyses]
+        shapley_summary[factor] = {"mean": mean(values), "sample_std": stdev(values), "min": min(values), "max": max(values)}
     return {
         "experiment_id": first["experiment_id"],
         "hardware": first["hardware"],
         "run_count": len(records),
         "per_run": [analysis["log_contribution"] for analysis in analyses],
         "summary": summary,
+        "shapley_per_run": [analysis["shapley_log_credit"] for analysis in analyses],
+        "shapley_summary": shapley_summary,
     }
 
 

@@ -23,6 +23,10 @@ def test_credit_uses_measured_counterfactuals():
     assert result["speedup_vs_base"]["AB"] == pytest.approx(10 / 6)
     assert result["log_contribution"]["A"] == pytest.approx(math.log(10 / 8))
     assert result["log_contribution"]["interaction"] == pytest.approx(math.log(8 * 9 / (6 * 10)))
+    assert sum(result["shapley_log_credit"].values()) == pytest.approx(math.log(10 / 6))
+    assert result["shapley_log_credit"]["A"] == pytest.approx(
+        (math.log(10 / 8) + math.log(9 / 6)) / 2
+    )
 
 
 def test_hardware_comparison_counts_rank_flips():
@@ -66,8 +70,17 @@ def test_credit_series_requires_same_code_and_device():
     result = credit_series([a, b])
     assert result["run_count"] == 2
     assert result["summary"]["A"]["sample_std"] > 0
+    assert result["shapley_summary"]["A"]["sample_std"] > 0
     b["hardware"]["uuid"] = "gpu-b"
     with pytest.raises(ValueError, match="same GPU"):
+        credit_series([a, b])
+
+
+def test_credit_series_rejects_relabelled_interventions():
+    a = sample_record("gpu-a", {"base": 10, "a": 8, "b": 9, "ab": 6})
+    b = sample_record("gpu-a", {"base": 10, "a": 8, "b": 9, "ab": 6})
+    b["candidates"][1]["changes"] = ["B"]
+    with pytest.raises(ValueError, match="different intervention factors"):
         credit_series([a, b])
 
 

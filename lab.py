@@ -115,6 +115,7 @@ def main() -> None:
                     "--seed", str(manifest["workload"].get("seed", 42)),
                     "--correct-trials", str(manifest["workload"].get("correct_trials", 5)),
                     "--perf-trials", str(manifest["workload"].get("perf_trials", 100)),
+                    "--backend", manifest["workload"].get("backend", "cuda"),
                 ]
                 completed = subprocess.run(command, env=environment, capture_output=True, text=True)
                 if completed.returncode:
