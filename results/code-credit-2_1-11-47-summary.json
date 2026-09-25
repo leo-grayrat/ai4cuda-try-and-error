@@ -1,0 +1,164 @@
+{
+  "experiment_id": "ada-2_1-11-47-actions",
+  "provenance": {
+    "archive": "adaexplore-l2.tar.gz",
+    "task": "2_1",
+    "parent_node": 11,
+    "child_node": 47
+  },
+  "source_sha256": {
+    "parent": "164969c2e640c9e552fecca544ea7b284bb7f2b252de3e23a1e0036c8f4fc27b",
+    "child": "f1d5363a197f3f2e39f710d89a7186b92579c279183c366d2dbe3630fd2b9caf",
+    "reference": "45ee3a3db038396c982207b36812086bf1b94472ebbf229c5e76c5ea0b90f89f"
+  },
+  "candidate_sha256": {
+    "parent": "164969c2e640c9e552fecca544ea7b284bb7f2b252de3e23a1e0036c8f4fc27b",
+    "child": "f1d5363a197f3f2e39f710d89a7186b92579c279183c366d2dbe3630fd2b9caf",
+    "without-inplace": "5a2dcc0fc05fccf75d2f516be0407b23d0208500b56ec649115a6594aa460412",
+    "without-grid": "410404fc9d3391b69f200d1ad47b4c3440ff44551ec3d0f9076bf95e596f45fd",
+    "control-bias": "aa4c86d76be92208eb2177d72e3520835d2d9a3a5d4cdcd792a7f824aef44911"
+  },
+  "reference_sha256": "45ee3a3db038396c982207b36812086bf1b94472ebbf229c5e76c5ea0b90f89f",
+  "evaluator_source_sha256": "616463f3c580c9937aac2e78a30ad9db6aef3ee0625f19ebca68a0031cbdb304",
+  "workload_hash": "629a5303bb69a2346463cf084db2f89085d820c96353b998ab46a5428434133e",
+  "upstream_revision": "423217d9fda91e0c2d67e4a43bf62f96f6d104f1",
+  "hardware": {
+    "uuid": "GPU-1265274a-9013-e311-19fa-35659d490047",
+    "name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+    "driver": "610.88",
+    "compute_capability": "12.0"
+  },
+  "rounds": 3,
+  "endpoint": {
+    "status": "measured",
+    "speedups": [
+      1.001620319527859,
+      1.0062549463480996,
+      1.0023526784379058
+    ],
+    "median_speedup": 1.0023526784379058
+  },
+  "score": "log(without_action_median_ms / child_median_ms); positive means action helped in child context",
+  "actions": [
+    {
+      "id": "inplace",
+      "category": "output_allocation",
+      "candidate_id": "without-inplace",
+      "source_edits": [
+        {
+          "parent_lines": [
+            70,
+            85
+          ],
+          "child_lines": [
+            78,
+            87
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "measured",
+      "log_effects": [
+        7.435710791412618e-05,
+        0.0061078982132439785,
+        0.0027039662381069932
+      ],
+      "median_log_effect": 0.0027039662381069932,
+      "sign_consistent": true
+    },
+    {
+      "id": "grid",
+      "category": "launch_layout",
+      "candidate_id": "without-grid",
+      "source_edits": [
+        {
+          "parent_lines": [
+            32,
+            39
+          ],
+          "child_lines": [
+            32,
+            37
+          ]
+        },
+        {
+          "parent_lines": [
+            84,
+            84
+          ],
+          "child_lines": [
+            93,
+            94
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "measured",
+      "log_effects": [
+        -4.981010311555516e-05,
+        0.00547636834629817,
+        0.0005898943926221797
+      ],
+      "median_log_effect": 0.0005898943926221797,
+      "sign_consistent": false
+    },
+    {
+      "id": "config",
+      "category": "autotune_config",
+      "candidate_id": null,
+      "source_edits": [
+        {
+          "parent_lines": [
+            7,
+            10
+          ],
+          "child_lines": [
+            7,
+            9
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "not_probed",
+      "log_effects": [],
+      "median_log_effect": null,
+      "sign_consistent": null
+    },
+    {
+      "id": "bias_control",
+      "category": "ordinary_executable_control",
+      "candidate_id": "control-bias",
+      "source_edits": [
+        {
+          "parent_lines": [
+            66,
+            66
+          ],
+          "child_lines": [
+            73,
+            76
+          ]
+        }
+      ],
+      "generation_position": null,
+      "comparison": "child versus child_without_action",
+      "status": "measured",
+      "log_effects": [
+        0.0561106040289123,
+        0.004639209931019594,
+        -0.001241385739831462
+      ],
+      "median_log_effect": 0.004639209931019594,
+      "sign_consistent": false
+    }
+  ],
+  "extra_candidate_evaluations": 9,
+  "record_paths": [
+    "runs\\ada-2_1-11-47-clean-r0.json",
+    "runs\\ada-2_1-11-47-clean-r1.json",
+    "runs\\ada-2_1-11-47-clean-r2.json"
+  ]
+}
