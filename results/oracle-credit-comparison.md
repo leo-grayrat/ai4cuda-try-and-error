@@ -1,29 +1,39 @@
-# Baseline (CUDA Agent) vs. Oracle Semantic Credit 分配对比报告
+# Oracle semantic credit：当前状态与更正
 
-本报告对比了在总性能奖励 $\sum_t r_t$ 严格守恒的前提下，两种信用分配机制在真实 Kernel 优化案例上的 Token 分布差异：
+本页取代此前的“Baseline (CUDA Agent) vs. Oracle Semantic Credit 分配对比报告”。此前报告中的 84%–100% 样板信用浪费不能作为实验结论，相关数字已经撤回。
 
-- **Baseline (CUDA Agent 方式)**：末端奖励挂在最后一个 Token，通过 Critic / GAE 指数后向扩散至所有 Token。
-- **Oracle Semantic Credit**：将相同的全部性能奖励精准分配给人工标注的真正优化决策 Token 区间，样板/胶水代码分数为 0。
+## 为什么撤回
 
-## 1. 核心对比数据汇总表
+先前实现把 CUDA Agent 的 baseline 简化成“终局奖励按 (gamma * lambda)^k 向前指数衰减”，并把这些权重重新归一化到终局 reward。这个做法等价于忽略 Critic 的真实价值估计，而且额外加入了“优势之和必须等于终局奖励”的约束。
 
-| 案例 | 任务与优化动作 | 总 Token 数 | 优化决策 Token 数 (占比) | 样板 Token 数 (占比) | Baseline 优化信用占比 | Baseline 样板浪费占比 | Oracle 优化信用占比 |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| **Device Memory Copy Elimination (2_20)** | KernelBench Level 2 Task 20 | 107 | 7 (6.5%) | 100 (93.5%) | **15.75%** | **84.25%** | **100.0%** |
-| **Vector Add 2x Grid-Stride Loop Unrolling** | KernelBench Vector Add | 280 | 85 (30.4%) | 195 (69.6%) | **1.02%** | **98.98%** | **100.0%** |
-| **Row Sum 2-Way Stride Reduction** | KernelBench Row Sum | 348 | 57 (16.4%) | 291 (83.6%) | **0.00%** | **100.00%** | **100.0%** |
+真正的 GAE 需要：
 
-## 2. 核心实验洞察
+delta_t = r_t + gamma * V(s_{t+1}) - V(s_t)
 
-1. **总奖励严格守恒**：在所有案例中，两种分配方式下的总信用之和 $\sum_t A_t$ 均与环境给出的真实性能回报严格相等，没有凭空增加或减少奖励。
-2. **Baseline 的严重样板稀释问题**：
-   - 在 CUDA Agent 机制下，真正的关键优化决策（如消除 `clone()`、指令展开、步长规约）只占总代码的 **6% ~ 23%**；
-   - 然而，Baseline 将 **80% ~ 97% 的性能信用**分配给了与速度完全无关的样板代码（PyTorch Module 封装、函数声明、入参类型转换、return 语句等）；
-   - 这直观证明了为什么序列 RL 在学习 Kernel 优化时极度低效：它将绝大部分性能提升归因于无论快慢都必须存在的胶水语法。
-3. **Oracle Semantic Credit 的聚焦效果**：
-   - Oracle 机制将 100% 的性能提升精准赋予真正改变计算与内存行为的代码决策；
-   - 这使得模型在策略梯度更新时，梯度完全施加于优化结构本身，避免了在长序列胶水代码上的概率浪费。
+A_t = delta_t + gamma * lambda * A_{t+1}
 
-## 3. 机器可读数据保存
+因此，没有实际 rollout 上的 Critic 值（或论文系统直接导出的逐 token advantage），就不能声称自己复现了 CUDA Agent 的信用分配。Advantage 也不是需要守恒的一袋 reward。
 
-详细标注及逐 Token 数据已保存在 `experiments/oracle-cases/` 目录下供后续直接加载。
+先前的三个“oracle cases”也不满足真实 token 级实验要求：两个来自仓库早期人为构造的 smoke test，并非 Agent 轨迹；所谓 2_20 案例重写成了玩具程序，却挂上了复杂真实父子版本的整体 1.301x 加速；raw_response 和 token 序列则是后补的文本与正则分词，不是模型当时真实生成的回复和 tokenizer 输出。这些文件已从当前分支删除。
+
+## 当前分支真正完成了什么
+
+当前只保留两个很窄的实验部件：
+
+1. kernel_lab/code_credit.py 冻结为朴素启发式基线，不再针对新漏报继续补正则。
+2. kernel_lab/oracle_credit.py 只负责表达人工给出的优化决策 span、把它对齐到真实模型 tokenizer 的 offset，以及在已经给定真实 Critic 值时计算标准 GAE。
+
+compute_oracle_token_signal 只是“如果人工 oracle 已知，怎样构造一个集中在该 span 上的实验信号”的定义。它本身不证明这种信号更合理，也不证明它能改善学习。
+
+## 现在还没有什么结论
+
+当前没有数据支持以下说法：
+
+- CUDA Agent 把 84%–100% 的信用错误分给了胶水代码；
+- Oracle semantic credit 优于 CUDA Agent；
+- 公开 AdaExplore 档案足以做 token 级信用比较；
+- 人工 oracle 集中权重能改善后续 kernel 学习。
+
+要做真正的比较，至少需要一条真实生成轨迹同时保留：原始模型回复、生成时 tokenizer 的 token/offset、终局性能 reward，以及 baseline Critic 的逐 token value（或直接的 advantage）。随后才能在人不知道 baseline advantage 的前提下人工标注程序级优化决策，并比较二者。
+
+在拿到这种数据以前，这个分支停在“把研究问题形式化清楚”的位置，不继续扩 synthetic case，不继续造训练数据，也不启动本机小模型训练。
