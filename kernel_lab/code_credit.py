@@ -1,7 +1,11 @@
-"""Locate performance-relevant edits in a parent/child kernel revision.
+"""[FROZEN - HEURISTIC BASELINE]
+Locate candidate edits in a parent/child kernel revision using diffs and AST heuristics.
 
-This is a *candidate locator*, not a performance attribution oracle. The
-returned ranking must be checked against correctness and measured runtime.
+CRITICAL STATUS:
+This module is strictly frozen as a naive heuristic baseline. It represents
+"how far can manual rules/diffs guess key optimizations without program semantic understanding".
+DO NOT patch, repair, or add new heuristics here when false positives or false negatives occur;
+observed failures serve as baseline ablation evidence, not software bugs to fix.
 """
 
 from __future__ import annotations

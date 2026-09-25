@@ -1,0 +1,8132 @@
+[
+  {
+    "case_id": "case_2_20_copy_elimination",
+    "title": "Device Memory Copy Elimination (2_20)",
+    "benchmark_task": "KernelBench Level 2 Task 20",
+    "prompt": "Optimize the following PyTorch/CUDA kernel for task 'KernelBench Level 2 Task 20':\n```python\nimport torch\nfrom torch import nn\n\nclass ModelNew(nn.Module):\n    \"\"\"Parent model performing redundant tensor copy before kernel invocation.\"\"\"\n    def __init__(self):\n        super().__init__()\n\n    def forward(self, x: torch.Tensor) -> torch.Tensor:\n        # Redundant intermediate memory allocation and copy\n        temp = x.clone().detach()\n        out = torch.relu(temp)\n        return out\n\n```",
+    "completion": "import torch\nfrom torch import nn\n\nclass ModelNew(nn.Module):\n    \"\"\"Optimized model: eliminated clone().detach() to avoid device memory allocation.\"\"\"\n    def __init__(self):\n        super().__init__()\n\n    def forward(self, x: torch.Tensor) -> torch.Tensor:\n        # Optimized: in-place view avoiding clone overhead\n        temp = x.detach()\n        out = torch.relu(temp)\n        return out\n",
+    "terminal_reward": 2.0,
+    "tokens": [
+      {
+        "index": 0,
+        "token": "import",
+        "char_span": [
+          0,
+          6
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00017872807601642938,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 1,
+        "token": "torch",
+        "char_span": [
+          7,
+          12
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00019003516854484783,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 2,
+        "token": "\n",
+        "char_span": [
+          12,
+          13
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00020205759547564894,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 3,
+        "token": "from",
+        "char_span": [
+          13,
+          17
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00021484061188266766,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 4,
+        "token": "torch",
+        "char_span": [
+          18,
+          23
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0002284323358667386,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 5,
+        "token": "import",
+        "char_span": [
+          24,
+          30
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00024288392968286932,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 6,
+        "token": "nn",
+        "char_span": [
+          31,
+          33
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0002582497923262832,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 7,
+        "token": "\n",
+        "char_span": [
+          33,
+          34
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00027458776430226814,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 8,
+        "token": "\n",
+        "char_span": [
+          34,
+          35
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00029195934535063064,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 9,
+        "token": "class",
+        "char_span": [
+          35,
+          40
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00031042992594431756,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 10,
+        "token": "ModelNew",
+        "char_span": [
+          41,
+          49
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0003300690334336178,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 11,
+        "token": "(",
+        "char_span": [
+          49,
+          50
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00035095059376248573,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 12,
+        "token": "nn",
+        "char_span": [
+          50,
+          52
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00037315320974214323,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 13,
+        "token": ".",
+        "char_span": [
+          52,
+          53
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00039676045692944525,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 14,
+        "token": "Module",
+        "char_span": [
+          53,
+          59
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00042186119822375885,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 15,
+        "token": ")",
+        "char_span": [
+          59,
+          60
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00044854991836656977,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 16,
+        "token": ":",
+        "char_span": [
+          60,
+          61
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00047692707960294493,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 17,
+        "token": "\n",
+        "char_span": [
+          61,
+          62
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0005070994998436417,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 18,
+        "token": "\"",
+        "char_span": [
+          66,
+          67
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0005391807547513468,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 19,
+        "token": "\"",
+        "char_span": [
+          67,
+          68
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0005732916052645899,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 20,
+        "token": "\"",
+        "char_span": [
+          68,
+          69
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.000609560452168623,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 21,
+        "token": "Optimized",
+        "char_span": [
+          69,
+          78
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0006481238194243731,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 22,
+        "token": "model",
+        "char_span": [
+          79,
+          84
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0006891268680748253,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 23,
+        "token": ":",
+        "char_span": [
+          84,
+          85
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0007327239426632911,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 24,
+        "token": "eliminated",
+        "char_span": [
+          86,
+          96
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0007790791522204051,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 25,
+        "token": "clone",
+        "char_span": [
+          97,
+          102
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0008283669880068105,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 26,
+        "token": "(",
+        "char_span": [
+          102,
+          103
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0008807729803368532,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 27,
+        "token": ")",
+        "char_span": [
+          103,
+          104
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0009364943969557185,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 28,
+        "token": ".",
+        "char_span": [
+          104,
+          105
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0009957409855988499,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 29,
+        "token": "detach",
+        "char_span": [
+          105,
+          111
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0010587357635288145,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 30,
+        "token": "(",
+        "char_span": [
+          111,
+          112
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0011257158570215997,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 31,
+        "token": ")",
+        "char_span": [
+          112,
+          113
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00119693339396236,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 32,
+        "token": "to",
+        "char_span": [
+          114,
+          116
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0012726564529105368,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 33,
+        "token": "avoid",
+        "char_span": [
+          117,
+          122
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0013531700722068443,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 34,
+        "token": "device",
+        "char_span": [
+          123,
+          129
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.001438777322920621,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 35,
+        "token": "memory",
+        "char_span": [
+          130,
+          136
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.001529800449676365,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 36,
+        "token": "allocation",
+        "char_span": [
+          137,
+          147
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.001626582083653764,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 37,
+        "token": ".",
+        "char_span": [
+          147,
+          148
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.001729486532327234,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 38,
+        "token": "\"",
+        "char_span": [
+          148,
+          149
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0018389011507998238,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 39,
+        "token": "\"",
+        "char_span": [
+          149,
+          150
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0019552377998934864,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 40,
+        "token": "\"",
+        "char_span": [
+          150,
+          151
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.002078934396484302,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 41,
+        "token": "\n",
+        "char_span": [
+          151,
+          152
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0022104565619184497,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 42,
+        "token": "def",
+        "char_span": [
+          156,
+          159
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.002350299374713929,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 43,
+        "token": "__init__",
+        "char_span": [
+          160,
+          168
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.002498989234145591,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 44,
+        "token": "(",
+        "char_span": [
+          168,
+          169
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.002657085841728433,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 45,
+        "token": "self",
+        "char_span": [
+          169,
+          173
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.002825184308057877,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 46,
+        "token": ")",
+        "char_span": [
+          173,
+          174
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.003003917392937668,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 47,
+        "token": ":",
+        "char_span": [
+          174,
+          175
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.003193957887227717,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 48,
+        "token": "\n",
+        "char_span": [
+          175,
+          176
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00339602114537769,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 49,
+        "token": "super",
+        "char_span": [
+          184,
+          189
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0036108677781793615,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 50,
+        "token": "(",
+        "char_span": [
+          189,
+          190
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.003839306515873856,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 51,
+        "token": ")",
+        "char_span": [
+          190,
+          191
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.004082197252391128,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 52,
+        "token": ".",
+        "char_span": [
+          191,
+          192
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.004340454282180891,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 53,
+        "token": "__init__",
+        "char_span": [
+          192,
+          200
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.004615049741819129,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 54,
+        "token": "(",
+        "char_span": [
+          200,
+          201
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.004907017269345167,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 55,
+        "token": ")",
+        "char_span": [
+          201,
+          202
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.005217455895103846,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 56,
+        "token": "\n",
+        "char_span": [
+          202,
+          203
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.005547534178738805,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 57,
+        "token": "\n",
+        "char_span": [
+          203,
+          204
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.005898494607909414,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 58,
+        "token": "def",
+        "char_span": [
+          208,
+          211
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.006271658275289117,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 59,
+        "token": "forward",
+        "char_span": [
+          212,
+          219
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.006668429851450417,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 60,
+        "token": "(",
+        "char_span": [
+          219,
+          220
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.007090302872355574,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 61,
+        "token": "self",
+        "char_span": [
+          220,
+          224
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.007538865361356272,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 62,
+        "token": ",",
+        "char_span": [
+          224,
+          225
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.008015805806864722,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 63,
+        "token": "x",
+        "char_span": [
+          226,
+          227
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.008522919518197473,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 64,
+        "token": ":",
+        "char_span": [
+          227,
+          228
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.009062115383516717,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 65,
+        "token": "torch",
+        "char_span": [
+          229,
+          234
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.009635423055307514,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 66,
+        "token": ".",
+        "char_span": [
+          234,
+          235
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.010245000590438612,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 67,
+        "token": "Tensor",
+        "char_span": [
+          235,
+          241
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.010893142573565774,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 68,
+        "token": ")",
+        "char_span": [
+          241,
+          242
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0115822887544559,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 69,
+        "token": "-",
+        "char_span": [
+          243,
+          244
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.012315033231744711,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 70,
+        "token": ">",
+        "char_span": [
+          244,
+          245
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.013094134217697726,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 71,
+        "token": "torch",
+        "char_span": [
+          246,
+          251
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.013922524420731235,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 72,
+        "token": ".",
+        "char_span": [
+          251,
+          252
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.01480332208477537,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 73,
+        "token": "Tensor",
+        "char_span": [
+          252,
+          258
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.015739842727033885,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 74,
+        "token": ":",
+        "char_span": [
+          258,
+          259
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.016735611618324174,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 75,
+        "token": "\n",
+        "char_span": [
+          259,
+          260
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.017794377052976262,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 76,
+        "token": "#",
+        "char_span": [
+          268,
+          269
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.01892012445824164,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 77,
+        "token": "Optimized",
+        "char_span": [
+          270,
+          279
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.020117091396322846,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 78,
+        "token": ":",
+        "char_span": [
+          279,
+          280
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.021389783515494785,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 79,
+        "token": "in",
+        "char_span": [
+          281,
+          283
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.02274299151036128,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 80,
+        "token": "-",
+        "char_span": [
+          283,
+          284
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.024181809155089082,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 81,
+        "token": "place",
+        "char_span": [
+          284,
+          289
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.025711652477500357,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 82,
+        "token": "view",
+        "char_span": [
+          290,
+          294
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.02733828014619921,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 83,
+        "token": "avoiding",
+        "char_span": [
+          295,
+          303
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.029067815147473905,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 84,
+        "token": "clone",
+        "char_span": [
+          304,
+          309
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.030906767833571405,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 85,
+        "token": "overhead",
+        "char_span": [
+          310,
+          318
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.03286206042910303,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 86,
+        "token": "\n",
+        "char_span": [
+          318,
+          319
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.03494105308782885,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 87,
+        "token": "temp",
+        "char_span": [
+          327,
+          331
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.03715157159790415,
+        "oracle_credit": 0.2857142857142857
+      },
+      {
+        "index": 88,
+        "token": "=",
+        "char_span": [
+          332,
+          333
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.039501936839876815,
+        "oracle_credit": 0.2857142857142857
+      },
+      {
+        "index": 89,
+        "token": "x",
+        "char_span": [
+          334,
+          335
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.042000996108321975,
+        "oracle_credit": 0.2857142857142857
+      },
+      {
+        "index": 90,
+        "token": ".",
+        "char_span": [
+          335,
+          336
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.044658156415015395,
+        "oracle_credit": 0.2857142857142857
+      },
+      {
+        "index": 91,
+        "token": "detach",
+        "char_span": [
+          336,
+          342
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.04748341989900626,
+        "oracle_credit": 0.2857142857142857
+      },
+      {
+        "index": 92,
+        "token": "(",
+        "char_span": [
+          342,
+          343
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.050487421476880665,
+        "oracle_credit": 0.2857142857142857
+      },
+      {
+        "index": 93,
+        "token": ")",
+        "char_span": [
+          343,
+          344
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.05368146887493957,
+        "oracle_credit": 0.2857142857142857
+      },
+      {
+        "index": 94,
+        "token": "\n",
+        "char_span": [
+          344,
+          345
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.05707758519398146,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 95,
+        "token": "out",
+        "char_span": [
+          353,
+          356
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.06068855416691277,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 96,
+        "token": "=",
+        "char_span": [
+          357,
+          358
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.06452796827954575,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 97,
+        "token": "torch",
+        "char_span": [
+          359,
+          364
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.06861027993572115,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 98,
+        "token": ".",
+        "char_span": [
+          364,
+          365
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.07295085585935263,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 99,
+        "token": "relu",
+        "char_span": [
+          365,
+          369
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.07756603493817399,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 100,
+        "token": "(",
+        "char_span": [
+          369,
+          370
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.08247318972692609,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 101,
+        "token": "temp",
+        "char_span": [
+          370,
+          374
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.08769079184149504,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 102,
+        "token": ")",
+        "char_span": [
+          374,
+          375
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.09323848149015954,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 103,
+        "token": "\n",
+        "char_span": [
+          375,
+          376
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0991371414036784,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 104,
+        "token": "return",
+        "char_span": [
+          384,
+          390
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.1054089754425076,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 105,
+        "token": "out",
+        "char_span": [
+          391,
+          394
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.11207759217704158,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 106,
+        "token": "\n",
+        "char_span": [
+          394,
+          395
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.11916809375549343,
+        "oracle_credit": 0.0
+      }
+    ],
+    "summary": {
+      "total_tokens": 107,
+      "optimization_tokens": 7,
+      "total_reward": 2.0
+    }
+  },
+  {
+    "case_id": "case_add_unroll_two",
+    "title": "Vector Add 2x Grid-Stride Loop Unrolling",
+    "benchmark_task": "KernelBench Vector Add",
+    "prompt": "Optimize the following PyTorch/CUDA kernel for task 'KernelBench Vector Add':\n```python\nimport cupy as cp\nimport numpy as np\nimport torch\nfrom torch import nn\n\n\nSOURCE = r\"\"\"\nextern \"C\" __global__ void add_kernel(const float* a, const float* b, float* out, int n) {\n    int i = blockIdx.x * blockDim.x + threadIdx.x;\n    if (i < n) out[i] = a[i] + b[i];\n}\n\"\"\"\nKERNEL = cp.RawKernel(SOURCE, \"add_kernel\")\n\n\nclass ModelNew(nn.Module):\n    def forward(self, a, b):\n        out = torch.empty_like(a)\n        threads = 128\n        blocks = (a.numel() + threads - 1) // threads\n        with cp.cuda.ExternalStream(torch.cuda.current_stream().cuda_stream):\n            KERNEL((blocks,), (threads,), (cp.asarray(a), cp.asarray(b), cp.asarray(out), np.int32(a.numel())))\n        return out\n\n```",
+    "completion": "import cupy as cp\nimport numpy as np\nimport torch\nfrom torch import nn\n\n\nSOURCE = r\"\"\"\nextern \"C\" __global__ void add_kernel(const float* a, const float* b, float* out, int n) {\n    int i = blockIdx.x * blockDim.x + threadIdx.x;\n    int stride = gridDim.x * blockDim.x;\n    if (i < n) out[i] = a[i] + b[i];\n    int j = i + stride;\n    if (j < n) out[j] = a[j] + b[j];\n}\n\"\"\"\nKERNEL = cp.RawKernel(SOURCE, \"add_kernel\")\n\n\nclass ModelNew(nn.Module):\n    def forward(self, a, b):\n        out = torch.empty_like(a)\n        threads = 128\n        blocks = (a.numel() + 2 * threads - 1) // (2 * threads)\n        with cp.cuda.ExternalStream(torch.cuda.current_stream().cuda_stream):\n            KERNEL((blocks,), (threads,), (cp.asarray(a), cp.asarray(b), cp.asarray(out), np.int32(a.numel())))\n        return out\n",
+    "terminal_reward": 1.5,
+    "tokens": [
+      {
+        "index": 0,
+        "token": "import",
+        "char_span": [
+          0,
+          6
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.293922737915379e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 1,
+        "token": "cupy",
+        "char_span": [
+          7,
+          11
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.5023101944873774e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 2,
+        "token": "as",
+        "char_span": [
+          12,
+          14
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.7238811211987e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 3,
+        "token": "cp",
+        "char_span": [
+          15,
+          17
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.959469560019884e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 4,
+        "token": "\n",
+        "char_span": [
+          17,
+          18
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.209962317937143e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 5,
+        "token": "import",
+        "char_span": [
+          18,
+          24
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.476302305089998e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 6,
+        "token": "numpy",
+        "char_span": [
+          25,
+          30
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.759492084093565e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 7,
+        "token": "as",
+        "char_span": [
+          31,
+          33
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.060597643905971e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 8,
+        "token": "np",
+        "char_span": [
+          34,
+          36
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.3807524124465395e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 9,
+        "token": "\n",
+        "char_span": [
+          36,
+          37
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.721161523069155e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 10,
+        "token": "import",
+        "char_span": [
+          37,
+          43
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.083106350950722e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 11,
+        "token": "torch",
+        "char_span": [
+          44,
+          49
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.4679493364707315e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 12,
+        "token": "\n",
+        "char_span": [
+          49,
+          50
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.8771391137381504e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 13,
+        "token": "from",
+        "char_span": [
+          50,
+          54
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.312215963570602e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 14,
+        "token": "torch",
+        "char_span": [
+          55,
+          60
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.774817611451996e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 15,
+        "token": "import",
+        "char_span": [
+          61,
+          67
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.266685392293457e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 16,
+        "token": "nn",
+        "char_span": [
+          68,
+          70
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.789670805203038e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 17,
+        "token": "\n",
+        "char_span": [
+          70,
+          71
+        ],
+        "is_optimization": false,
+        "baseline_credit": 9.345742482937839e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 18,
+        "token": "\n",
+        "char_span": [
+          71,
+          72
+        ],
+        "is_optimization": false,
+        "baseline_credit": 9.936993602273087e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 19,
+        "token": "\n",
+        "char_span": [
+          72,
+          73
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.0565649763182442e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 20,
+        "token": "SOURCE",
+        "char_span": [
+          73,
+          79
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.1234077366488508e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 21,
+        "token": "=",
+        "char_span": [
+          80,
+          81
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.194479252151888e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 22,
+        "token": "r",
+        "char_span": [
+          82,
+          83
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.270047051729812e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 23,
+        "token": "\"",
+        "char_span": [
+          83,
+          84
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.3503955892927295e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 24,
+        "token": "\"",
+        "char_span": [
+          84,
+          85
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.435827314505826e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 25,
+        "token": "\"",
+        "char_span": [
+          85,
+          86
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.5266638112767952e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 26,
+        "token": "\n",
+        "char_span": [
+          86,
+          87
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.6232470082687883e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 27,
+        "token": "extern",
+        "char_span": [
+          87,
+          93
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.7259404659955218e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 28,
+        "token": "\"",
+        "char_span": [
+          94,
+          95
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.8351307453434573e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 29,
+        "token": "C",
+        "char_span": [
+          95,
+          96
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.9512288626724692e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 30,
+        "token": "\"",
+        "char_span": [
+          96,
+          97
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.0746718369723224e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 31,
+        "token": "__global__",
+        "char_span": [
+          98,
+          108
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.205924334898801e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 32,
+        "token": "void",
+        "char_span": [
+          109,
+          113
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.3454804198817665e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 33,
+        "token": "add_kernel",
+        "char_span": [
+          114,
+          124
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.493865411889172e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 34,
+        "token": "(",
+        "char_span": [
+          124,
+          125
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.651637864847605e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 35,
+        "token": "const",
+        "char_span": [
+          125,
+          130
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.8193916691627906e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 36,
+        "token": "float",
+        "char_span": [
+          131,
+          136
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.997758287254429e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 37,
+        "token": "*",
+        "char_span": [
+          136,
+          137
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.187409130520393e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 38,
+        "token": "a",
+        "char_span": [
+          138,
+          139
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.389058086677717e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 39,
+        "token": ",",
+        "char_span": [
+          139,
+          140
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.603464206993851e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 40,
+        "token": "const",
+        "char_span": [
+          141,
+          146
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.831434563523499e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 41,
+        "token": "float",
+        "char_span": [
+          147,
+          152
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.073827287106325e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 42,
+        "token": "*",
+        "char_span": [
+          152,
+          153
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.331554797561218e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 43,
+        "token": "b",
+        "char_span": [
+          154,
+          155
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.605587238236276e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 44,
+        "token": ",",
+        "char_span": [
+          155,
+          156
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.89695612784293e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 45,
+        "token": "float",
+        "char_span": [
+          157,
+          162
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.2067582433205e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 46,
+        "token": "*",
+        "char_span": [
+          162,
+          163
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.5361597483471554e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 47,
+        "token": "out",
+        "char_span": [
+          164,
+          167
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.8864005830379117e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 48,
+        "token": ",",
+        "char_span": [
+          167,
+          168
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.25879913135344e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 49,
+        "token": "int",
+        "char_span": [
+          169,
+          172
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.654757183788879e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 50,
+        "token": "n",
+        "char_span": [
+          173,
+          174
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.075765214023264e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 51,
+        "token": ")",
+        "char_span": [
+          174,
+          175
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.523407989392094e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 52,
+        "token": "{",
+        "char_span": [
+          176,
+          177
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.999370536302066e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 53,
+        "token": "\n",
+        "char_span": [
+          177,
+          178
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.505444483043132e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 54,
+        "token": "int",
+        "char_span": [
+          182,
+          185
+        ],
+        "is_optimization": false,
+        "baseline_credit": 9.043534803873612e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 55,
+        "token": "i",
+        "char_span": [
+          186,
+          187
+        ],
+        "is_optimization": false,
+        "baseline_credit": 9.615666989764606e-08,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 56,
+        "token": "=",
+        "char_span": [
+          188,
+          189
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.0223994672795966e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 57,
+        "token": "blockIdx",
+        "char_span": [
+          190,
+          198
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.0870807732903738e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 58,
+        "token": ".",
+        "char_span": [
+          198,
+          199
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.1558540917494673e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 59,
+        "token": "x",
+        "char_span": [
+          199,
+          200
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.2289783006373921e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 60,
+        "token": "*",
+        "char_span": [
+          201,
+          202
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.3067286556484763e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 61,
+        "token": "blockDim",
+        "char_span": [
+          203,
+          211
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.3893978263141693e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 62,
+        "token": ".",
+        "char_span": [
+          211,
+          212
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.4772969976758846e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 63,
+        "token": "x",
+        "char_span": [
+          212,
+          213
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.5707570416543163e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 64,
+        "token": "+",
+        "char_span": [
+          214,
+          215
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.6701297625245257e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 65,
+        "token": "threadIdx",
+        "char_span": [
+          216,
+          225
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.7757892211850352e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 66,
+        "token": ".",
+        "char_span": [
+          225,
+          226
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.8881331432057792e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 67,
+        "token": "x",
+        "char_span": [
+          226,
+          227
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.007584415955108e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 68,
+        "token": ";",
+        "char_span": [
+          227,
+          228
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.1345926804413693e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 69,
+        "token": "\n",
+        "char_span": [
+          228,
+          229
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.2696360238611052e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 70,
+        "token": "int",
+        "char_span": [
+          233,
+          236
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.4132227792249924e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 71,
+        "token": "stride",
+        "char_span": [
+          237,
+          243
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.565893438835717e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 72,
+        "token": "=",
+        "char_span": [
+          244,
+          245
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.7282226888205395e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 73,
+        "token": "gridDim",
+        "char_span": [
+          246,
+          253
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.9008215723769693e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 74,
+        "token": ".",
+        "char_span": [
+          253,
+          254
+        ],
+        "is_optimization": true,
+        "baseline_credit": 3.084339789874502e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 75,
+        "token": "x",
+        "char_span": [
+          254,
+          255
+        ],
+        "is_optimization": true,
+        "baseline_credit": 3.2794681444704965e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 76,
+        "token": "*",
+        "char_span": [
+          256,
+          257
+        ],
+        "is_optimization": true,
+        "baseline_credit": 3.486941142446036e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 77,
+        "token": "blockDim",
+        "char_span": [
+          258,
+          266
+        ],
+        "is_optimization": true,
+        "baseline_credit": 3.707539758050012e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 78,
+        "token": ".",
+        "char_span": [
+          266,
+          267
+        ],
+        "is_optimization": true,
+        "baseline_credit": 3.942094373258917e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 79,
+        "token": "x",
+        "char_span": [
+          267,
+          268
+        ],
+        "is_optimization": true,
+        "baseline_credit": 4.191487903518253e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 80,
+        "token": ";",
+        "char_span": [
+          268,
+          269
+        ],
+        "is_optimization": true,
+        "baseline_credit": 4.456659121231529e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 81,
+        "token": "\n",
+        "char_span": [
+          269,
+          270
+        ],
+        "is_optimization": true,
+        "baseline_credit": 4.738606189507208e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 82,
+        "token": "if",
+        "char_span": [
+          274,
+          276
+        ],
+        "is_optimization": true,
+        "baseline_credit": 5.038390419465398e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 83,
+        "token": "(",
+        "char_span": [
+          277,
+          278
+        ],
+        "is_optimization": true,
+        "baseline_credit": 5.357140265247632e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 84,
+        "token": "i",
+        "char_span": [
+          278,
+          279
+        ],
+        "is_optimization": true,
+        "baseline_credit": 5.696055571767819e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 85,
+        "token": "<",
+        "char_span": [
+          280,
+          281
+        ],
+        "is_optimization": true,
+        "baseline_credit": 6.056412091193853e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 86,
+        "token": "n",
+        "char_span": [
+          282,
+          283
+        ],
+        "is_optimization": true,
+        "baseline_credit": 6.439566285160927e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 87,
+        "token": ")",
+        "char_span": [
+          283,
+          284
+        ],
+        "is_optimization": true,
+        "baseline_credit": 6.846960430793119e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 88,
+        "token": "out",
+        "char_span": [
+          285,
+          288
+        ],
+        "is_optimization": true,
+        "baseline_credit": 7.280128049753449e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 89,
+        "token": "[",
+        "char_span": [
+          288,
+          289
+        ],
+        "is_optimization": true,
+        "baseline_credit": 7.740699680758585e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 90,
+        "token": "i",
+        "char_span": [
+          289,
+          290
+        ],
+        "is_optimization": true,
+        "baseline_credit": 8.230409017287171e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 91,
+        "token": "]",
+        "char_span": [
+          290,
+          291
+        ],
+        "is_optimization": true,
+        "baseline_credit": 8.751099433585509e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 92,
+        "token": "=",
+        "char_span": [
+          292,
+          293
+        ],
+        "is_optimization": true,
+        "baseline_credit": 9.304730923535894e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 93,
+        "token": "a",
+        "char_span": [
+          294,
+          295
+        ],
+        "is_optimization": true,
+        "baseline_credit": 9.893387478507064e-07,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 94,
+        "token": "[",
+        "char_span": [
+          295,
+          296
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.05192849319586e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 95,
+        "token": "i",
+        "char_span": [
+          296,
+          297
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.1184779300328125e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 96,
+        "token": "]",
+        "char_span": [
+          297,
+          298
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.1892375651598218e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 97,
+        "token": "+",
+        "char_span": [
+          299,
+          300
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.2644737534926336e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 98,
+        "token": "b",
+        "char_span": [
+          301,
+          302
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.3444697006832892e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 99,
+        "token": "[",
+        "char_span": [
+          302,
+          303
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.4295265291688349e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 100,
+        "token": "i",
+        "char_span": [
+          303,
+          304
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.5199644116627698e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 101,
+        "token": "]",
+        "char_span": [
+          304,
+          305
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.6161237763559486e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 102,
+        "token": ";",
+        "char_span": [
+          305,
+          306
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.7183665883635818e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 103,
+        "token": "\n",
+        "char_span": [
+          306,
+          307
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.8270777122419796e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 104,
+        "token": "int",
+        "char_span": [
+          311,
+          314
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.9426663607038594e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 105,
+        "token": "j",
+        "char_span": [
+          315,
+          316
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.0655676349854965e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 106,
+        "token": "=",
+        "char_span": [
+          317,
+          318
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.1962441626640045e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 107,
+        "token": "i",
+        "char_span": [
+          319,
+          320
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.335187839089851e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 108,
+        "token": "+",
+        "char_span": [
+          321,
+          322
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.4829216789897403e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 109,
+        "token": "stride",
+        "char_span": [
+          323,
+          329
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.6400017852097183e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 110,
+        "token": ";",
+        "char_span": [
+          329,
+          330
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.8070194420092703e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 111,
+        "token": "\n",
+        "char_span": [
+          330,
+          331
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.984603340786039e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 112,
+        "token": "if",
+        "char_span": [
+          335,
+          337
+        ],
+        "is_optimization": true,
+        "baseline_credit": 3.173421946609292e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 113,
+        "token": "(",
+        "char_span": [
+          338,
+          339
+        ],
+        "is_optimization": true,
+        "baseline_credit": 3.3741860144702732e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 114,
+        "token": "j",
+        "char_span": [
+          339,
+          340
+        ],
+        "is_optimization": true,
+        "baseline_credit": 3.587651264721184e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 115,
+        "token": "<",
+        "char_span": [
+          341,
+          342
+        ],
+        "is_optimization": true,
+        "baseline_credit": 3.81462122777372e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 116,
+        "token": "n",
+        "char_span": [
+          343,
+          344
+        ],
+        "is_optimization": true,
+        "baseline_credit": 4.055950268765253e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 117,
+        "token": ")",
+        "char_span": [
+          344,
+          345
+        ],
+        "is_optimization": true,
+        "baseline_credit": 4.312546803578153e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 118,
+        "token": "out",
+        "char_span": [
+          346,
+          349
+        ],
+        "is_optimization": true,
+        "baseline_credit": 4.5853767183180784e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 119,
+        "token": "[",
+        "char_span": [
+          349,
+          350
+        ],
+        "is_optimization": true,
+        "baseline_credit": 4.875467005122891e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 120,
+        "token": "j",
+        "char_span": [
+          350,
+          351
+        ],
+        "is_optimization": true,
+        "baseline_credit": 5.1839096279881875e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 121,
+        "token": "]",
+        "char_span": [
+          351,
+          352
+        ],
+        "is_optimization": true,
+        "baseline_credit": 5.511865633161283e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 122,
+        "token": "=",
+        "char_span": [
+          353,
+          354
+        ],
+        "is_optimization": true,
+        "baseline_credit": 5.860569519576059e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 123,
+        "token": "a",
+        "char_span": [
+          355,
+          356
+        ],
+        "is_optimization": true,
+        "baseline_credit": 6.231333885779967e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 124,
+        "token": "[",
+        "char_span": [
+          356,
+          357
+        ],
+        "is_optimization": true,
+        "baseline_credit": 6.625554370845261e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 125,
+        "token": "j",
+        "char_span": [
+          357,
+          358
+        ],
+        "is_optimization": true,
+        "baseline_credit": 7.044714907863116e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 126,
+        "token": "]",
+        "char_span": [
+          358,
+          359
+        ],
+        "is_optimization": true,
+        "baseline_credit": 7.490393309795977e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 127,
+        "token": "+",
+        "char_span": [
+          360,
+          361
+        ],
+        "is_optimization": true,
+        "baseline_credit": 7.964267208714487e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 128,
+        "token": "b",
+        "char_span": [
+          362,
+          363
+        ],
+        "is_optimization": true,
+        "baseline_credit": 8.46812037077564e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 129,
+        "token": "[",
+        "char_span": [
+          363,
+          364
+        ],
+        "is_optimization": true,
+        "baseline_credit": 9.003849410713067e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 130,
+        "token": "j",
+        "char_span": [
+          364,
+          365
+        ],
+        "is_optimization": true,
+        "baseline_credit": 9.573470931114371e-06,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 131,
+        "token": "]",
+        "char_span": [
+          365,
+          366
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.0179129113359248e-05,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 132,
+        "token": ";",
+        "char_span": [
+          366,
+          367
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.0823103788792395e-05,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 133,
+        "token": "\n",
+        "char_span": [
+          367,
+          368
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.1507819020512912e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 134,
+        "token": "}",
+        "char_span": [
+          368,
+          369
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.2235852228083904e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 135,
+        "token": "\n",
+        "char_span": [
+          369,
+          370
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.3009943889509733e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 136,
+        "token": "\"",
+        "char_span": [
+          370,
+          371
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.383300785700131e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 137,
+        "token": "\"",
+        "char_span": [
+          371,
+          372
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.4708142325360246e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 138,
+        "token": "\"",
+        "char_span": [
+          372,
+          373
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.5638641494269266e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 139,
+        "token": "\n",
+        "char_span": [
+          373,
+          374
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.6628007968388374e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 140,
+        "token": "KERNEL",
+        "char_span": [
+          374,
+          380
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.7679965941933415e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 141,
+        "token": "=",
+        "char_span": [
+          381,
+          382
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.8798475217366735e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 142,
+        "token": "cp",
+        "char_span": [
+          383,
+          385
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.9987746110969415e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 143,
+        "token": ".",
+        "char_span": [
+          385,
+          386
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.1252255301402885e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 144,
+        "token": "RawKernel",
+        "char_span": [
+          386,
+          395
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.2596762680917477e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 145,
+        "token": "(",
+        "char_span": [
+          395,
+          396
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.402632927263953e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 146,
+        "token": "SOURCE",
+        "char_span": [
+          396,
+          402
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.5546336281381745e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 147,
+        "token": ",",
+        "char_span": [
+          402,
+          403
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.716250534968819e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 148,
+        "token": "\"",
+        "char_span": [
+          404,
+          405
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.888092009536224e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 149,
+        "token": "add_kernel",
+        "char_span": [
+          405,
+          415
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.0708049011549435e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 150,
+        "token": "\"",
+        "char_span": [
+          415,
+          416
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.2650769815576215e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 151,
+        "token": ")",
+        "char_span": [
+          416,
+          417
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.4716395338199065e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 152,
+        "token": "\n",
+        "char_span": [
+          417,
+          418
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.691270105071671e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 153,
+        "token": "\n",
+        "char_span": [
+          418,
+          419
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.924795433356375e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 154,
+        "token": "\n",
+        "char_span": [
+          419,
+          420
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.173094559655901e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 155,
+        "token": "class",
+        "char_span": [
+          420,
+          425
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.4371021367952166e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 156,
+        "token": "ModelNew",
+        "char_span": [
+          426,
+          434
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.717811947682314e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 157,
+        "token": "(",
+        "char_span": [
+          434,
+          435
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.016280646126862e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 158,
+        "token": "nn",
+        "char_span": [
+          435,
+          437
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.333631734318833e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 159,
+        "token": ".",
+        "char_span": [
+          437,
+          438
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.6710597919392164e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 160,
+        "token": "Module",
+        "char_span": [
+          438,
+          444
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.0298349728221336e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 161,
+        "token": ")",
+        "char_span": [
+          444,
+          445
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.411307786094772e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 162,
+        "token": ":",
+        "char_span": [
+          445,
+          446
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.816914179792421e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 163,
+        "token": "\n",
+        "char_span": [
+          446,
+          447
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.248180946084446e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 164,
+        "token": "def",
+        "char_span": [
+          451,
+          454
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.706731468457676e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 165,
+        "token": "forward",
+        "char_span": [
+          455,
+          462
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.194291832490886e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 166,
+        "token": "(",
+        "char_span": [
+          462,
+          463
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.712697323222631e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 167,
+        "token": "self",
+        "char_span": [
+          463,
+          467
+        ],
+        "is_optimization": false,
+        "baseline_credit": 9.263899333570051e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 168,
+        "token": ",",
+        "char_span": [
+          467,
+          468
+        ],
+        "is_optimization": false,
+        "baseline_credit": 9.849972709803348e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 169,
+        "token": "a",
+        "char_span": [
+          469,
+          470
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00010473123561726048,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 170,
+        "token": ",",
+        "char_span": [
+          470,
+          471
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0001113569756696018,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 171,
+        "token": "b",
+        "char_span": [
+          472,
+          473
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00011840188800595618,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 172,
+        "token": ")",
+        "char_span": [
+          473,
+          474
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00012589249123440318,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 173,
+        "token": ":",
+        "char_span": [
+          474,
+          475
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00013385698164210862,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 174,
+        "token": "\n",
+        "char_span": [
+          475,
+          476
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00014232533933238557,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 175,
+        "token": "out",
+        "char_span": [
+          484,
+          487
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00015132944107643337,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 176,
+        "token": "=",
+        "char_span": [
+          488,
+          489
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00016090318030455436,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 177,
+        "token": "torch",
+        "char_span": [
+          490,
+          495
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00017108259468852135,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 178,
+        "token": ".",
+        "char_span": [
+          495,
+          496
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00018190600179534435,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 179,
+        "token": "empty_like",
+        "char_span": [
+          496,
+          506
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00019341414332306684,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 180,
+        "token": "(",
+        "char_span": [
+          506,
+          507
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00020565033846152775,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 181,
+        "token": "a",
+        "char_span": [
+          507,
+          508
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00021866064695537238,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 182,
+        "token": ")",
+        "char_span": [
+          508,
+          509
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0002324940424831179,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 183,
+        "token": "\n",
+        "char_span": [
+          509,
+          510
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00024720259700491005,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 184,
+        "token": "threads",
+        "char_span": [
+          518,
+          525
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0002628416767728974,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 185,
+        "token": "=",
+        "char_span": [
+          526,
+          527
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0002794701507420494,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 186,
+        "token": "128",
+        "char_span": [
+          528,
+          531
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0002971506121659217,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 187,
+        "token": "\n",
+        "char_span": [
+          531,
+          532
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00031594961421150636,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 188,
+        "token": "blocks",
+        "char_span": [
+          540,
+          546
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.00033593792048007055,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 189,
+        "token": "=",
+        "char_span": [
+          547,
+          548
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.00035719077137700216,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 190,
+        "token": "(",
+        "char_span": [
+          549,
+          550
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.00037978816733333565,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 191,
+        "token": "a",
+        "char_span": [
+          550,
+          551
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.00040381516994506716,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 192,
+        "token": ".",
+        "char_span": [
+          551,
+          552
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.00042936222216381407,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 193,
+        "token": "numel",
+        "char_span": [
+          552,
+          557
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.00045652548874408725,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 194,
+        "token": "(",
+        "char_span": [
+          557,
+          558
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0004854072182286946,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 195,
+        "token": ")",
+        "char_span": [
+          558,
+          559
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0005161161278348694,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 196,
+        "token": "+",
+        "char_span": [
+          560,
+          561
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0005487678126899195,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 197,
+        "token": "2",
+        "char_span": [
+          562,
+          563
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0005834851809568522,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 198,
+        "token": "*",
+        "char_span": [
+          564,
+          565
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0006203989164878812,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 199,
+        "token": "threads",
+        "char_span": [
+          566,
+          573
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0006596479707473484,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 200,
+        "token": "-",
+        "char_span": [
+          574,
+          575
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0007013800858557665,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 201,
+        "token": "1",
+        "char_span": [
+          576,
+          577
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0007457523507238347,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 202,
+        "token": ")",
+        "char_span": [
+          577,
+          578
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0007929317923698401,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 203,
+        "token": "/",
+        "char_span": [
+          579,
+          580
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0008430960046462947,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 204,
+        "token": "/",
+        "char_span": [
+          580,
+          581
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0008964338167424718,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 205,
+        "token": "(",
+        "char_span": [
+          582,
+          583
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0009531460039792362,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 206,
+        "token": "2",
+        "char_span": [
+          583,
+          584
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0010134460435717559,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 207,
+        "token": "*",
+        "char_span": [
+          585,
+          586
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0010775609182049502,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 208,
+        "token": "threads",
+        "char_span": [
+          587,
+          594
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0011457319704465182,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 209,
+        "token": ")",
+        "char_span": [
+          594,
+          595
+        ],
+        "is_optimization": true,
+        "baseline_credit": 0.0012182158112137354,
+        "oracle_credit": 0.01764705882352941
+      },
+      {
+        "index": 210,
+        "token": "\n",
+        "char_span": [
+          595,
+          596
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0012952852857137005,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 211,
+        "token": "with",
+        "char_span": [
+          604,
+          608
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0013772305004930362,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 212,
+        "token": "cp",
+        "char_span": [
+          609,
+          611
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0014643599154630902,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 213,
+        "token": ".",
+        "char_span": [
+          611,
+          612
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0015570015050112602,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 214,
+        "token": "cuda",
+        "char_span": [
+          612,
+          616
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0016555039925691228,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 215,
+        "token": ".",
+        "char_span": [
+          616,
+          617
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0017602381632845538,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 216,
+        "token": "ExternalStream",
+        "char_span": [
+          617,
+          631
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0018715982597390256,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 217,
+        "token": "(",
+        "char_span": [
+          631,
+          632
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.001990003465963876,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 218,
+        "token": "torch",
+        "char_span": [
+          632,
+          637
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0021158994853417083,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 219,
+        "token": ".",
+        "char_span": [
+          637,
+          638
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0022497602183324914,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 220,
+        "token": "cuda",
+        "char_span": [
+          638,
+          642
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0023920895463397035,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 221,
+        "token": ".",
+        "char_span": [
+          642,
+          643
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00254342322843137,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 222,
+        "token": "current_stream",
+        "char_span": [
+          643,
+          657
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.002704330918055683,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 223,
+        "token": "(",
+        "char_span": [
+          657,
+          658
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0028754183073425657,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 224,
+        "token": ")",
+        "char_span": [
+          658,
+          659
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.003057329407062803,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 225,
+        "token": ".",
+        "char_span": [
+          659,
+          660
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00325074897082701,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 226,
+        "token": "cuda_stream",
+        "char_span": [
+          660,
+          671
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.003456405072649665,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 227,
+        "token": ")",
+        "char_span": [
+          671,
+          672
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0036750718475807177,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 228,
+        "token": ":",
+        "char_span": [
+          672,
+          673
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.003907572405721125,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 229,
+        "token": "\n",
+        "char_span": [
+          673,
+          674
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.004154781930591308,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 230,
+        "token": "KERNEL",
+        "char_span": [
+          686,
+          692
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.004417630973515478,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 231,
+        "token": "(",
+        "char_span": [
+          692,
+          693
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0046971089564226244,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 232,
+        "token": "(",
+        "char_span": [
+          693,
+          694
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.004994267896249468,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 233,
+        "token": "blocks",
+        "char_span": [
+          694,
+          700
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.005310226364964878,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 234,
+        "token": ",",
+        "char_span": [
+          700,
+          701
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.005646173700122145,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 235,
+        "token": ")",
+        "char_span": [
+          701,
+          702
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0060033744817885645,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 236,
+        "token": ",",
+        "char_span": [
+          702,
+          703
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.006383173292704482,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 237,
+        "token": "(",
+        "char_span": [
+          704,
+          705
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.006786999779590092,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 238,
+        "token": "threads",
+        "char_span": [
+          705,
+          712
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00721637403465188,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 239,
+        "token": ",",
+        "char_span": [
+          712,
+          713
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.007672912317545857,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 240,
+        "token": ")",
+        "char_span": [
+          713,
+          714
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00815833313933637,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 241,
+        "token": ",",
+        "char_span": [
+          714,
+          715
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.008674463731351804,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 242,
+        "token": "(",
+        "char_span": [
+          716,
+          717
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.009223246923287404,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 243,
+        "token": "cp",
+        "char_span": [
+          717,
+          719
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.009806748456445937,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 244,
+        "token": ".",
+        "char_span": [
+          719,
+          720
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.010427164759644803,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 245,
+        "token": "asarray",
+        "char_span": [
+          720,
+          727
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.011086831217059865,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 246,
+        "token": "(",
+        "char_span": [
+          727,
+          728
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.01178823095912798,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 247,
+        "token": "a",
+        "char_span": [
+          728,
+          729
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.01253400420959913,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 248,
+        "token": ")",
+        "char_span": [
+          729,
+          730
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.01332695822392252,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 249,
+        "token": ",",
+        "char_span": [
+          730,
+          731
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.014170077856376946,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 250,
+        "token": "cp",
+        "char_span": [
+          732,
+          734
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.01506653679572243,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 251,
+        "token": ".",
+        "char_span": [
+          734,
+          735
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.01601970951166659,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 252,
+        "token": "asarray",
+        "char_span": [
+          735,
+          742
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.017033183957114933,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 253,
+        "token": "(",
+        "char_span": [
+          742,
+          743
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.018110775074019064,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 254,
+        "token": "b",
+        "char_span": [
+          743,
+          744
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.019256539153661954,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 255,
+        "token": ")",
+        "char_span": [
+          744,
+          745
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.020474789105435355,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 256,
+        "token": ",",
+        "char_span": [
+          745,
+          746
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.021770110691584642,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 257,
+        "token": "cp",
+        "char_span": [
+          747,
+          749
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.02314737978903205,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 258,
+        "token": ".",
+        "char_span": [
+          749,
+          750
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.024611780743255766,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 259,
+        "token": "asarray",
+        "char_span": [
+          750,
+          757
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.026168825883312884,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 260,
+        "token": "(",
+        "char_span": [
+          757,
+          758
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.027824376271465057,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 261,
+        "token": "out",
+        "char_span": [
+          758,
+          761
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.02958466376551308,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 262,
+        "token": ")",
+        "char_span": [
+          761,
+          762
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.03145631447688791,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 263,
+        "token": ",",
+        "char_span": [
+          762,
+          763
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.03344637371279948,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 264,
+        "token": "np",
+        "char_span": [
+          764,
+          766
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.03556233249633119,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 265,
+        "token": ".",
+        "char_span": [
+          766,
+          767
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.037812155764307485,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 266,
+        "token": "int32",
+        "char_span": [
+          767,
+          772
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0402043123490776,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 267,
+        "token": "(",
+        "char_span": [
+          772,
+          773
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.042747806857073474,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 268,
+        "token": "a",
+        "char_span": [
+          773,
+          774
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.04545221356413979,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 269,
+        "token": ".",
+        "char_span": [
+          774,
+          775
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.04832771245522572,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 270,
+        "token": "numel",
+        "char_span": [
+          775,
+          780
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.05138512754409965,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 271,
+        "token": "(",
+        "char_span": [
+          780,
+          781
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.05463596761733083,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 272,
+        "token": ")",
+        "char_span": [
+          781,
+          782
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.058092469555907314,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 273,
+        "token": ")",
+        "char_span": [
+          782,
+          783
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.06176764439756228,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 274,
+        "token": ")",
+        "char_span": [
+          783,
+          784
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.06567532631319753,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 275,
+        "token": ")",
+        "char_span": [
+          784,
+          785
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.06983022468176238,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 276,
+        "token": "\n",
+        "char_span": [
+          785,
+          786
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.07424797945960912,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 277,
+        "token": "return",
+        "char_span": [
+          794,
+          800
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.07894522005274761,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 278,
+        "token": "out",
+        "char_span": [
+          801,
+          804
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.08393962791360725,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 279,
+        "token": "\n",
+        "char_span": [
+          804,
+          805
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.08925000309793434,
+        "oracle_credit": 0.0
+      }
+    ],
+    "summary": {
+      "total_tokens": 280,
+      "optimization_tokens": 85,
+      "total_reward": 1.5
+    }
+  },
+  {
+    "case_id": "case_row_sum_stride256_unroll",
+    "title": "Row Sum 2-Way Stride Reduction",
+    "benchmark_task": "KernelBench Row Sum",
+    "prompt": "Optimize the following PyTorch/CUDA kernel for task 'KernelBench Row Sum':\n```python\nimport cupy as cp\nimport numpy as np\nimport torch\nfrom torch import nn\n\n\nSOURCE = r\"\"\"\nextern \"C\" __global__ void row_sum(const float* x, float* out, int columns) {\n    __shared__ float values[128];\n    int row = blockIdx.x;\n    int lane = threadIdx.x;\n    float sum = 0.0f;\n    for (int col = lane; col < columns; col += 128) {\n        sum += x[row * columns + col];\n    }\n    values[lane] = sum;\n    __syncthreads();\n    for (int stride = 64; stride > 0; stride >>= 1) {\n        if (lane < stride) values[lane] += values[lane + stride];\n        __syncthreads();\n    }\n    if (lane == 0) out[row] = values[0];\n}\n\"\"\"\nKERNEL = cp.RawKernel(SOURCE, \"row_sum\")\n\n\nclass ModelNew(nn.Module):\n    def forward(self, x):\n        out = torch.empty(x.shape[0], device=x.device, dtype=x.dtype)\n        with cp.cuda.ExternalStream(torch.cuda.current_stream().cuda_stream):\n            KERNEL((x.shape[0],), (128,), (cp.asarray(x), cp.asarray(out), np.int32(x.shape[1])))\n        return out\n\n```",
+    "completion": "import cupy as cp\nimport numpy as np\nimport torch\nfrom torch import nn\n\n\nSOURCE = r\"\"\"\nextern \"C\" __global__ void row_sum(const float* x, float* out, int columns) {\n    __shared__ float values[128];\n    int row = blockIdx.x;\n    int lane = threadIdx.x;\n    float sum = 0.0f;\n    for (int col = 2 * lane; col < columns; col += 256) {\n        sum += x[row * columns + col];\n        if (col + 1 < columns) sum += x[row * columns + col + 1];\n    }\n    values[lane] = sum;\n    __syncthreads();\n    for (int stride = 64; stride > 0; stride >>= 1) {\n        if (lane < stride) values[lane] += values[lane + stride];\n        __syncthreads();\n    }\n    if (lane == 0) out[row] = values[0];\n}\n\"\"\"\nKERNEL = cp.RawKernel(SOURCE, \"row_sum\")\n\n\nclass ModelNew(nn.Module):\n    def forward(self, x):\n        out = torch.empty(x.shape[0], device=x.device, dtype=x.dtype)\n        with cp.cuda.ExternalStream(torch.cuda.current_stream().cuda_stream):\n            KERNEL((x.shape[0],), (128,), (cp.asarray(x), cp.asarray(out), np.int32(x.shape[1])))\n        return out\n",
+    "terminal_reward": 2.0,
+    "tokens": [
+      {
+        "index": 0,
+        "token": "import",
+        "char_span": [
+          0,
+          6
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.777203433687367e-11,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 1,
+        "token": "cupy",
+        "char_span": [
+          7,
+          11
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.205957930555415e-11,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 2,
+        "token": "as",
+        "char_span": [
+          12,
+          14
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.66183724673622e-11,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 3,
+        "token": "cp",
+        "char_span": [
+          15,
+          17
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.146557412797682e-11,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 4,
+        "token": "\n",
+        "char_span": [
+          17,
+          18
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.661943022645063e-11,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 5,
+        "token": "import",
+        "char_span": [
+          18,
+          24
+        ],
+        "is_optimization": false,
+        "baseline_credit": 9.209934101695973e-11,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 6,
+        "token": "numpy",
+        "char_span": [
+          25,
+          30
+        ],
+        "is_optimization": false,
+        "baseline_credit": 9.792593409565096e-11,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 7,
+        "token": "as",
+        "char_span": [
+          31,
+          33
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.0412114204747577e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 8,
+        "token": "np",
+        "char_span": [
+          34,
+          36
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.1070828500529057e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 9,
+        "token": "\n",
+        "char_span": [
+          36,
+          37
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.1771215843199421e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 10,
+        "token": "import",
+        "char_span": [
+          37,
+          43
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.251591264561342e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 11,
+        "token": "torch",
+        "char_span": [
+          44,
+          49
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.3307722111231705e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 12,
+        "token": "\n",
+        "char_span": [
+          49,
+          50
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.4149624785998627e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 13,
+        "token": "from",
+        "char_span": [
+          50,
+          54
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.5044789777776316e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 14,
+        "token": "torch",
+        "char_span": [
+          55,
+          60
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.5996586685567587e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 15,
+        "token": "import",
+        "char_span": [
+          61,
+          67
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.7008598283431778e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 16,
+        "token": "nn",
+        "char_span": [
+          68,
+          70
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.808463400683868e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 17,
+        "token": "\n",
+        "char_span": [
+          70,
+          71
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.9228744292226135e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 18,
+        "token": "\n",
+        "char_span": [
+          71,
+          72
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.044523582373858e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 19,
+        "token": "\n",
+        "char_span": [
+          72,
+          73
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.173868774453863e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 20,
+        "token": "SOURCE",
+        "char_span": [
+          73,
+          79
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.3113968893714648e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 21,
+        "token": "=",
+        "char_span": [
+          80,
+          81
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.457625613366789e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 22,
+        "token": "r",
+        "char_span": [
+          82,
+          83
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.613105383696745e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 23,
+        "token": "\"",
+        "char_span": [
+          83,
+          84
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.7784214606026e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 24,
+        "token": "\"",
+        "char_span": [
+          84,
+          85
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.954196130358958e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 25,
+        "token": "\"",
+        "char_span": [
+          85,
+          86
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.141091047696925e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 26,
+        "token": "\n",
+        "char_span": [
+          86,
+          87
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.339809726418846e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 27,
+        "token": "extern",
+        "char_span": [
+          87,
+          93
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.551100187579847e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 28,
+        "token": "\"",
+        "char_span": [
+          94,
+          95
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.775757775204516e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 29,
+        "token": "C",
+        "char_span": [
+          95,
+          96
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.014628150137709e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 30,
+        "token": "\"",
+        "char_span": [
+          96,
+          97
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.268610473299e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 31,
+        "token": "__global__",
+        "char_span": [
+          98,
+          108
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.5386607903232324e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 32,
+        "token": "void",
+        "char_span": [
+          109,
+          113
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.825795630327732e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 33,
+        "token": "row_sum",
+        "char_span": [
+          114,
+          121
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.131095832352719e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 34,
+        "token": "(",
+        "char_span": [
+          121,
+          122
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.45571061387849e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 35,
+        "token": "const",
+        "char_span": [
+          122,
+          127
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.800861896734173e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 36,
+        "token": "float",
+        "char_span": [
+          128,
+          133
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.167848906681735e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 37,
+        "token": "*",
+        "char_span": [
+          133,
+          134
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.558053063989086e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 38,
+        "token": "x",
+        "char_span": [
+          135,
+          136
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.972943183401474e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 39,
+        "token": ",",
+        "char_span": [
+          136,
+          137
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.414081003085034e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 40,
+        "token": "float",
+        "char_span": [
+          138,
+          143
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.883127063354634e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 41,
+        "token": "*",
+        "char_span": [
+          143,
+          144
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.381846957314869e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 42,
+        "token": "out",
+        "char_span": [
+          145,
+          148
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.912117976942977e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 43,
+        "token": ",",
+        "char_span": [
+          148,
+          149
+        ],
+        "is_optimization": false,
+        "baseline_credit": 9.47593617963102e-10,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 44,
+        "token": "int",
+        "char_span": [
+          150,
+          153
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.007542390178737e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 45,
+        "token": "columns",
+        "char_span": [
+          154,
+          161
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.0712837747780298e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 46,
+        "token": ")",
+        "char_span": [
+          161,
+          162
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.1390577084295903e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 47,
+        "token": "{",
+        "char_span": [
+          163,
+          164
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.2111193072084959e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 48,
+        "token": "\n",
+        "char_span": [
+          164,
+          165
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.2877398269096183e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 49,
+        "token": "__shared__",
+        "char_span": [
+          169,
+          179
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.3692076841144266e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 50,
+        "token": "float",
+        "char_span": [
+          180,
+          185
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.4558295418547864e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 51,
+        "token": "values",
+        "char_span": [
+          186,
+          192
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.5479314639604321e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 52,
+        "token": "[",
+        "char_span": [
+          192,
+          193
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.6458601424353344e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 53,
+        "token": "128",
+        "char_span": [
+          193,
+          196
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.7499842024830776e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 54,
+        "token": "]",
+        "char_span": [
+          196,
+          197
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.8606955900936497e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 55,
+        "token": ";",
+        "char_span": [
+          197,
+          198
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.978411047414832e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 56,
+        "token": "\n",
+        "char_span": [
+          198,
+          199
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.10357368146181e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 57,
+        "token": "int",
+        "char_span": [
+          203,
+          206
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.2366546320699734e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 58,
+        "token": "row",
+        "char_span": [
+          207,
+          210
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.3781548453694557e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 59,
+        "token": "=",
+        "char_span": [
+          211,
+          212
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.528606959457157e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 60,
+        "token": "blockIdx",
+        "char_span": [
+          213,
+          221
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.6885773093643345e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 61,
+        "token": ".",
+        "char_span": [
+          221,
+          222
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.858668058866916e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 62,
+        "token": "x",
+        "char_span": [
+          222,
+          223
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.039519467163122e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 63,
+        "token": ";",
+        "char_span": [
+          223,
+          224
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.231812298950688e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 64,
+        "token": "\n",
+        "char_span": [
+          224,
+          225
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.4362703869757446e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 65,
+        "token": "int",
+        "char_span": [
+          229,
+          232
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.6536633566993563e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 66,
+        "token": "lane",
+        "char_span": [
+          233,
+          237
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.884809523337966e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 67,
+        "token": "=",
+        "char_span": [
+          238,
+          239
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.130578972182845e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 68,
+        "token": "threadIdx",
+        "char_span": [
+          240,
+          249
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.391896833793561e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 69,
+        "token": ".",
+        "char_span": [
+          249,
+          250
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.669746766394004e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 70,
+        "token": "x",
+        "char_span": [
+          250,
+          251
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.965174658579484e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 71,
+        "token": ";",
+        "char_span": [
+          251,
+          252
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.27929256627271e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 72,
+        "token": "\n",
+        "char_span": [
+          252,
+          253
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.61328289874823e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 73,
+        "token": "float",
+        "char_span": [
+          257,
+          262
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.968402869482435e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 74,
+        "token": "sum",
+        "char_span": [
+          263,
+          266
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.345989228583131e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 75,
+        "token": "=",
+        "char_span": [
+          267,
+          268
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.747463294612579e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 76,
+        "token": "0.0",
+        "char_span": [
+          269,
+          272
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.174336304744901e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 77,
+        "token": "f",
+        "char_span": [
+          272,
+          273
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.628215103397024e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 78,
+        "token": ";",
+        "char_span": [
+          273,
+          274
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.110808190746437e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 79,
+        "token": "\n",
+        "char_span": [
+          274,
+          275
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.623932153903708e-09,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 80,
+        "token": "for",
+        "char_span": [
+          279,
+          282
+        ],
+        "is_optimization": true,
+        "baseline_credit": 9.16951850494812e-09,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 81,
+        "token": "(",
+        "char_span": [
+          283,
+          284
+        ],
+        "is_optimization": true,
+        "baseline_credit": 9.749620951566317e-09,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 82,
+        "token": "int",
+        "char_span": [
+          284,
+          287
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.036642312766222e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 83,
+        "token": "col",
+        "char_span": [
+          288,
+          291
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.1022246813037978e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 84,
+        "token": "=",
+        "char_span": [
+          292,
+          293
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.1719560673086634e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 85,
+        "token": "2",
+        "char_span": [
+          294,
+          295
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.2460989551394612e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 86,
+        "token": "*",
+        "char_span": [
+          296,
+          297
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.3249324350233507e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 87,
+        "token": "lane",
+        "char_span": [
+          298,
+          302
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.4087532536133445e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 88,
+        "token": ";",
+        "char_span": [
+          302,
+          303
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.4978769310083407e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 89,
+        "token": "col",
+        "char_span": [
+          304,
+          307
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.5926389484405538e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 90,
+        "token": "<",
+        "char_span": [
+          308,
+          309
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.6933960111010674e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 91,
+        "token": "columns",
+        "char_span": [
+          310,
+          317
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.8005273908570628e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 92,
+        "token": ";",
+        "char_span": [
+          317,
+          318
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.9144363539150052e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 93,
+        "token": "col",
+        "char_span": [
+          319,
+          322
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.0355516788038332e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 94,
+        "token": "+",
+        "char_span": [
+          323,
+          324
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.1643292703921673e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 95,
+        "token": "=",
+        "char_span": [
+          324,
+          325
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.3012538760150638e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 96,
+        "token": "256",
+        "char_span": [
+          326,
+          329
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.44684091017019e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 97,
+        "token": ")",
+        "char_span": [
+          329,
+          330
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.6016383946519828e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 98,
+        "token": "{",
+        "char_span": [
+          331,
+          332
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.7662290214268822e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 99,
+        "token": "\n",
+        "char_span": [
+          332,
+          333
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.9412323460147604e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 100,
+        "token": "sum",
+        "char_span": [
+          341,
+          344
+        ],
+        "is_optimization": true,
+        "baseline_credit": 3.12730711963292e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 101,
+        "token": "+",
+        "char_span": [
+          345,
+          346
+        ],
+        "is_optimization": true,
+        "baseline_credit": 3.32515376888136e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 102,
+        "token": "=",
+        "char_span": [
+          346,
+          347
+        ],
+        "is_optimization": true,
+        "baseline_credit": 3.5355170323034136e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 103,
+        "token": "x",
+        "char_span": [
+          348,
+          349
+        ],
+        "is_optimization": true,
+        "baseline_credit": 3.7591887637463196e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 104,
+        "token": "[",
+        "char_span": [
+          349,
+          350
+        ],
+        "is_optimization": true,
+        "baseline_credit": 3.9970109130742366e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 105,
+        "token": "row",
+        "char_span": [
+          350,
+          353
+        ],
+        "is_optimization": true,
+        "baseline_credit": 4.249878695453734e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 106,
+        "token": "*",
+        "char_span": [
+          354,
+          355
+        ],
+        "is_optimization": true,
+        "baseline_credit": 4.518743961141662e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 107,
+        "token": "columns",
+        "char_span": [
+          356,
+          363
+        ],
+        "is_optimization": true,
+        "baseline_credit": 4.804618778460035e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 108,
+        "token": "+",
+        "char_span": [
+          364,
+          365
+        ],
+        "is_optimization": true,
+        "baseline_credit": 5.1085792434450125e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 109,
+        "token": "col",
+        "char_span": [
+          366,
+          369
+        ],
+        "is_optimization": true,
+        "baseline_credit": 5.4317695305103805e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 110,
+        "token": "]",
+        "char_span": [
+          369,
+          370
+        ],
+        "is_optimization": true,
+        "baseline_credit": 5.775406199373079e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 111,
+        "token": ";",
+        "char_span": [
+          370,
+          371
+        ],
+        "is_optimization": true,
+        "baseline_credit": 6.140782774453034e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 112,
+        "token": "\n",
+        "char_span": [
+          371,
+          372
+        ],
+        "is_optimization": true,
+        "baseline_credit": 6.52927461398515e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 113,
+        "token": "if",
+        "char_span": [
+          380,
+          382
+        ],
+        "is_optimization": true,
+        "baseline_credit": 6.942344087171878e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 114,
+        "token": "(",
+        "char_span": [
+          383,
+          384
+        ],
+        "is_optimization": true,
+        "baseline_credit": 7.381546078864303e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 115,
+        "token": "col",
+        "char_span": [
+          384,
+          387
+        ],
+        "is_optimization": true,
+        "baseline_credit": 7.848533842492613e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 116,
+        "token": "+",
+        "char_span": [
+          388,
+          389
+        ],
+        "is_optimization": true,
+        "baseline_credit": 8.345065223277632e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 117,
+        "token": "1",
+        "char_span": [
+          390,
+          391
+        ],
+        "is_optimization": true,
+        "baseline_credit": 8.873009275148998e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 118,
+        "token": "<",
+        "char_span": [
+          392,
+          393
+        ],
+        "is_optimization": true,
+        "baseline_credit": 9.43435329627751e-08,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 119,
+        "token": "columns",
+        "char_span": [
+          394,
+          401
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.0031210309704955e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 120,
+        "token": ")",
+        "char_span": [
+          401,
+          402
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.0665827017230148e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 121,
+        "token": "sum",
+        "char_span": [
+          403,
+          406
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.1340592256491385e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 122,
+        "token": "+",
+        "char_span": [
+          407,
+          408
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.2058045993079623e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 123,
+        "token": "=",
+        "char_span": [
+          408,
+          409
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.28208888815307e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 124,
+        "token": "x",
+        "char_span": [
+          410,
+          411
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.3631992431186282e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 125,
+        "token": "[",
+        "char_span": [
+          411,
+          412
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.4494409815190095e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 126,
+        "token": "row",
+        "char_span": [
+          412,
+          415
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.5411387363306852e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 127,
+        "token": "*",
+        "char_span": [
+          416,
+          417
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.6386376781825468e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 128,
+        "token": "columns",
+        "char_span": [
+          418,
+          425
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.7423048146544888e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 129,
+        "token": "+",
+        "char_span": [
+          426,
+          427
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.8525303717751076e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 130,
+        "token": "col",
+        "char_span": [
+          428,
+          431
+        ],
+        "is_optimization": true,
+        "baseline_credit": 1.969729262918775e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 131,
+        "token": "+",
+        "char_span": [
+          432,
+          433
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.0943426506313395e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 132,
+        "token": "1",
+        "char_span": [
+          434,
+          435
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.226839607263519e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 133,
+        "token": "]",
+        "char_span": [
+          435,
+          436
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.3677188806629652e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 134,
+        "token": ";",
+        "char_span": [
+          436,
+          437
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.517510771571468e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 135,
+        "token": "\n",
+        "char_span": [
+          437,
+          438
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.6767791297942237e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 136,
+        "token": "}",
+        "char_span": [
+          442,
+          443
+        ],
+        "is_optimization": true,
+        "baseline_credit": 2.846123476655209e-07,
+        "oracle_credit": 0.03508771929824561
+      },
+      {
+        "index": 137,
+        "token": "\n",
+        "char_span": [
+          443,
+          444
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.0261812617280263e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 138,
+        "token": "values",
+        "char_span": [
+          448,
+          454
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.217630262337083e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 139,
+        "token": "[",
+        "char_span": [
+          454,
+          455
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.421191134861332e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 140,
+        "token": "lane",
+        "char_span": [
+          455,
+          459
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.637630127444266e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 141,
+        "token": "]",
+        "char_span": [
+          459,
+          460
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.8677619643213884e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 142,
+        "token": "=",
+        "char_span": [
+          461,
+          462
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.1124529126224225e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 143,
+        "token": "sum",
+        "char_span": [
+          463,
+          466
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.3726240431923684e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 144,
+        "token": ";",
+        "char_span": [
+          466,
+          467
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.649254697705868e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 145,
+        "token": "\n",
+        "char_span": [
+          467,
+          468
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.943386175125857e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 146,
+        "token": "__syncthreads",
+        "char_span": [
+          472,
+          485
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.256125651383153e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 147,
+        "token": "(",
+        "char_span": [
+          485,
+          486
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.58865034703153e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 148,
+        "token": ")",
+        "char_span": [
+          486,
+          487
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.94221195856622e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 149,
+        "token": ";",
+        "char_span": [
+          487,
+          488
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.318141370086358e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 150,
+        "token": "\n",
+        "char_span": [
+          488,
+          489
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.717853663037063e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 151,
+        "token": "for",
+        "char_span": [
+          493,
+          496
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.142853442888956e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 152,
+        "token": "(",
+        "char_span": [
+          497,
+          498
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.594740502805908e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 153,
+        "token": "int",
+        "char_span": [
+          498,
+          501
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.075215845620317e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 154,
+        "token": "stride",
+        "char_span": [
+          502,
+          508
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.586088086783962e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 155,
+        "token": "=",
+        "char_span": [
+          509,
+          510
+        ],
+        "is_optimization": false,
+        "baseline_credit": 9.129280262396558e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 156,
+        "token": "64",
+        "char_span": [
+          511,
+          513
+        ],
+        "is_optimization": false,
+        "baseline_credit": 9.706837067938925e-07,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 157,
+        "token": ";",
+        "char_span": [
+          513,
+          514
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.0320932554958984e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 158,
+        "token": "stride",
+        "char_span": [
+          515,
+          521
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.0973878314682598e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 159,
+        "token": ">",
+        "char_span": [
+          522,
+          523
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.1668132179354172e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 160,
+        "token": "0",
+        "char_span": [
+          524,
+          525
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.2406307474060787e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 161,
+        "token": ";",
+        "char_span": [
+          525,
+          526
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.3191182853865803e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 162,
+        "token": "stride",
+        "char_span": [
+          527,
+          533
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.4025712763281024e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 163,
+        "token": ">",
+        "char_span": [
+          534,
+          535
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.4913038557449254e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 164,
+        "token": ">",
+        "char_span": [
+          535,
+          536
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.585650032689979e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 165,
+        "token": "=",
+        "char_span": [
+          536,
+          537
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.685964947038787e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 166,
+        "token": "1",
+        "char_span": [
+          538,
+          539
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.7926262063144997e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 167,
+        "token": ")",
+        "char_span": [
+          539,
+          540
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.9060353070861239e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 168,
+        "token": "{",
+        "char_span": [
+          541,
+          542
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.026619146290403e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 169,
+        "token": "\n",
+        "char_span": [
+          542,
+          543
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.1548316281662976e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 170,
+        "token": "if",
+        "char_span": [
+          551,
+          553
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.291155372850928e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 171,
+        "token": "(",
+        "char_span": [
+          554,
+          555
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.436103533068504e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 172,
+        "token": "lane",
+        "char_span": [
+          555,
+          559
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.5902217257506687e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 173,
+        "token": "<",
+        "char_span": [
+          560,
+          561
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.754090085859297e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 174,
+        "token": "stride",
+        "char_span": [
+          562,
+          568
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.928325450142793e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 175,
+        "token": ")",
+        "char_span": [
+          568,
+          569
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.1135836790460323e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 176,
+        "token": "values",
+        "char_span": [
+          570,
+          576
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.310562125514122e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 177,
+        "token": "[",
+        "char_span": [
+          576,
+          577
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.5200022599831177e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 178,
+        "token": "lane",
+        "char_span": [
+          577,
+          581
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.742692461438722e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 179,
+        "token": "]",
+        "char_span": [
+          581,
+          582
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.9794709850491456e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 180,
+        "token": "+",
+        "char_span": [
+          583,
+          584
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.231229117542951e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 181,
+        "token": "=",
+        "char_span": [
+          584,
+          585
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.498914532209411e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 182,
+        "token": "values",
+        "char_span": [
+          586,
+          592
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.783534856150358e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 183,
+        "token": "[",
+        "char_span": [
+          592,
+          593
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.086161463211438e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 184,
+        "token": "lane",
+        "char_span": [
+          593,
+          597
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.407933506870216e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 185,
+        "token": "+",
+        "char_span": [
+          598,
+          599
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.750062208261793e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 186,
+        "token": "stride",
+        "char_span": [
+          600,
+          606
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.113835415483033e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 187,
+        "token": "]",
+        "char_span": [
+          606,
+          607
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.500622451337622e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 188,
+        "token": ";",
+        "char_span": [
+          607,
+          608
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.911879267769932e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 189,
+        "token": "\n",
+        "char_span": [
+          608,
+          609
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.349153926390146e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 190,
+        "token": "__syncthreads",
+        "char_span": [
+          617,
+          630
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.814092425720516e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 191,
+        "token": "(",
+        "char_span": [
+          630,
+          631
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.30844489709784e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 192,
+        "token": ")",
+        "char_span": [
+          631,
+          632
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.834072192554852e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 193,
+        "token": ";",
+        "char_span": [
+          632,
+          633
+        ],
+        "is_optimization": false,
+        "baseline_credit": 9.392952889478844e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 194,
+        "token": "\n",
+        "char_span": [
+          633,
+          634
+        ],
+        "is_optimization": false,
+        "baseline_credit": 9.987190738414507e-06,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 195,
+        "token": "}",
+        "char_span": [
+          638,
+          639
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.0619022582046258e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 196,
+        "token": "\n",
+        "char_span": [
+          639,
+          640
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.1290826775168802e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 197,
+        "token": "if",
+        "char_span": [
+          644,
+          646
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.2005132137340565e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 198,
+        "token": "(",
+        "char_span": [
+          647,
+          648
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.2764627471919794e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 199,
+        "token": "lane",
+        "char_span": [
+          648,
+          652
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.3572171687315038e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 200,
+        "token": "=",
+        "char_span": [
+          653,
+          654
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.4430804558548686e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 201,
+        "token": "=",
+        "char_span": [
+          654,
+          655
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.534375816964241e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 202,
+        "token": "0",
+        "char_span": [
+          656,
+          657
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.6314469079896233e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 203,
+        "token": ")",
+        "char_span": [
+          657,
+          658
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.734659125985777e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 204,
+        "token": "out",
+        "char_span": [
+          659,
+          662
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.844400984567546e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 205,
+        "token": "[",
+        "char_span": [
+          662,
+          663
+        ],
+        "is_optimization": false,
+        "baseline_credit": 1.9610855763610274e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 206,
+        "token": "row",
+        "char_span": [
+          663,
+          666
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.0851521279755737e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 207,
+        "token": "]",
+        "char_span": [
+          666,
+          667
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.2170676533498923e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 208,
+        "token": "=",
+        "char_span": [
+          668,
+          669
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.357328711695792e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 209,
+        "token": "values",
+        "char_span": [
+          670,
+          676
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.5064632766568766e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 210,
+        "token": "[",
+        "char_span": [
+          676,
+          677
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.6650327237181035e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 211,
+        "token": "0",
+        "char_span": [
+          677,
+          678
+        ],
+        "is_optimization": false,
+        "baseline_credit": 2.8336339433472657e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 212,
+        "token": "]",
+        "char_span": [
+          678,
+          679
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.0129015878227175e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 213,
+        "token": ";",
+        "char_span": [
+          679,
+          680
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.2035104602049096e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 214,
+        "token": "\n",
+        "char_span": [
+          680,
+          681
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.406178054444348e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 215,
+        "token": "}",
+        "char_span": [
+          681,
+          682
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.621667256187505e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 216,
+        "token": "\n",
+        "char_span": [
+          682,
+          683
+        ],
+        "is_optimization": false,
+        "baseline_credit": 3.8507892144471074e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 217,
+        "token": "\"",
+        "char_span": [
+          683,
+          684
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.09440639494642e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 218,
+        "token": "\"",
+        "char_span": [
+          684,
+          685
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.353435826630962e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 219,
+        "token": "\"",
+        "char_span": [
+          685,
+          686
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.628852553568274e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 220,
+        "token": "\n",
+        "char_span": [
+          686,
+          687
+        ],
+        "is_optimization": false,
+        "baseline_credit": 4.921693305229425e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 221,
+        "token": "KERNEL",
+        "char_span": [
+          687,
+          693
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.233060398968022e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 222,
+        "token": "=",
+        "char_span": [
+          694,
+          695
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.5641258893865206e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 223,
+        "token": "cp",
+        "char_span": [
+          696,
+          698
+        ],
+        "is_optimization": false,
+        "baseline_credit": 5.9161359802089535e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 224,
+        "token": ".",
+        "char_span": [
+          698,
+          699
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.29041571526736e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 225,
+        "token": "RawKernel",
+        "char_span": [
+          699,
+          708
+        ],
+        "is_optimization": false,
+        "baseline_credit": 6.68837396625982e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 226,
+        "token": "(",
+        "char_span": [
+          708,
+          709
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.111508736055098e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 227,
+        "token": "SOURCE",
+        "char_span": [
+          709,
+          715
+        ],
+        "is_optimization": false,
+        "baseline_credit": 7.56141279750675e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 228,
+        "token": ",",
+        "char_span": [
+          715,
+          716
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.039779689002392e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 229,
+        "token": "\"",
+        "char_span": [
+          717,
+          718
+        ],
+        "is_optimization": false,
+        "baseline_credit": 8.548410089316738e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 230,
+        "token": "row_sum",
+        "char_span": [
+          718,
+          725
+        ],
+        "is_optimization": false,
+        "baseline_credit": 9.08921859576474e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 231,
+        "token": "\"",
+        "char_span": [
+          725,
+          726
+        ],
+        "is_optimization": false,
+        "baseline_credit": 9.664240931169316e-05,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 232,
+        "token": ")",
+        "char_span": [
+          726,
+          727
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00010275641606772264,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 233,
+        "token": "\n",
+        "char_span": [
+          727,
+          728
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00010925722069933296,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 234,
+        "token": "\n",
+        "char_span": [
+          728,
+          729
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00011616929367286863,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 235,
+        "token": "\n",
+        "char_span": [
+          729,
+          730
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00012351865355966895,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 236,
+        "token": "class",
+        "char_span": [
+          730,
+          735
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00013133296497572453,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 237,
+        "token": "ModelNew",
+        "char_span": [
+          736,
+          744
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00013964164271741046,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 238,
+        "token": "(",
+        "char_span": [
+          744,
+          745
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00014847596248528493,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 239,
+        "token": "nn",
+        "char_span": [
+          745,
+          747
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00015786917861274316,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 240,
+        "token": ".",
+        "char_span": [
+          747,
+          748
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00016785664924268275,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 241,
+        "token": "Module",
+        "char_span": [
+          748,
+          754
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00017847596942337349,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 242,
+        "token": ")",
+        "char_span": [
+          754,
+          755
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0001897671126245332,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 243,
+        "token": ":",
+        "char_span": [
+          755,
+          756
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00020177258120630855,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 244,
+        "token": "\n",
+        "char_span": [
+          756,
+          757
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00021453756640755828,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 245,
+        "token": "def",
+        "char_span": [
+          761,
+          764
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00022811011845567068,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 246,
+        "token": "forward",
+        "char_span": [
+          765,
+          772
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00024254132743824634,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 247,
+        "token": "(",
+        "char_span": [
+          772,
+          773
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0002578855156174868,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 248,
+        "token": "self",
+        "char_span": [
+          773,
+          777
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00027420044191120343,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 249,
+        "token": ",",
+        "char_span": [
+          777,
+          778
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0002915475193101578,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 250,
+        "token": "x",
+        "char_span": [
+          779,
+          780
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0003099920460501412,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 251,
+        "token": ")",
+        "char_span": [
+          780,
+          781
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00032960345140897523,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 252,
+        "token": ":",
+        "char_span": [
+          781,
+          782
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0003504555570536685,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 253,
+        "token": "\n",
+        "char_span": [
+          782,
+          783
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0003726268549214976,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 254,
+        "token": "out",
+        "char_span": [
+          791,
+          794
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0003962008026810182,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 255,
+        "token": "=",
+        "char_span": [
+          795,
+          796
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00042126613788518683,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 256,
+        "token": "torch",
+        "char_span": [
+          797,
+          802
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00044791721199913536,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 257,
+        "token": ".",
+        "char_span": [
+          802,
+          803
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.00047625434555995246,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 258,
+        "token": "empty",
+        "char_span": [
+          803,
+          808
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0005063842058053722,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 259,
+        "token": "(",
+        "char_span": [
+          808,
+          809
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0005384202081928465,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 260,
+        "token": "x",
+        "char_span": [
+          809,
+          810
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.000572482943320411,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 261,
+        "token": ".",
+        "char_span": [
+          810,
+          811
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0006087006308563646,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 262,
+        "token": "shape",
+        "char_span": [
+          811,
+          816
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0006472096021864589,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 263,
+        "token": "[",
+        "char_span": [
+          816,
+          817
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0006881548135953844,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 264,
+        "token": "0",
+        "char_span": [
+          817,
+          818
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0007316903919142842,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 265,
+        "token": "]",
+        "char_span": [
+          818,
+          819
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0007779802146882342,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 266,
+        "token": ",",
+        "char_span": [
+          819,
+          820
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0008271985270475644,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 267,
+        "token": "device",
+        "char_span": [
+          821,
+          827
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0008795305976050657,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 268,
+        "token": "=",
+        "char_span": [
+          827,
+          828
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0009351734158480231,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 269,
+        "token": "x",
+        "char_span": [
+          828,
+          829
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0009943364336502105,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 270,
+        "token": ".",
+        "char_span": [
+          829,
+          830
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.001057242353695067,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 271,
+        "token": "device",
+        "char_span": [
+          830,
+          836
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0011241279677778491,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 272,
+        "token": ",",
+        "char_span": [
+          836,
+          837
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.001195245048142317,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 273,
+        "token": "dtype",
+        "char_span": [
+          838,
+          843
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0012708612952071418,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 274,
+        "token": "=",
+        "char_span": [
+          843,
+          844
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0013512613452494864,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 275,
+        "token": "x",
+        "char_span": [
+          844,
+          845
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0014367478418389008,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 276,
+        "token": ".",
+        "char_span": [
+          845,
+          846
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0015276425750546528,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 277,
+        "token": "dtype",
+        "char_span": [
+          846,
+          851
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0016242876927747504,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 278,
+        "token": ")",
+        "char_span": [
+          851,
+          852
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0017270469885962258,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 279,
+        "token": "\n",
+        "char_span": [
+          852,
+          853
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0018363072712346898,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 280,
+        "token": "with",
+        "char_span": [
+          861,
+          865
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0019524798205578842,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 281,
+        "token": "cp",
+        "char_span": [
+          866,
+          868
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0020760019357340606,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 282,
+        "token": ".",
+        "char_span": [
+          868,
+          869
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.002207338581322765,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 283,
+        "token": "cuda",
+        "char_span": [
+          869,
+          873
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.002346984137504269,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 284,
+        "token": ".",
+        "char_span": [
+          873,
+          874
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0024954642610359053,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 285,
+        "token": "ExternalStream",
+        "char_span": [
+          874,
+          888
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0026533378639403567,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 286,
+        "token": "(",
+        "char_span": [
+          888,
+          889
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.002821199217374117,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 287,
+        "token": "torch",
+        "char_span": [
+          889,
+          894
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0029996801885955517,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 288,
+        "token": ".",
+        "char_span": [
+          894,
+          895
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0031894526194530056,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 289,
+        "token": "cuda",
+        "char_span": [
+          895,
+          899
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0033912308553460985,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 290,
+        "token": ".",
+        "char_span": [
+          899,
+          900
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0036057744341797962,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 291,
+        "token": "current_stream",
+        "char_span": [
+          900,
+          914
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0038338909454330634,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 292,
+        "token": "(",
+        "char_span": [
+          914,
+          915
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.004076439070104268,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 293,
+        "token": ")",
+        "char_span": [
+          915,
+          916
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.004334331812976361,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 294,
+        "token": ".",
+        "char_span": [
+          916,
+          917
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.004608539939368805,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 295,
+        "token": "cuda_stream",
+        "char_span": [
+          917,
+          928
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.004900095629312924,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 296,
+        "token": ")",
+        "char_span": [
+          928,
+          929
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.005210096362905821,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 297,
+        "token": ":",
+        "char_span": [
+          929,
+          930
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.005539709051468177,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 298,
+        "token": "\n",
+        "char_span": [
+          930,
+          931
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0058901744300565405,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 299,
+        "token": "KERNEL",
+        "char_span": [
+          943,
+          949
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.006262811727864478,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 300,
+        "token": "(",
+        "char_span": [
+          949,
+          950
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.006659023634093012,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 301,
+        "token": "(",
+        "char_span": [
+          950,
+          951
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.007080301577983,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 302,
+        "token": "x",
+        "char_span": [
+          951,
+          952
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.007528231342884636,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 303,
+        "token": ".",
+        "char_span": [
+          952,
+          953
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.008004499035496689,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 304,
+        "token": "shape",
+        "char_span": [
+          953,
+          958
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.008510897432745019,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 305,
+        "token": "[",
+        "char_span": [
+          958,
+          959
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.009049332730191406,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 306,
+        "token": "0",
+        "char_span": [
+          959,
+          960
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.009621831717375233,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 307,
+        "token": "]",
+        "char_span": [
+          960,
+          961
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.010230549407097536,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 308,
+        "token": ",",
+        "char_span": [
+          961,
+          962
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0108777771473658,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 309,
+        "token": ")",
+        "char_span": [
+          962,
+          963
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.01156595124653461,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 310,
+        "token": ",",
+        "char_span": [
+          963,
+          964
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.012297662144109102,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 311,
+        "token": "(",
+        "char_span": [
+          965,
+          966
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.013075664161732165,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 312,
+        "token": "128",
+        "char_span": [
+          966,
+          969
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.01390288587106025,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 313,
+        "token": ",",
+        "char_span": [
+          969,
+          970
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.01478244111755476,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 314,
+        "token": ")",
+        "char_span": [
+          970,
+          971
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.015717640741685017,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 315,
+        "token": ",",
+        "char_span": [
+          971,
+          972
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.01671200504166403,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 316,
+        "token": "(",
+        "char_span": [
+          973,
+          974
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.017769277024629482,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 317,
+        "token": "cp",
+        "char_span": [
+          974,
+          976
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.018893436496150433,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 318,
+        "token": ".",
+        "char_span": [
+          976,
+          977
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.02008871504109562,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 319,
+        "token": "asarray",
+        "char_span": [
+          977,
+          984
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.02135961195225478,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 320,
+        "token": "(",
+        "char_span": [
+          984,
+          985
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.02271091116667175,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 321,
+        "token": "x",
+        "char_span": [
+          985,
+          986
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.024147699273441518,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 322,
+        "token": ")",
+        "char_span": [
+          986,
+          987
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.025675384660756535,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 323,
+        "token": ",",
+        "char_span": [
+          987,
+          988
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.02729971787427595,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 324,
+        "token": "cp",
+        "char_span": [
+          989,
+          991
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.029026813263451304,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 325,
+        "token": ".",
+        "char_span": [
+          991,
+          992
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.030863171997290065,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 326,
+        "token": "asarray",
+        "char_span": [
+          992,
+          999
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.03281570653619358,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 327,
+        "token": "(",
+        "char_span": [
+          999,
+          1000
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.034891766651986796,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 328,
+        "token": "out",
+        "char_span": [
+          1000,
+          1003
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.037099167094084846,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 329,
+        "token": ")",
+        "char_span": [
+          1003,
+          1004
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.039446217005938165,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 330,
+        "token": ",",
+        "char_span": [
+          1004,
+          1005
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.04194175120248608,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 331,
+        "token": "np",
+        "char_span": [
+          1006,
+          1008
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.04459516342635416,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 332,
+        "token": ".",
+        "char_span": [
+          1008,
+          1009
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.0474164417079789,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 333,
+        "token": "int32",
+        "char_span": [
+          1009,
+          1014
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.05041620596276332,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 334,
+        "token": "(",
+        "char_span": [
+          1014,
+          1015
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.05360574796678716,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 335,
+        "token": "x",
+        "char_span": [
+          1015,
+          1016
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.05699707386154934,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 336,
+        "token": ".",
+        "char_span": [
+          1016,
+          1017
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.06060294934773986,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 337,
+        "token": "shape",
+        "char_span": [
+          1017,
+          1022
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.06443694773816042,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 338,
+        "token": "[",
+        "char_span": [
+          1022,
+          1023
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.06851350105067561,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 339,
+        "token": "1",
+        "char_span": [
+          1023,
+          1024
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.07284795433352005,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 340,
+        "token": "]",
+        "char_span": [
+          1024,
+          1025
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.07745662342745353,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 341,
+        "token": ")",
+        "char_span": [
+          1025,
+          1026
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.08235685638219409,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 342,
+        "token": ")",
+        "char_span": [
+          1026,
+          1027
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.08756709875831374,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 343,
+        "token": ")",
+        "char_span": [
+          1027,
+          1028
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.09310696306040803,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 344,
+        "token": "\n",
+        "char_span": [
+          1028,
+          1029
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.09899730256290061,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 345,
+        "token": "return",
+        "char_span": [
+          1037,
+          1043
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.10526028980638023,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 346,
+        "token": "out",
+        "char_span": [
+          1044,
+          1047
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.11191950005994708,
+        "oracle_credit": 0.0
+      },
+      {
+        "index": 347,
+        "token": "\n",
+        "char_span": [
+          1047,
+          1048
+        ],
+        "is_optimization": false,
+        "baseline_credit": 0.11900000006373959,
+        "oracle_credit": 0.0
+      }
+    ],
+    "summary": {
+      "total_tokens": 348,
+      "optimization_tokens": 57,
+      "total_reward": 2.0
+    }
+  }
+]
