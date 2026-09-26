@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from study import (
     child_environment, collect_opencode_usage, collect_usage, evaluate_trial,
-    run_exit_code, stage_task, stop_process_tree, summarize_events,
+    isolated_task_workspace, run_exit_code, stage_task, stop_process_tree, summarize_events,
     summarize_opencode_events,
 )
 
@@ -49,6 +49,26 @@ def test_stage_task_excludes_independent_evaluator(tmp_path):
     assert not (work / "evaluate.py").exists()
 
 
+def test_isolated_workspace_cannot_see_sibling_trials_and_preserves_candidate(tmp_path):
+    task = tmp_path / "tasks" / "case"
+    task.mkdir(parents=True)
+    for name in ("task.md", "reference.py", "candidate.py", "evaluate.py"):
+        (task / name).write_text(name, encoding="utf-8")
+    output = tmp_path / "runs" / "trial"
+    output.mkdir(parents=True)
+    sibling = tmp_path / "runs" / "prior" / "evaluation.json"
+    sibling.parent.mkdir(parents=True)
+    sibling.write_text("SECRET_PRIOR_RESULT", encoding="utf-8")
+    with isolated_task_workspace(task, output) as (work, hashes):
+        assert work.parent != output
+        assert not work.is_relative_to(tmp_path)
+        assert not (work.parent / "runs").exists()
+        assert not (work / "evaluate.py").exists()
+        assert hashes["task_sha256"]
+        (work / "candidate.py").write_text("new kernel", encoding="utf-8")
+    assert (output / "work" / "candidate.py").read_text(encoding="utf-8") == "new kernel"
+
+
 def test_evaluation_saves_independent_result(tmp_path):
     task = tmp_path / "task"
     trial = tmp_path / "trial"
@@ -79,6 +99,21 @@ def test_evaluation_reports_incorrect_candidate_as_failure(tmp_path):
     )
     assert evaluate_trial(task, trial, sys.executable) != 0
     assert json.loads((trial / "evaluation.json").read_text(encoding="utf-8"))["correct"] is False
+
+
+def test_evaluation_can_save_remeasurement_separately(tmp_path):
+    task = tmp_path / "task"
+    trial = tmp_path / "trial"
+    (trial / "work").mkdir(parents=True)
+    task.mkdir()
+    (trial / "work" / "candidate.py").write_text("candidate", encoding="utf-8")
+    (trial / "evaluation.json").write_text("old result", encoding="utf-8")
+    (task / "evaluate.py").write_text(
+        "import json\nprint(json.dumps({'correct': True}))\n", encoding="utf-8",
+    )
+    assert evaluate_trial(task, trial, sys.executable, result_name="evaluation-graph.json") == 0
+    assert (trial / "evaluation.json").read_text(encoding="utf-8") == "old result"
+    assert json.loads((trial / "evaluation-graph.json").read_text(encoding="utf-8"))["correct"] is True
 
 
 def test_child_environment_uses_existing_codex_home_on_windows():

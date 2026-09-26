@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
 import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -28,7 +30,27 @@ def stage_task(source: Path, work: Path) -> dict[str, str]:
         "reference_sha256": sha256(source / "reference.py"),
         "candidate_sha256": sha256(source / "candidate.py"),
         "evaluator_sha256": sha256(source / "evaluate.py"),
+        "evaluator_common_sha256": sha256(Path(__file__).with_name("eval_common.py")),
     }
+
+
+@contextmanager
+def isolated_task_workspace(task: Path, output: Path):
+    """Keep live agent files away from the evaluator and earlier trial records."""
+    temp_root = Path(tempfile.gettempdir()).resolve()
+    base = Path(tempfile.mkdtemp(prefix="ai4cuda-task-", dir=temp_root)).resolve()
+    if base.parent != temp_root:
+        raise RuntimeError(f"Unexpected temporary workspace: {base}")
+    work = base / "work"
+    try:
+        hashes = stage_task(task, work)
+        yield work, hashes
+    finally:
+        try:
+            if work.exists():
+                shutil.copytree(work, output / "work")
+        finally:
+            shutil.rmtree(base)
 
 
 def collect_usage(events: list[dict]) -> dict[str, int] | None:
@@ -173,8 +195,14 @@ def run_trial(
     if output.exists():
         raise FileExistsError(output)
     output.mkdir(parents=True)
-    work = output / "work"
-    task_hashes = stage_task(task, work)
+    with isolated_task_workspace(task, output) as (work, task_hashes):
+        return _run_trial_in_workspace(task, skill, model, output, timeout_s, backend, work, task_hashes)
+
+
+def _run_trial_in_workspace(
+    task: Path, skill: Path | None, model: str, output: Path, timeout_s: int,
+    backend: str, work: Path, task_hashes: dict[str, str],
+) -> dict:
     skill_text = skill.read_text(encoding="utf-8") if skill else ""
     prompt = (task / "task.md").read_text(encoding="utf-8")
     prompt += "\n\nEdit only candidate.py. Check the result against reference.py on a small and a large CUDA input. Report what you checked."
@@ -275,9 +303,12 @@ def run_trial(
     return summary
 
 
-def evaluate_trial(task: Path, trial: Path, python: str) -> int:
-    if (trial / "evaluation.json").exists():
-        raise FileExistsError(trial / "evaluation.json")
+def evaluate_trial(task: Path, trial: Path, python: str, result_name: str = "evaluation.json") -> int:
+    if Path(result_name).name != result_name or not result_name.endswith(".json"):
+        raise ValueError(f"Invalid result name: {result_name}")
+    result_path = trial / result_name
+    if result_path.exists():
+        raise FileExistsError(result_path)
     cache = trial / "triton-cache"
     cache.mkdir(exist_ok=True)
     env = os.environ.copy()
@@ -287,11 +318,12 @@ def evaluate_trial(task: Path, trial: Path, python: str) -> int:
         cwd=task, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180,
         env=env,
     )
-    (trial / "evaluation.stdout.txt").write_text(result.stdout, encoding="utf-8")
-    (trial / "evaluation.stderr.txt").write_text(result.stderr, encoding="utf-8")
+    stem = Path(result_name).stem
+    (trial / f"{stem}.stdout.txt").write_text(result.stdout, encoding="utf-8")
+    (trial / f"{stem}.stderr.txt").write_text(result.stderr, encoding="utf-8")
     if result.returncode == 0:
         parsed = json.loads(result.stdout)
-        (trial / "evaluation.json").write_text(json.dumps(parsed, indent=2), encoding="utf-8")
+        result_path.write_text(json.dumps(parsed, indent=2), encoding="utf-8")
         return 0 if parsed.get("correct") is True else 1
     return result.returncode
 
@@ -310,6 +342,7 @@ def main() -> None:
     evaluate.add_argument("--task", type=Path, required=True)
     evaluate.add_argument("--trial", type=Path, required=True)
     evaluate.add_argument("--python", default=sys.executable)
+    evaluate.add_argument("--result-name", default="evaluation.json")
     args = parser.parse_args()
     if args.command == "run":
         model = args.model or ("deepseek/deepseek-flash" if args.backend == "opencode" else "gpt-5.5")
@@ -320,7 +353,7 @@ def main() -> None:
         print(json.dumps(summary, ensure_ascii=False))
         raise SystemExit(run_exit_code(summary))
     else:
-        raise SystemExit(evaluate_trial(args.task.resolve(), args.trial.resolve(), args.python))
+        raise SystemExit(evaluate_trial(args.task.resolve(), args.trial.resolve(), args.python, args.result_name))
 
 
 if __name__ == "__main__":

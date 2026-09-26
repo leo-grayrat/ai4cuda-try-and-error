@@ -1,5 +1,7 @@
 # OpenCode + DeepSeek V4.1 Flash 采集检查点（2026-09-27）
 
+> 本文是提交 `b6831ad` 时的历史快照。后续发现 `row_reduce` 完整提示运行读取了相邻试跑结果，且旧评测未验证候选实际启动 GPU kernel；这里的计时也受严重噪声影响。当前采集判断见 [第二轮隔离试跑](isolated-pilot.md)。本文保留当时的原始记录，不用于效果比较。
+
 ## 当前结论
 
 本机 OpenCode 1.18.12 使用 `deepseek/deepseek-flash`（界面名 DeepSeek V4.1 Flash）已完成最小模型调用、文件读写调用，以及 `vector_affine` 三种提示条件各一次运行。JSON 事件能记录模型步骤、每步输入与输出 token、缓存 token、工具调用与反馈；独立评测另行检查候选代码。这证明了采集链路可用，**不证明 skill 有效或无效**。
