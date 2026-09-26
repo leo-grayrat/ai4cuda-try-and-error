@@ -69,7 +69,7 @@ def test_credit_conservation_and_targeting() -> None:
 
 def test_oracle_cases_from_disk() -> None:
     cases_dir = Path("experiments/oracle-cases")
-    json_files = list(cases_dir.glob("*.json"))
+    json_files = list(cases_dir.glob("case_*.json"))
     assert len(json_files) == 3
 
     for p in json_files:
