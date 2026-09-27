@@ -1,0 +1,64 @@
+{
+  "status": "complete",
+  "usage": {
+    "steps": 12,
+    "input_tokens": 239717,
+    "uncached_input_tokens": 17509,
+    "cached_input_tokens": 222208,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 6473,
+    "visible_output_tokens": 3306,
+    "reasoning_output_tokens": 3167,
+    "total_tokens": 246190,
+    "cost_usd": 0.007176774
+  },
+  "tool_events": 14,
+  "tool_feedback_events": 14,
+  "task": "layernorm_rows",
+  "task_hashes": {
+    "task_sha256": "d8d7095805d53ab125f04c771bf3d6cf57382bf8f138e8712fea7f17945d2bb6",
+    "reference_sha256": "30364be401089abd08983bf50a5454d5189423cdf94dc06a3e2a1a944b2988c0",
+    "candidate_sha256": "fc36a3d81fa7ab0cb8229b68116d705de8f7249f256667989a3d98ccb9e339b3",
+    "evaluator_sha256": "967bf6caebe420172c7df3154af99fa30486b0a61cc4d9515dcdd51d5a534921",
+    "evaluator_common_sha256": "24ec93d23bd74a21bd2edb3e08b11269191291650ad78a53d28ef238758219e7"
+  },
+  "skill": "concise.md",
+  "skill_sha256": "384283c9d0c8035d29a8c9851dcba0c60155631369b9403b66a6f94883f947d1",
+  "skill_tokens_estimate": 168,
+  "skill_token_method": "o200k_base estimate; not model-exact",
+  "model_requested": "deepseek/deepseek-flash",
+  "model_revision": null,
+  "runner": "opencode",
+  "runner_version": "1.18.12",
+  "usage_granularity": "OpenCode model step",
+  "command": [
+    "opencode.cmd",
+    "run",
+    "--pure",
+    "--auto",
+    "--model",
+    "deepseek/deepseek-flash",
+    "--format",
+    "json",
+    "--title",
+    "AI4CUDA layernorm_rows concise.md",
+    "<prompt>"
+  ],
+  "return_code": 0,
+  "elapsed_s": 53.213,
+  "source_versions": [
+    {
+      "event_index": 0,
+      "sha256": "fc36a3d81fa7ab0cb8229b68116d705de8f7249f256667989a3d98ccb9e339b3"
+    },
+    {
+      "event_index": 12,
+      "sha256": "29158896523c310a3efb3f8ca0b3009c5f5255558599f45ad9eba7b4a90756fd"
+    },
+    {
+      "event_index": 24,
+      "sha256": "8ff3312566c7cc68446ec165cc4428bc51cffe23dac38e02c70925c201f47c27"
+    }
+  ],
+  "final_candidate_sha256": "8ff3312566c7cc68446ec165cc4428bc51cffe23dac38e02c70925c201f47c27"
+}

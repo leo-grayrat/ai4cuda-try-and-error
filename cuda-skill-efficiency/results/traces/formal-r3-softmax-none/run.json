@@ -1,0 +1,60 @@
+{
+  "status": "complete",
+  "usage": {
+    "steps": 10,
+    "input_tokens": 200079,
+    "uncached_input_tokens": 17167,
+    "cached_input_tokens": 182912,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 7212,
+    "visible_output_tokens": 3031,
+    "reasoning_output_tokens": 4181,
+    "total_tokens": 207291,
+    "cost_usd": 0.007450986
+  },
+  "tool_events": 13,
+  "tool_feedback_events": 13,
+  "task": "softmax_rows",
+  "task_hashes": {
+    "task_sha256": "52d767a785df461b51cf0ce10cb4271823f2ad66193461cbb60411d008eaf879",
+    "reference_sha256": "0da12d8c6491cd7bbd03854625d21af92075dabf8470dee5c398c4a290025262",
+    "candidate_sha256": "fc36a3d81fa7ab0cb8229b68116d705de8f7249f256667989a3d98ccb9e339b3",
+    "evaluator_sha256": "b61e094b0feb5722ae89467c0678994c2477a836dc998bab0f156d69f09f22a5",
+    "evaluator_common_sha256": "24ec93d23bd74a21bd2edb3e08b11269191291650ad78a53d28ef238758219e7"
+  },
+  "skill": "none",
+  "skill_sha256": null,
+  "skill_tokens_estimate": 0,
+  "skill_token_method": "none",
+  "model_requested": "deepseek/deepseek-flash",
+  "model_revision": null,
+  "runner": "opencode",
+  "runner_version": "1.18.12",
+  "usage_granularity": "OpenCode model step",
+  "command": [
+    "opencode.cmd",
+    "run",
+    "--pure",
+    "--auto",
+    "--model",
+    "deepseek/deepseek-flash",
+    "--format",
+    "json",
+    "--title",
+    "AI4CUDA softmax_rows none",
+    "<prompt>"
+  ],
+  "return_code": 0,
+  "elapsed_s": 60.754,
+  "source_versions": [
+    {
+      "event_index": 0,
+      "sha256": "fc36a3d81fa7ab0cb8229b68116d705de8f7249f256667989a3d98ccb9e339b3"
+    },
+    {
+      "event_index": 14,
+      "sha256": "55cebc7555cb87930ce7f3619aa601bc0e5a6967464b1d49d583135e142f31f5"
+    }
+  ],
+  "final_candidate_sha256": "55cebc7555cb87930ce7f3619aa601bc0e5a6967464b1d49d583135e142f31f5"
+}

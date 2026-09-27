@@ -1,0 +1,64 @@
+{
+  "status": "complete",
+  "usage": {
+    "steps": 8,
+    "input_tokens": 148370,
+    "uncached_input_tokens": 16274,
+    "cached_input_tokens": 132096,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 4522,
+    "visible_output_tokens": 1679,
+    "reasoning_output_tokens": 2843,
+    "total_tokens": 152892,
+    "cost_usd": 0.005550588
+  },
+  "tool_events": 9,
+  "tool_feedback_events": 9,
+  "task": "softmax_rows",
+  "task_hashes": {
+    "task_sha256": "52d767a785df461b51cf0ce10cb4271823f2ad66193461cbb60411d008eaf879",
+    "reference_sha256": "0da12d8c6491cd7bbd03854625d21af92075dabf8470dee5c398c4a290025262",
+    "candidate_sha256": "fc36a3d81fa7ab0cb8229b68116d705de8f7249f256667989a3d98ccb9e339b3",
+    "evaluator_sha256": "b61e094b0feb5722ae89467c0678994c2477a836dc998bab0f156d69f09f22a5",
+    "evaluator_common_sha256": "24ec93d23bd74a21bd2edb3e08b11269191291650ad78a53d28ef238758219e7"
+  },
+  "skill": "full.md",
+  "skill_sha256": "0f2cfea2bb296f2473d55e1afc37b21ab4c62e489bcacc4c29bc9c7400ca4aeb",
+  "skill_tokens_estimate": 399,
+  "skill_token_method": "o200k_base estimate; not model-exact",
+  "model_requested": "deepseek/deepseek-flash",
+  "model_revision": null,
+  "runner": "opencode",
+  "runner_version": "1.18.12",
+  "usage_granularity": "OpenCode model step",
+  "command": [
+    "opencode.cmd",
+    "run",
+    "--pure",
+    "--auto",
+    "--model",
+    "deepseek/deepseek-flash",
+    "--format",
+    "json",
+    "--title",
+    "AI4CUDA softmax_rows full.md",
+    "<prompt>"
+  ],
+  "return_code": 0,
+  "elapsed_s": 44.421,
+  "source_versions": [
+    {
+      "event_index": 0,
+      "sha256": "fc36a3d81fa7ab0cb8229b68116d705de8f7249f256667989a3d98ccb9e339b3"
+    },
+    {
+      "event_index": 12,
+      "sha256": "fc8d77e0f3bab2ec2ba58665040a7e871567c24739ab0adcd0f9168f60dd202c"
+    },
+    {
+      "event_index": 15,
+      "sha256": "59d5c4100c715e92dbb55704924b1a599b59bb316dd6cf242f908962c39d91aa"
+    }
+  ],
+  "final_candidate_sha256": "59d5c4100c715e92dbb55704924b1a599b59bb316dd6cf242f908962c39d91aa"
+}

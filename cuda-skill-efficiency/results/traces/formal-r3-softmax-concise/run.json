@@ -1,0 +1,64 @@
+{
+  "status": "complete",
+  "usage": {
+    "steps": 8,
+    "input_tokens": 149988,
+    "uncached_input_tokens": 16484,
+    "cached_input_tokens": 133504,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 5119,
+    "visible_output_tokens": 2424,
+    "reasoning_output_tokens": 2695,
+    "total_tokens": 155107,
+    "cost_usd": 0.005944512
+  },
+  "tool_events": 10,
+  "tool_feedback_events": 10,
+  "task": "softmax_rows",
+  "task_hashes": {
+    "task_sha256": "52d767a785df461b51cf0ce10cb4271823f2ad66193461cbb60411d008eaf879",
+    "reference_sha256": "0da12d8c6491cd7bbd03854625d21af92075dabf8470dee5c398c4a290025262",
+    "candidate_sha256": "fc36a3d81fa7ab0cb8229b68116d705de8f7249f256667989a3d98ccb9e339b3",
+    "evaluator_sha256": "b61e094b0feb5722ae89467c0678994c2477a836dc998bab0f156d69f09f22a5",
+    "evaluator_common_sha256": "24ec93d23bd74a21bd2edb3e08b11269191291650ad78a53d28ef238758219e7"
+  },
+  "skill": "concise.md",
+  "skill_sha256": "384283c9d0c8035d29a8c9851dcba0c60155631369b9403b66a6f94883f947d1",
+  "skill_tokens_estimate": 168,
+  "skill_token_method": "o200k_base estimate; not model-exact",
+  "model_requested": "deepseek/deepseek-flash",
+  "model_revision": null,
+  "runner": "opencode",
+  "runner_version": "1.18.12",
+  "usage_granularity": "OpenCode model step",
+  "command": [
+    "opencode.cmd",
+    "run",
+    "--pure",
+    "--auto",
+    "--model",
+    "deepseek/deepseek-flash",
+    "--format",
+    "json",
+    "--title",
+    "AI4CUDA softmax_rows concise.md",
+    "<prompt>"
+  ],
+  "return_code": 0,
+  "elapsed_s": 38.021,
+  "source_versions": [
+    {
+      "event_index": 0,
+      "sha256": "fc36a3d81fa7ab0cb8229b68116d705de8f7249f256667989a3d98ccb9e339b3"
+    },
+    {
+      "event_index": 13,
+      "sha256": "498b8764a721c9e49714722fa64e44957119f4b8cd817e2241c07736e45152df"
+    },
+    {
+      "event_index": 16,
+      "sha256": "fc349aace0dc8877fb2451b5bf5d836063cac7536bba5bee385038d321356aa3"
+    }
+  ],
+  "final_candidate_sha256": "fc349aace0dc8877fb2451b5bf5d836063cac7536bba5bee385038d321356aa3"
+}

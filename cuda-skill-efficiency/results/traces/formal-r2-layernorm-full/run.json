@@ -1,0 +1,64 @@
+{
+  "status": "complete",
+  "usage": {
+    "steps": 26,
+    "input_tokens": 774892,
+    "uncached_input_tokens": 23148,
+    "cached_input_tokens": 751744,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 27015,
+    "visible_output_tokens": 13352,
+    "reasoning_output_tokens": 13663,
+    "total_tokens": 801907,
+    "cost_usd": 0.021936432
+  },
+  "tool_events": 26,
+  "tool_feedback_events": 26,
+  "task": "layernorm_rows",
+  "task_hashes": {
+    "task_sha256": "d8d7095805d53ab125f04c771bf3d6cf57382bf8f138e8712fea7f17945d2bb6",
+    "reference_sha256": "30364be401089abd08983bf50a5454d5189423cdf94dc06a3e2a1a944b2988c0",
+    "candidate_sha256": "fc36a3d81fa7ab0cb8229b68116d705de8f7249f256667989a3d98ccb9e339b3",
+    "evaluator_sha256": "967bf6caebe420172c7df3154af99fa30486b0a61cc4d9515dcdd51d5a534921",
+    "evaluator_common_sha256": "24ec93d23bd74a21bd2edb3e08b11269191291650ad78a53d28ef238758219e7"
+  },
+  "skill": "full.md",
+  "skill_sha256": "0f2cfea2bb296f2473d55e1afc37b21ab4c62e489bcacc4c29bc9c7400ca4aeb",
+  "skill_tokens_estimate": 399,
+  "skill_token_method": "o200k_base estimate; not model-exact",
+  "model_requested": "deepseek/deepseek-flash",
+  "model_revision": null,
+  "runner": "opencode",
+  "runner_version": "1.18.12",
+  "usage_granularity": "OpenCode model step",
+  "command": [
+    "opencode.cmd",
+    "run",
+    "--pure",
+    "--auto",
+    "--model",
+    "deepseek/deepseek-flash",
+    "--format",
+    "json",
+    "--title",
+    "AI4CUDA layernorm_rows full.md",
+    "<prompt>"
+  ],
+  "return_code": 0,
+  "elapsed_s": 208.721,
+  "source_versions": [
+    {
+      "event_index": 0,
+      "sha256": "fc36a3d81fa7ab0cb8229b68116d705de8f7249f256667989a3d98ccb9e339b3"
+    },
+    {
+      "event_index": 14,
+      "sha256": "0bd15bb59f92a719524ce882d457197e1059d080fbfbc9208764d51567d9a05d"
+    },
+    {
+      "event_index": 72,
+      "sha256": "6409a8757717c431806435996cd47d131e211ee1b7b82cde110dfaf8deb1c382"
+    }
+  ],
+  "final_candidate_sha256": "6409a8757717c431806435996cd47d131e211ee1b7b82cde110dfaf8deb1c382"
+}

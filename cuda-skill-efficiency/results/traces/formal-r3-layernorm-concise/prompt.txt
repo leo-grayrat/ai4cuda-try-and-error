@@ -1,0 +1,16 @@
+Implement `run(x)` in `candidate.py` for the computation in `reference.py`: normalize each row of a contiguous CUDA float32 matrix with layer norm epsilon `1e-5`, without learned scale or bias. Return a float32 matrix of the same shape. Inputs include non-power-of-two row widths. Use relative and absolute tolerance `1e-4`.
+
+Use one or more Triton GPU kernels. PyTorch may allocate output tensors and expose metadata, but may not compute the normalization. Edit only `candidate.py`. Check correctness on a small and a large CUDA input before reporting performance. The independent evaluator is outside this workspace.
+
+
+Edit only candidate.py. Check the result against reference.py on a small and a large CUDA input. Report what you checked.
+
+---
+
+Additional CUDA development guidance:
+
+# CUDA kernel development guidance for this study
+
+Read the task and reference. Edit only `candidate.py`; leave the reference and evaluator untouched. Use a custom CUDA kernel (Triton is available). PyTorch may allocate output and provide metadata, but must not compute the answer. Preserve dtype, shape, device, all elements and masked tails across the stated shapes.
+
+Implement a simple correct kernel first. Compare small and large inputs to the reference after each substantive edit; if wrong, check indexing, masks, grid, allocation and synchronization. Measure speed only after correctness passes, retain the best correct source, and report checks and uncertainty. For elementwise work use adjacent lanes and avoid intermediate tensors; for row reductions cover each column once. Weigh launch overhead and memory traffic before complex tiling, and recheck correctness if speedup looks suspicious.

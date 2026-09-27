@@ -1,0 +1,111 @@
+{
+  "candidate_sha256": "192739b0da33ac76c5fb17ff176cf161f45e6036a406026bd2bb29d941f8d686",
+  "evaluator_common_sha256": "24ec93d23bd74a21bd2edb3e08b11269191291650ad78a53d28ef238758219e7",
+  "correct": true,
+  "error": null,
+  "checks": [
+    {
+      "shape": [
+        8,
+        128
+      ],
+      "correct": true,
+      "triton_launches": [
+        "_softmax_kernel"
+      ]
+    },
+    {
+      "shape": [
+        64,
+        769
+      ],
+      "correct": true,
+      "triton_launches": [
+        "_softmax_kernel"
+      ]
+    },
+    {
+      "shape": [
+        256,
+        2048
+      ],
+      "correct": true,
+      "triton_launches": [
+        "_softmax_kernel"
+      ]
+    }
+  ],
+  "reference_samples_ms": [
+    0.005630999803543091,
+    0.005690000019967556,
+    0.005557000171393156,
+    0.005429000128060579,
+    0.005429999902844429,
+    0.005566000007092953,
+    0.0054350001737475395,
+    0.005559000186622143,
+    0.005717999767512083,
+    0.005652000196278095,
+    0.005427999887615442,
+    0.00545499986037612,
+    0.005563999991863966,
+    0.005435999948531389,
+    0.005448999814689159,
+    0.005625999998301268,
+    0.013783999718725681,
+    0.005582000128924847,
+    0.005739999935030937,
+    0.005555999930948019
+  ],
+  "candidate_samples_ms": [
+    0.003790999995544553,
+    0.003533999901264906,
+    0.003519000019878149,
+    0.0036589999217540026,
+    0.003654999891296029,
+    0.003531999886035919,
+    0.003854000009596348,
+    0.0036430000327527523,
+    0.0035149999894201756,
+    0.0036490000784397125,
+    0.0037070000544190407,
+    0.003650000086054206,
+    0.009572000242769718,
+    0.0036539998836815357,
+    0.0038789999671280384,
+    0.0035059999208897352,
+    0.0036949999630451202,
+    0.0035170000046491623,
+    0.018316999077796936,
+    0.003533999901264906
+  ],
+  "gpu": "NVIDIA GeForce RTX 5060 Laptop GPU",
+  "torch": "2.11.0+cu128",
+  "benchmark_mode": "paired CUDA graph replays",
+  "repeats_per_graph": 32,
+  "pair_order": [
+    "reference_first",
+    "candidate_first",
+    "reference_first",
+    "candidate_first",
+    "candidate_first",
+    "candidate_first",
+    "reference_first",
+    "candidate_first",
+    "candidate_first",
+    "candidate_first",
+    "reference_first",
+    "reference_first",
+    "reference_first",
+    "reference_first",
+    "reference_first",
+    "candidate_first",
+    "reference_first",
+    "reference_first",
+    "candidate_first",
+    "candidate_first"
+  ],
+  "reference_median_ms": 0.005561500089243054,
+  "candidate_median_ms": 0.003651999984867871,
+  "speedup": 1.52286421475554
+}

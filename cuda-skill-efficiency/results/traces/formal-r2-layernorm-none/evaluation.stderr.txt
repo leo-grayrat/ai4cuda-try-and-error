@@ -1,0 +1,3 @@
+remark: candidate.py:7:0: 172 instructions in function
+remark: candidate.py:7:0: 180 instructions in function
+remark: candidate.py:7:0: 256 instructions in function
