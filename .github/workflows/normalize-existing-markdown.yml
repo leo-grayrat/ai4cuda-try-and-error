@@ -1,0 +1,45 @@
+name: Normalize Existing Markdown
+
+on:
+  push:
+    paths:
+      - '.github/workflows/normalize-existing-markdown.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    uses: leo-grayrat/markdown-github-normalizer/.github/workflows/normalize.yml@main
+    with:
+      mode: replace
+      files: |
+        README.md
+        RESEARCH_RETROSPECTIVE.md
+        research-notes/program-transformation-action-space.md
+        action-credit/README.md
+        action-credit/experiments/oracle-cases/README.md
+        action-credit/results/2_1-11-47-clean-remeasurement.md
+        action-credit/results/2_1-11-47-first-round.md
+        action-credit/results/2_1-11-47-premeasurement.md
+        action-credit/results/2_1-action-review.md
+        action-credit/results/2_20-premeasurement.md
+        action-credit/results/2_20-remeasurement.md
+        action-credit/results/adaexplore-mlp.md
+        action-credit/results/code-credit-protocol.md
+        action-credit/results/code-first-pilot.md
+        action-credit/results/implementation-ledger.md
+        action-credit/results/oracle-credit-comparison.md
+        action-credit/results/pilot.md
+        action-credit/results/prospective-screen-2_1.md
+        action-credit/results/screening-index-2026-09-25.md
+        action-credit/results/source-audit.md
+        cuda-skill-efficiency/README.md
+        cuda-skill-efficiency/feasibility.md
+        cuda-skill-efficiency/formal-protocol.md
+        cuda-skill-efficiency/isolated-pilot.md
+        cuda-skill-efficiency/materials.md
+        cuda-skill-efficiency/opencode-pilot.md
+        cuda-skill-efficiency/protocol.md
+        cuda-skill-efficiency/results/formal-results.md
+        cuda-skill-efficiency/results/traces/README.md
