@@ -53,20 +53,19 @@ jobs:
           cuda-skill-efficiency/results/traces/README.md
           '''.split()
 
-          inline_code = re.compile(r'(`+)(.*?)\\1')
-          bold = re.compile(r'(?<![\\*])\\*\\*(?!\\*)(.+?)(?<![\\*])\\*\\*(?!\\*)')
-          word = re.compile(r'\\w')
+          inline_code = re.compile(r'(`+)(.*?)\1')
+          bold = re.compile(r'(?<![\*])\*\*(?!\*)(.+?)(?<![\*])\*\*(?!\*)')
+          word = re.compile(r'\w')
 
           def repair_segment(segment: str) -> str:
               out = []
               cursor = 0
               for match in bold.finditer(segment):
                   prefix = segment[cursor:match.start()]
-                  body = match.group(1)
-                  trimmed = body.strip(' \\t')
+                  trimmed = match.group(1).strip()
                   if not trimmed:
                       continue
-                  if match.start() > 0 and word.match(segment[match.start() - 1]) and not prefix.endswith((' ', '\\t')):
+                  if match.start() > 0 and word.match(segment[match.start() - 1]) and not prefix.endswith((' ', '\t')):
                       prefix += ' '
                   out.append(prefix)
                   out.append(f'**{trimmed}**')
@@ -90,7 +89,8 @@ jobs:
               path = pathlib.Path(name)
               if not path.is_file():
                   continue
-              lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
+              original = path.read_text(encoding='utf-8')
+              lines = original.splitlines(keepends=True)
               repaired = []
               fence = None
               for line in lines:
@@ -110,7 +110,7 @@ jobs:
                       continue
                   repaired.append(repair_line(line))
               text = ''.join(repaired)
-              if text != path.read_text(encoding='utf-8'):
+              if text != original:
                   path.write_text(text, encoding='utf-8')
       - name: Commit repair if needed
         shell: bash
