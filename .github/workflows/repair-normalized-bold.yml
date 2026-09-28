@@ -121,6 +121,6 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- '*.md' '*.markdown'
+          git add -- '*.md'
           git commit -m 'fix: repair markdown bold boundaries [skip md-normalizer]'
           git push
