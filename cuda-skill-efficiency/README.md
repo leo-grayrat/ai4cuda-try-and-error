@@ -13,7 +13,7 @@
 - [第二轮隔离采集试跑](isolated-pilot.md)：记录隔离与评测修复、两任务三条件的采集门槛结果。
 - [封存的正式对照约定](formal-protocol.md)：规定新任务、重复顺序、资源上限和报告口径。
 - [首轮正式结果](results/formal-results.md)：18 条运行的质量、token 成本、异常轨迹和第一阶段判断；[JSON 汇总](results/formal-summary.json)可由原始记录重建。
-- 首轮选用与本机环境匹配的 CUDA kernel 开发任务。`skills/full.md` 是为这些任务撰写的第一版完整规则；`skills/concise.md` 保留同一批可操作要求。二者是**本项目实验材料**，不冒称 CUDA Agent 官方 skill 的压缩版。
+- 首轮选用与本机环境匹配的 CUDA kernel 开发任务。`skills/full.md` 是为这些任务撰写的第一版完整规则；`skills/concise.md` 保留同一批可操作要求。二者是 **本项目实验材料**，不冒称 CUDA Agent 官方 skill 的压缩版。
 - [CUDA Agent 的公开 skill](https://github.com/BytedTsinghua-SIA/CUDA-Agent/blob/main/agent_workdir/SKILL.md) 描述 CUDA C++ 扩展与其专属工作目录；[FlashRT 的 AGENTS.md](https://github.com/Infini-AI-Lab/FlashRT/blob/main/AGENTS.md) 描述另一类应用部署。两者可供规则类型审查，只有任务、环境与规则相配时才进入效果对照。
 - CUDA Agent 的公开仓库提供示例工作目录；[issue #3](https://github.com/BytedTsinghua-SIA/CUDA-Agent/issues/3) 请求中间轨迹，[issue #18](https://github.com/BytedTsinghua-SIA/CUDA-Agent/issues/18) 请求 agent 框架细节。因此本项目只用自己新采集的逐轮记录回答效率问题。
 

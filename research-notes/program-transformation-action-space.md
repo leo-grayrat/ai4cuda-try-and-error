@@ -4,9 +4,9 @@
 
 现在大多数 CUDA 生成 Agent 的基本动作，形式上仍然是：
 
-\[
+```math
 a_t = \text{下一个 token}
-\]
+```
 
 一次完整的“优化尝试”其实是几千个这样的动作拼成一份程序，然后编译、验证、测速，才拿到反馈。
 
@@ -23,64 +23,64 @@ if (j < n) out[j] = ...
 
 同时 host 端还得把 block 数从大约
 
-\[
+```math
 N/T
-\]
+```
 
 改成
 
-\[
+```math
 N/(2T).
-\]
+```
 
-从文本 diff 看，这是两块相距很远的代码；从程序优化角度看，它们却是**一个决定**：
+从文本 diff 看，这是两块相距很远的代码；从程序优化角度看，它们却是 **一个决定**：
 
-\[
+```math
 \text{work-per-thread}:1\rightarrow2
-\]
+```
 
 甚至缺了其中任何一块，整个动作都没有正确实现。
 
 这时候一个比较自然的数学对象其实是：
 
-\[
+```math
 a=(\tau,\ell,\theta)
-\]
+```
 
-其中 \(\tau\) 是变换类型，\(\ell\) 是作用位置，\(\theta\) 是参数。上面这个例子可以粗略写成：
+其中 $`\tau`$ 是变换类型，$`\ell`$ 是作用位置，$`\theta`$ 是参数。上面这个例子可以粗略写成：
 
-\[
+```math
 a=
 (\text{increase-work-per-thread},
 \text{elementwise kernel},
 k=2).
-\]
+```
 
 然后真正的 CUDA 代码只是这个 action 的一种 **realization**：
 
-\[
+```math
 a \longrightarrow \Delta P.
-\]
+```
 
 关键就是这里的多对多关系：
 
-\[
+```math
 \boxed{
 \text{一个语义 action}
 \rightarrow
 \text{很多 token、很多代码位置}
 }
-\]
+```
 
 同时也可能：
 
-\[
+```math
 \boxed{
 \text{完全不同的代码写法}
 \rightarrow
 \text{同一个语义 action}
 }
-\]
+```
 
 这才是我觉得它比原来 semantic-credit 想法更根本的原因。
 
@@ -108,55 +108,55 @@ a \longrightarrow \Delta P.
 
 那几乎没用。因为“做 tiling”离实际 CUDA 代码还差十万八千里。
 
-真正有意义的 action 必须是**参数化的程序变换**。
+真正有意义的 action 必须是 **参数化的程序变换**。
 
 比如不是：
 
-\[
+```math
 \text{tile}
-\]
+```
 
 而更接近：
 
-\[
+```math
 \text{tile}(
 \text{reduction axis},
 128,
 \text{map to block/warp}
 )
-\]
+```
 
 不是：
 
-\[
+```math
 \text{fuse}
-\]
+```
 
 而是：
 
-\[
+```math
 \text{fuse}(
 \text{producer}=A,
 \text{consumer}=B,
 \text{materialization removed}
 )
-\]
+```
 
 不是：
 
-\[
+```math
 \text{change launch config}
-\]
+```
 
 而是：
 
-\[
+```math
 \text{set blockDim}=256.
-\]
+```
 
 这里其实和传统编译优化、TVM/Halide 那种 schedule space 有一点血缘关系。编译器本来就知道“程序文本”和“优化变换”不是同一个层次。
 
-所以这件事情**本身绝不是前无古人的概念**。如果最后只是：
+所以这件事情 **本身绝不是前无古人的概念**。如果最后只是：
 
 > “我们发现 compiler pass 比 token 更语义化。”
 
@@ -189,11 +189,11 @@ a \longrightarrow \Delta P.
 
 更合理的对象可能是：
 
-\[
+```math
 a
 \rightarrow
 \{e_1,e_2,e_3,\ldots\}
-\]
+```
 
 一个 action 对应一组 distributed edits。
 
@@ -201,7 +201,7 @@ a
 
 > 为什么简单 locator 总是在漏？
 
-因为我们试图从**文本局部性**恢复**程序决策单位**，而两者本来就不是一一对应。
+因为我们试图从 **文本局部性** 恢复 **程序决策单位**，而两者本来就不是一一对应。
 
 所以这个方向和之前 semantic credit 其实不是完全割裂的。
 
@@ -212,27 +212,27 @@ a
 
 这样 credit assignment 问题会被大幅简化：
 
-\[
+```math
 \text{选择 transformation}
 \rightarrow
 \text{实现}
 \rightarrow
 \text{测速}
-\]
+```
 
 性能反馈天然就可以记在 transformation 上。
 
-当然，如果连续做了 \(A,B,C\) 三个 transformation，仍然会有高层 credit assignment 问题。但至少问题从：
+当然，如果连续做了 $`A,B,C`$ 三个 transformation，仍然会有高层 credit assignment 问题。但至少问题从：
 
-\[
+```math
 3000\text{ 个 token 谁负责}
-\]
+```
 
 降成了：
 
-\[
+```math
 3\text{ 个程序决策谁负责}.
-\]
+```
 
 这不是彻底消灭 credit assignment，但问题规模和语义性完全不同。
 
@@ -248,9 +248,9 @@ a
 
 因为它也可能只是普通的：
 
-\[
+```math
 \text{plan first}
-\]
+```
 
 或者多给了模型一些 reasoning token。
 
@@ -265,9 +265,9 @@ a
 
 如果：
 
-\[
+```math
 \text{Free-plan}\approx\text{Structured-action}>\text{Direct}
-\]
+```
 
 那我们大概率只是证明：
 
@@ -277,9 +277,9 @@ a
 
 如果：
 
-\[
+```math
 \text{Structured-action}>\text{Free-plan}>\text{Direct}
-\]
+```
 
 才开始说明：
 
@@ -287,9 +287,9 @@ a
 
 如果：
 
-\[
+```math
 \text{Oracle-action}\gg\text{Structured-action}
-\]
+```
 
 则说明 action abstraction 很有用，但是：
 
@@ -297,9 +297,9 @@ a
 
 如果连：
 
-\[
+```math
 \text{Oracle-action}\approx\text{Direct}
-\]
+```
 
 那这个方向基本就可以杀掉了——连“做什么”都告诉模型了，依旧没提高成功率，说明 strategy/realization 分离根本没有帮忙。
 
@@ -317,11 +317,11 @@ a
 
 但是它们非常适合回答一个更前置的问题：
 
-\[
+```math
 \boxed{
 \text{成功的 CUDA 优化轨迹到底能不能被少量重复出现的程序变换解释？}
 }
-\]
+```
 
 这件事本身就值得先看。
 
@@ -336,17 +336,17 @@ a
 
 根本聚不成稳定 transformation vocabulary，那么：
 
-\[
+```math
 \text{program-transformation action space}
-\]
+```
 
 可能就是个幻想。
 
 反过来，如果我们发现大量 edge 能不断落回一些重复模式：
 
-\[
+```math
 A_1,A_2,\ldots,A_{12}
-\]
+```
 
 比如不同任务里不断出现：
 
@@ -358,29 +358,29 @@ A_1,A_2,\ldots,A_{12}
 > vectorized load/store；  
 > 改 block mapping；
 
-而且**同一个 action 的代码实现差异很大**，那就出现了一个很强的现象：
+而且 **同一个 action 的代码实现差异很大**，那就出现了一个很强的现象：
 
-\[
+```math
 \text{code diff entropy 很高}
-\]
+```
 
 但：
 
-\[
+```math
 \text{transformation entropy 较低}.
-\]
+```
 
 这才是“action abstraction”最值得研究的经验基础。
 
 甚至这里可以定义一个很直观的问题：
 
-\[
+```math
 \phi:\Delta P\rightarrow a
-\]
+```
 
-我们能不能找到一个足够简单的 \(\phi\)，让大量成功程序变换被压缩到一个小 action vocabulary？
+我们能不能找到一个足够简单的 $`\phi`$，让大量成功程序变换被压缩到一个小 action vocabulary？
 
-注意，我这里说的仍然是**人工标注**。
+注意，我这里说的仍然是 **人工标注**。
 
 不写 classifier。
 
@@ -416,17 +416,17 @@ A_1,A_2,\ldots,A_{12}
 
 所以真正实验应该是：
 
-\[
+```math
 \text{一些 trajectory}
 \rightarrow
 \text{建立 transformation vocabulary}
-\]
+```
 
-然后**冻结它**。
+然后 **冻结它**。
 
 再去新的 task 上测试：
 
-\[
+```math
 P_{\text{held-out}}
 \rightarrow
 \text{选择 action}
@@ -434,7 +434,7 @@ P_{\text{held-out}}
 \text{实现}
 \rightarrow
 \text{测速}.
-\]
+```
 
 这里真正想看的是：
 
@@ -450,29 +450,29 @@ P_{\text{held-out}}
 
 太粗：
 
-\[
+```math
 \text{memory optimization}
-\]
+```
 
 没意义。
 
 太细：
 
-\[
+```math
 \text{把第 172 行的 i 改成 i+stride}
-\]
+```
 
 又退化成 code diff。
 
 真正有价值的 action 应该处在中间：
 
-\[
+```math
 \boxed{
 \text{比 token/code edit 抽象}
 \quad\land\quad
 \text{又足够具体到能约束实现}
 }
-\]
+```
 
 这很像找一个“自然坐标系”。
 
@@ -498,29 +498,29 @@ P_{\text{held-out}}
 
 所以最终可能不是 10 个名词标签，而是一个很小的 typed DSL：
 
-\[
+```math
 \text{IncreaseWorkPerThread}(axis,k)
-\]
+```
 
-\[
+```math
 \text{Tile}(axis,size,mapping)
-\]
+```
 
-\[
+```math
 \text{Fuse}(producer,consumer)
-\]
+```
 
-\[
+```math
 \text{EliminateMaterialization}(site)
-\]
+```
 
-\[
+```math
 \text{Vectorize}(axis,width)
-\]
+```
 
 ……
 
-但这是**如果现象存在以后**才值得形式化。
+但这是 **如果现象存在以后** 才值得形式化。
 
 现在别写 DSL。
 
@@ -536,43 +536,43 @@ P_{\text{held-out}}
 
 普通 plan-first 是：
 
-\[
+```math
 P
 \rightarrow
 \text{自然语言 reasoning}
 \rightarrow
 P'
-\]
+```
 
 中间那个 reasoning 没有明确可学习的结构。
 
 我们想讨论的东西应该是：
 
-\[
+```math
 P_t
 \xrightarrow{a_t}
 P_{t+1}
-\]
+```
 
-其中 \(a_t\) 是一个**可复用、可比较、可统计、可以跨任务重复出现的程序变换对象**。
+其中 $`a_t`$ 是一个 **可复用、可比较、可统计、可以跨任务重复出现的程序变换对象**。
 
 于是搜索空间就从：
 
-\[
+```math
 \mathcal V^L
-\]
+```
 
-——长度 \(L\) 的 token 序列——
+——长度 $`L`$ 的 token 序列——
 
 变成：
 
-\[
+```math
 \mathcal A\times\mathcal R(a)
-\]
+```
 
-前面先在一个小得多的 transformation space \(\mathcal A\) 里决定“做什么”，后面再解决 realization。
+前面先在一个小得多的 transformation space $`\mathcal A`$ 里决定“做什么”，后面再解决 realization。
 
-如果 \(|\mathcal A|\) 真比所有可能代码序列小很多，而且过去经验可以对 \(\mathcal A\) 泛化，那么这个结构才真正有意义。
+如果 $`|\mathcal A|`$ 真比所有可能代码序列小很多，而且过去经验可以对 $`\mathcal A`$ 泛化，那么这个结构才真正有意义。
 
 ---
 
@@ -584,9 +584,9 @@ P_{t+1}
 
 假设模型以前在 reduction A 上学到：
 
-\[
+```math
 \text{warp-level reduction}
-\]
+```
 
 是一个有价值的动作。
 
@@ -594,27 +594,27 @@ P_{t+1}
 
 token 级经验很难直接复用：
 
-\[
+```math
 \text{code}_A \not\approx \text{code}_B.
-\]
+```
 
 但 transformation 层可以：
 
-\[
+```math
 a_A=a_B=\text{WarpReduce}.
-\]
+```
 
 于是过去的经验实际上变成：
 
-\[
+```math
 Q(P,a)
-\]
+```
 
 而不是：
 
-\[
+```math
 Q(P,\text{某一串具体 token}).
-\]
+```
 
 这才是“更可迁移”真正应该指的东西。
 
@@ -640,15 +640,15 @@ Q(P,\text{某一串具体 token}).
 
 它不是：
 
-\[
+```math
 A\rightarrow B\rightarrow C
-\]
+```
 
 而更像：
 
-\[
+```math
 P\rightarrow P'
-\]
+```
 
 一次整体重构。
 
@@ -660,9 +660,9 @@ P\rightarrow P'
 
 而且这些 action 强耦合：
 
-\[
+```math
 \text{tile size}
-\]
+```
 
 取决于 layout；
 
@@ -678,9 +678,9 @@ thread mapping 又和 shared memory footprint 一起决定 occupancy。
 
 也就是说，我们外部强行加一层：
 
-\[
+```math
 \text{select transformation}
-\]
+```
 
 可能只是在把模型本来隐式完成的 reasoning 显式打印出来，没有减少真正困难。
 
@@ -708,19 +708,19 @@ thread mapping 又和 shared memory footprint 一起决定 occupancy。
 
 之前是：
 
-\[
+```math
 \text{已有 token action space}
 \rightarrow
 \text{怎样更聪明地分 credit}
-\]
+```
 
 现在是：
 
-\[
+```math
 \boxed{
 \text{token action space 本身是不是选错了坐标系？}
 }
-\]
+```
 
 但我不会现在就说：
 
@@ -728,11 +728,11 @@ thread mapping 又和 shared memory footprint 一起决定 occupancy。
 
 因为它有一个非常明确、也非常容易杀掉的前置条件：
 
-\[
+```math
 \boxed{
 \text{真实成功 CUDA 优化能否被稳定地压缩成重复出现的 transformation？}
 }
-\]
+```
 
 如果我们人工看几十个真实 trajectory，发现根本压不出来，或者必须发明越来越细的 action 才能覆盖，那么这条路就应该死。
 

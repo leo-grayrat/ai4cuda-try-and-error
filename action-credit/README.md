@@ -16,7 +16,7 @@
 
 ## 代码优先试点入口
 
-从档案里选定**明确父子关系**且档案标记两者正确的一条修改。准备命令读取两份源码，按源码位置和语法上下文列出变化，写出父版本、子版本、最多三个待检验优化动作的撤销版本，以及一个普通代码对照。`screen-manifest.json` 只含父子两个版本，适合先核对本机正确性；只有父子都正确再运行完整 `manifest.json`。每个动作初始状态都是 `unverified`；大规模联动修改可能只能作为整体检验。
+从档案里选定 **明确父子关系** 且档案标记两者正确的一条修改。准备命令读取两份源码，按源码位置和语法上下文列出变化，写出父版本、子版本、最多三个待检验优化动作的撤销版本，以及一个普通代码对照。`screen-manifest.json` 只含父子两个版本，适合先核对本机正确性；只有父子都正确再运行完整 `manifest.json`。每个动作初始状态都是 `unverified`；大规模联动修改可能只能作为整体检验。
 
 ```powershell
 ..\.venv-kb\Scripts\python.exe -m scripts.prepare_credit_case `
@@ -48,7 +48,7 @@ uv pip install --python ..\.venv\Scripts\python.exe -r requirements-smoke.txt
 ..\.venv\Scripts\python.exe -m pytest -q --basetemp .pytest-tmp
 ```
 
-`runs/` 不入库。每次运行生成一份 JSON 和同名 `.assets` 文件夹，快照保存清单及源代码；已有记录不会被覆盖。运行记录保留候选配置、代码哈希、随机种子、设备 UUID、驱动、正确性、每次测量及中位时间。源码哈希在计算前只把 CRLF 换行转换为 LF，以便比较 Windows 与 Linux 上的同一份文件。测量单位是毫秒。`credit` 使用 `-log(中位延迟)` 作为分数，输出 A、B 的单独贡献、交互项 `J(AB)-J(A)-J(B)+J(base)`，以及将交互项各分一半的 Shapley 对数信用；这四份程序必须从**同一基线**构造，且都通过正确性检查。单个样例和一次测量不能支持普遍的因果结论。
+`runs/` 不入库。每次运行生成一份 JSON 和同名 `.assets` 文件夹，快照保存清单及源代码；已有记录不会被覆盖。运行记录保留候选配置、代码哈希、随机种子、设备 UUID、驱动、正确性、每次测量及中位时间。源码哈希在计算前只把 CRLF 换行转换为 LF，以便比较 Windows 与 Linux 上的同一份文件。测量单位是毫秒。`credit` 使用 `-log(中位延迟)` 作为分数，输出 A、B 的单独贡献、交互项 `J(AB)-J(A)-J(B)+J(base)`，以及将交互项各分一半的 Shapley 对数信用；这四份程序必须从 **同一基线** 构造，且都通过正确性检查。单个样例和一次测量不能支持普遍的因果结论。
 
 要从快照重新运行 Numba 样例，显式指定保存的评测器代码：
 
@@ -93,11 +93,11 @@ $env:CUPY_CACHE_DIR = (Join-Path (Get-Location) '..\.cache\cupy')
   --evaluator-source runs/gpu-a.assets/evaluator.py
 ```
 
-[KernelBlaster](https://github.com/NVlabs/KernelBlaster) 已在每个 `trajectory_*` 目录保存逐步 `.cu` 候选和日志，适合用来**寻找**真实的优化修改。但它使用 `init.cu`、`driver.cpp` 格式；上面的 KernelBench Python 适配器接收 `ModelNew` 文件，不能直接把这些 `.cu` 文件交给它。正式实验可选择沿用 KernelBlaster 自己的编译与评测环境重测，或先在 KernelBench 格式中构造同一组受控候选。连续两步修改也不能自动当作独立的 A、B：必须额外构造并验证“只做 B”的版本。
+[KernelBlaster](https://github.com/NVlabs/KernelBlaster) 已在每个 `trajectory_*` 目录保存逐步 `.cu` 候选和日志，适合用来 **寻找** 真实的优化修改。但它使用 `init.cu`、`driver.cpp` 格式；上面的 KernelBench Python 适配器接收 `ModelNew` 文件，不能直接把这些 `.cu` 文件交给它。正式实验可选择沿用 KernelBlaster 自己的编译与评测环境重测，或先在 KernelBench 格式中构造同一组受控候选。连续两步修改也不能自动当作独立的 A、B：必须额外构造并验证“只做 B”的版本。
 
 ## 第二台 GPU 可用时
 
-把**相同的清单和候选源码**带到第二台机器，在那边运行 `lab.py run` 得到 `gpu-b.json`，然后执行：
+把 **相同的清单和候选源码** 带到第二台机器，在那边运行 `lab.py run` 得到 `gpu-b.json`，然后执行：
 
 ```powershell
 python lab.py compare runs\gpu-a.json runs\gpu-b.json
