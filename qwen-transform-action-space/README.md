@@ -49,7 +49,41 @@ transformation vocabulary 先冻结再标注。
 
 ## 工作流
 
-按 `academic-pipeline` skill 的阶段编排执行：
-Stage 1 RESEARCH → Stage 1.5 EXPERIMENT → Stage 2 WRITE → Stage 2.5 INTEGRITY
-→ Stage 3 REVIEW → Stage 4 REVISE → Stage 3′/4′ → Stage 4.5 FINAL INTEGRITY
-→ Stage 5 FINALIZE。各阶段结束设有 checkpoint。
+按 `academic-pipeline` skill 的阶段编排执行（用户指示：全程自动推进，checkpoint 不等待确认）：
+Stage 1 RESEARCH（quick）→ Stage 1.5 EXPERIMENT → Stage 2 WRITE → Stage 2.5 INTEGRITY
+→ Stage 3 REVIEW（五视角盲审）→ Stage 4 REVISE → Stage 3′ RE-REVIEW → Stage 4′ RE-REVISE
+→ Stage 4.5 FINAL INTEGRITY → Stage 5 FINALIZE。
+
+## 产出状态（全部阶段已完成）
+
+| 阶段 | 产物 | 结果 |
+|------|------|------|
+| Stage 1 | `stage1_research/` | RQ Brief + 28 源核查账；2 条 spec 文献检索不到 → 禁止引用 |
+| Stage 1.5 | `STAGE1_5_REPORT.md`、`data/`、`figures/` | 2,510 候选边 / 55 标注；词表覆盖 90.9% |
+| Stage 2 | `paper/main.md` v1 | 8,825 词初稿 |
+| Stage 2.5 | `STAGE2_5_INTEGRITY.md` | 28/28 引用回源；69/69 数字；拦下 3 处不可验证断言 |
+| Stage 3 | `stage3_review/` | 五份盲审 + 编辑决定：**Major Revision**（overall 48–57） |
+| Stage 4 | `stage4_revision/REVISION_NOTES.md` | R-1..R-8 逐项处置；**头条统计结论反号** |
+| Stage 3′/4′ | `stage3prime_rereview/` | R-1..R-6 MET、R-7/R-8 PARTIAL；抓出 §5.2 残留矛盾 |
+| Stage 4.5 | `STAGE4_5_FINAL_INTEGRITY.md` | 从零复核 **32/32**，新发现并修 3 处引用字段错误 |
+| Stage 5 | `paper/latex/`、`paper/zh/full.md` | LaTeX 源 + bib（本机无 TeX 引擎，**PDF 有意未产出**，见 `paper/latex/BUILD.md`）；中文对照稿约 1.95 万字 |
+
+终态关卡：`verify_references.py` 32/32 · `verify_paper_numbers.py` 117/117 ·
+`verify_zh_alignment.py` 定量 token 264/264 · `integrity_scan.py` PASS。
+
+### 本目录的重要事实
+
+论文 v2 的核心结论与 v1 **相反**：v1 声称「语义标签不优于 diff 粗结构」，那是
+`calibrate_informativeness.py` 误用 Miller–Madow 偏差项产生的假象；修正后语义标签在自己的
+置换零模型下显著（p = 0.0005），而粗结构（p = 0.752）与 hunk 数（p = 0.436）都不显著。
+同时撤回了另外两项当时当作证据使用的说法（恒等式熵比较、跨任务复现率）。
+
+本流水线自身的两次失败（对账全绿却对方法错误免疫；审稿子代理产出不可复现引文）
+已作为**元发现写入论文 §7.5**，而不是当作过程瑕疵隐去。
+
+### 已知未完成（不作表面修补）
+
+1. 正文约 12,500 词，超出 workshop 8–12 页目标；进一步删减会改变论证重心，属作者决策。
+2. 人工独立标注与 κ 未执行（§7.1 四条可执行标准全部未完成）——本文最大真实弱点。
+3. 无任何干预实验：§4 是协议，L2/L3 主张未被检验。
+4. Stage 2 的 v1 稿件当时未单独提交，故 Stage 3′ 无逐行回归 diff（过程缺陷）。

@@ -13,7 +13,7 @@ execution-level reward at the end of a trajectory of thousands of decisions. Per
 a handful of *program design decisions* — fuse two passes, stop materializing an intermediate, change the per-thread
 workload — each of which is realized across many tokens and several spatially separated code sites. We ask whether
 this is not merely a credit-assignment nuisance but an error in the choice of *coordinate system*: the action unit
-itself. We formalize a candidate action as a typed program transformation `a = (tau, l, theta)` and state what would
+itself. We formalize a candidate action as a typed program transformation `a = (τ, ℓ, θ)` and state what would
 have to be true for that to be a better interface than whole-program generation. Two claims must be separated, and
 the literature does not separate them: K-Search already decouples algorithmic planning from program instantiation
 and reports large gains [29], and CuAsmRL already trains a reinforcement agent over an explicit space of schedule
@@ -528,6 +528,18 @@ Section 3.5. What the data supports is that a transformation vocabulary is a *re
 description of past successes — which is precisely the status that makes Section 4 worth specifying rather than
 optional.
 
+### 3.9 Figures
+
+![Figure 1. Description length per edge. The rightmost bar is identically log2(n) and carries no evidential content; the comparison that matters is against the 24-cell coarse structure.](../figures/fig1_entropy_comparison.png)
+
+![Figure 2. Observed distribution over the frozen 12-category vocabulary, primary versus secondary labels, with the 40% red line.](../figures/fig2_label_distribution.png)
+
+![Figure 3. Occurrences versus distinct diff fingerprints per category. The two are equal by identity, which is why this panel no longer supports the many-to-many claim.](../figures/fig3_many_to_many.png)
+
+![Figure 4. Realised speedup per primary transformation (log scale). The extreme values are dominated by pathological parents and by the backend-substitution category.](../figures/fig4_speedup_by_label.png)
+
+![Figure 5. The corrected comparison: each descriptor's mutual information with the realised-speedup quartile against its own permutation null. Only the semantic label exceeds its null.](../figures/fig5_permutation_calibration.png)
+
 ---
 
 ## 4. A Falsifiable Experimental Framework
@@ -581,13 +593,13 @@ and search cost (rollouts, tokens, wall-clock to first valid-and-faster kernel) 
 | Oracle-action ~ Direct | telling the model what to do does not help | **direction is dead**: strategy/realization separation buys nothing, so no action space can help |
 | Structured-action < Free-plan | the imposed granularity is actively harmful | investigate coupling: good optimizations may not decompose |
 | Structured-action ~ Brute-search | an LLM adds nothing over enumeration with a cost model | **the systems community already owns this problem**; re-target or withdraw |
-| Oracle-action not runnable | `phi` cannot be constructed for this task family | **indeterminate — do not read as a null result** (see below) |
+| Oracle-action not runnable | `φ` cannot be constructed for this task family | **indeterminate — do not read as a null result** (see below) |
 
 The last row is a correction forced by review. Oracle-action and the realization obligation of Section 4.5 both
-require `phi : \Delta P \to a`, the map that recovers the intended transformation from a change; Section 7.3 admits
+require `φ : ΔP → a`, the map that recovers the intended transformation from a change; Section 7.3 admits
 we never constructed it. A protocol whose decisive branch depends on an object we have not built would report
 "direction is dead" whenever that object is unavailable, which is a false negative dressed as rigour. Oracle-action
-therefore carries an explicit precondition: a `phi` validated on a held-out set, or a human-supplied oracle standing
+therefore carries an explicit precondition: a `φ` validated on a held-out set, or a human-supplied oracle standing
 in for it with the substitution recorded. If neither is available, the branch is *not evaluated*, and the paper's
 conclusion must say so.
 
@@ -689,7 +701,7 @@ model is exactly what an LLM is worst at being assumed to have.
 ### 5.2 Hierarchical RL has a name for this, and a warning
 
 Temporal abstraction is old technology: options [11], the option-critic architecture [12], and skill libraries in
-LLM agents such as Voyager [14]. Our `a = (tau, l, theta)` is an option with parameters. That lineage brings two
+LLM agents such as Voyager [14]. Our `a = (τ, ℓ, θ)` is an option with parameters. That lineage brings two
 things we should inherit rather than re-derive: the formal machinery for policies over sub-policies, and a candid
 literature on *when higher-level actions fail to help*. Recent work on option-critic pathologies reports policy
 necrosis and redundant coverage - learned options that are never used or that overlap so much that the hierarchy
@@ -809,7 +821,7 @@ transformations [9]; Ansor searches tensor factorizations [10]. Section 5.3 expl
 ancestry and our strongest objection.
 
 **Hierarchical RL and skill discovery.** Options [11], option-critic [12], reported option pathologies — policy
-necrosis and redundant coverage [13] — and LLM skill libraries [14]. Our `a = (tau, l, theta)` is a parameterized
+necrosis and redundant coverage [13] — and LLM skill libraries [14]. Our `a = (τ, ℓ, θ)` is a parameterized
 option (Section 5.2).
 
 **Benchmark integrity.** Correctness illusion [20], mutation analysis of kernel-benchmark oracles [24], adversarial
@@ -892,7 +904,7 @@ because timing was taken from corpus metadata and never re-measured; `fast_p`'s 
 realized-speedup values used as the Section 3.6 outcome are plausibly timing artefacts; 53 of 55 edges change
 autotuning alongside structure, so per-action attribution in Sections 3.5-3.7 is confounded by construction. The
 trajectory corpus was produced by a *search* procedure rather than by a policy learning from a reward, so the
-visited-program distribution is not the on-policy distribution a Section-4 experiment would face. Finally, `phi` is
+visited-program distribution is not the on-policy distribution a Section-4 experiment would face. Finally, `φ` is
 never constructed here — we assert that the diffs have labels, not that a mechanical map from diff to label exists —
 and the gap between those two is a separate research question (automatic action recognition) that we deliberately did
 not open.
@@ -941,7 +953,7 @@ deliberately a question, and Section 3.6 is deliberately a correction of our own
 
 We asked whether the token-level action space used by agentic reinforcement-learning systems for GPU kernel
 optimization is the wrong coordinate system, and whether parameterized program transformations
-`a = (tau, l, theta)` are a more natural unit for both search and learning. The answer after one round of adversarial
+`a = (τ, ℓ, θ)` are a more natural unit for both search and learning. The answer after one round of adversarial
 review is: the premise holds, two of the arguments we built for it do not, and the question remains
 experimentally open.
 
@@ -977,7 +989,7 @@ specifies a five-condition protocol — Direct, Free-plan, Structured-action, Or
 with a learned cost model and no LLM in the loop — with a reading tree whose neutral, inverted, and
 *indeterminate* branches are fixed in advance, including the branch that withdraws the direction if an LLM choosing
 transformations cannot beat enumeration, and the precondition that protects a false negative from being reported as a
-null when `phi` cannot be constructed.
+null when `φ` cannot be constructed.
 
 Two further findings from trying to falsify ourselves should travel beyond this specific topic. First, every edge we
 could not classify was the same uncategorized decision: stop implementing this yourself and call a library. An action
