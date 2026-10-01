@@ -1006,14 +1006,14 @@ asked to question a method.
 5. R. Zhao, D. Bieber, K. Swersky, D. Tarlow. **Neural Networks for Modeling Source Code Edits.** ICLR 2019. arXiv:1904.02818.
 6. W. Cheng, Y. Cao, C. Shen, B. Li, J. Chen, Y. Li, W. Hu. **To Diff or Not to Diff? Structure-Aware and Adaptive Output Formats for Efficient LLM-based Code Editing.** Findings of ACL 2026. arXiv:2604.27296.
 7. **SWE-RL: Advancing LLM Reasoning via Reinforcement Learning on Open Software Evolution.** arXiv:2502.18449, 2025.
-8. J. Ragan-Kelley, C. Barnes, A. Adams, S. Paris, F. Durand, S. Amarasinghe. **Halide: A Language and Compiler for Optimizing Parallelism, Locality, and Recomputation in Image Processing Pipelines.** PLDI 2013, pp. 519-530. doi:10.1145/2491956.2462176.
+8. J. Ragan-Kelley, C. Barnes, A. Adams, S. Paris, F. Durand, S. Amarasinghe. **Halide: a language and compiler for optimizing parallelism, locality, and recomputation in image processing pipelines.** PLDI 2013, pp. 519-530; reproduced in ACM SIGPLAN Notices 48(6). doi:10.1145/2499370.2462176.
 9. **TVM: An Automated End-to-End Optimizing Compiler for Deep Learning.** OSDI 2018. arXiv:1802.04799.
 10. **Ansor: Generating High-Performance Tensor Programs for Deep Learning.** OSDI 2020. arXiv:2006.06762.
 11. R. S. Sutton, D. Precup, S. Singh. **Between MDPs and Semi-MDPs: A Framework for Temporal Abstraction in Reinforcement Learning.** Artificial Intelligence 112(1-2):181-211, 1999. doi:10.1016/S0004-3702(99)00052-1.
 12. P.-L. Bacon, J. Harb, D. Precup. **The Option-Critic Architecture.** AAAI 2017. arXiv:1609.05140.
 13. **When Do Options Help? Policy Necrosis and Redundant Coverage in Option-Critic.** arXiv:2609.05508, 2026.
 14. G. Wang, Y. Xie, Y. Jiang, A. Mandlekar, C. Xiao, Y. Zhu, L. Fan, A. Anandkumar. **Voyager: An Open-Ended Embodied Agent with Large Language Models.** arXiv:2305.16291, 2023.
-15. Q. I. Mahmud, N. K. Ahmed, A. Jannesari. **CudaPerf: Multi-turn RL with Structural and Performance Aware Rewards for CUDA Kernel Generation.** arXiv:2607.20908, 2026.
+15. Q. I. Mahmud, N. K. Ahmed, A. Jannesari. **Multi-turn RL with Structural and Performance Aware Rewards for CUDA Kernel Generation.** (method name: CudaPerf). arXiv:2607.20908, 2026.
 16. **CUDA-L1: Improving CUDA Optimization via Contrastive Reinforcement Learning.** arXiv:2507.14111, 2025.
 17. **Dr. Kernel: Reinforcement Learning Done Right for Triton Kernel Generations.** arXiv:2602.05885, 2026.
 18. J. Tang, J. Huan, H. Zhou, Y. Zhang, L. Wang. **NKI-Agent: Domain-Specific Fine-Tuning and Agentic Tool Use for Neuron Kernel Generation.** DL4C @ ICML 2026. arXiv:2607.04395.
