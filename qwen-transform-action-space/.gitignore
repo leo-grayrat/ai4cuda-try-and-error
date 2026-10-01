@@ -1,0 +1,4 @@
+data/adaexplore/
+*.tar.gz
+__pycache__/
+
