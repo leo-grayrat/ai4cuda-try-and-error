@@ -8,30 +8,23 @@ reproducible from the accompanying scripts; Section 3.6 reports a statistical er
 
 ## Abstract
 
-Reinforcement-learning systems that generate GPU kernels update a policy over sampled text, then attach a single
-execution-level reward at the end of a trajectory of thousands of decisions. Performance, however, is a property of
-a handful of *program design decisions* — fuse two passes, stop materializing an intermediate, change the per-thread
-workload — each of which is realized across many tokens and several spatially separated code sites. We ask whether
-this is not merely a credit-assignment nuisance but an error in the choice of *coordinate system*: the action unit
-itself. We formalize a candidate action as a typed program transformation `a = (τ, ℓ, θ)` and state what would
-have to be true for that to be a better interface than whole-program generation. Two claims must be separated, and
-the literature does not separate them: K-Search already decouples algorithmic planning from program instantiation
-and reports large gains [29], and CuAsmRL already trains a reinforcement agent over an explicit space of schedule
-transformations [30]; the descriptive premise, however, had not been measured on public trajectories. We therefore
-test the prerequisite empirically on AdaExplore optimization trees (2,510 successful parent→child edges available;
-55 annotated across 45 tasks). A frozen 12-category vocabulary covers 90.9% of edges using 10 categories, and label
-entropy (2.67 bits) is well below that of a faithful description of the same diffs (4.26 bits of coarse structure,
-5.78 bits of diff identity). The informative test is not compression, which any coarse summary enjoys: under
-symmetric permutation calibration the semantic label is significantly informative about realised speedup
-(plug-in mutual information 0.697 bits, 0.624 after bias correction, p = 0.0005), whereas neither coarse diff
-structure (p = 0.752) nor hunk count alone (p = 0.436) beats its own null. We report that this result replaced an opposite conclusion in our first draft,
-produced by an under-corrected Miller–Madow term, and that our own 69-assertion reconciliation harness could not
-detect it. Cross-task recurrence, by contrast, is at chance under our sampling design and does not support the
-transferability argument. The contribution is therefore a calibrated measurement of one premise, a set of
-methodological bans we were forced into, and a falsification protocol for what remains undecidable — including the
-possibility that selection is easy and realization is the bottleneck, which our own data suggests is live.
+Agentic reinforcement-learning systems now write GPU kernels that beat compiler autotuning. They update a policy
+over sampled text and attach one execution-level reward at the end of thousands of decisions. Performance, however,
+belongs to a handful of program design decisions — fuse two passes, stop materializing an intermediate, change the
+per-thread workload — each realized across many tokens and several separated code sites. We ask whether this is not
+merely a credit-assignment nuisance but a wrong choice of *coordinate system*: the action unit. We formalize a
+candidate action as a typed program transformation `a = (τ, ℓ, θ)`, and separate three claims the literature
+conflates: description, search efficiency, learning efficiency. On public AdaExplore trajectories (2,510 successful
+parent→child edges; 55 annotated over 45 tasks) a frozen 12-category vocabulary covers 90.9% of edges using 10
+categories, and under symmetric permutation calibration the semantic label predicts realised speedup beyond its own
+granularity (p = 0.0005) while coarse diff structure (p = 0.752) and hunk count alone (p = 0.436) do not. Two
+statistics we first cited are withdrawn here as an identity and a sampling artefact; our own 117-assertion
+reconciliation harness could not see the error that reversed this headline. Cross-task recurrence sits at chance, so
+transferability is unsupported. K-Search, CuAsmRL, CodeAct and ReCode already occupy parts of the interface this
+thesis proposes, narrowing our contribution to measurement and protocol. Search and learning stay untested; we
+specify the five-condition experiment that decides them, including the branch that kills the direction.
 
-*(~260 words)*
+*(245 words, measured by `scripts/audit_spec_coverage.py`)*
 
 ---
 
@@ -257,6 +250,14 @@ but this paper deliberately does **not** build that DSL. Designing forty-seven a
 and a parser before establishing that the phenomenon exists is the single most likely way to produce a body of
 engineering that answers no question. The prerequisite comes first.
 
+The test for whether a candidate sits at the right granularity can be stated without a vocabulary: an abstraction is
+worth keeping when it is *purely a contract* rather than a convenience for human readers. Sul and Ré make the same
+distinction from the other side when they argue that CUDA DSLs may retire as cognitive offloaders but hit "a floor
+where an abstraction is purely the contract, rather than an offloader, and it stops" [36]. Translated to actions:
+`Fuse(producer, consumer)` is a contract because an implementer cannot satisfy it without touching the sites the
+fusion requires, whereas `memory optimization` is only a label — nothing fails to count as it. That is also why the
+cross-site obligation of Section 2.2 matters so much: it is the operational content of "contract".
+
 ### 2.4 Why this is not just "plan first"
 
 A prompt that says "describe your plan, then write the kernel" is not evidence for anything interesting. It adds
@@ -415,6 +416,27 @@ each; `SharedMemoryTransform` never appears at all.
   actively invited and each `Other` was required to explain why all eleven specific categories failed. A vocabulary
   that has to be inflated to absorb its data would have shown up as a long tail of `Other` with heterogeneous
   reasons; what we got instead was five identical refusals pointing at one missing category.
+
+**The claim worth keeping is qualitative, not count-based.** Since the diversity *counts* are void, we instead
+examine realizations directly. All edges carrying one category, with the structural facts of each realization, are in
+`data/exemplar_Fuse.md`; an excerpt:
+
+| edge | task | lvl | ×vs parent | hunks | changed lines | regions |
+|---|---|---|---|---|---|---|
+| `L2_2_11_167_168` | 2_11 | L2 | 1.06 | 3 | 141 | 3 |
+| `L2_2_48_29_30` | 2_48 | L2 | 1.57 | 1 | 107 | 1 |
+| `L2_2_28_106_107` | 2_28 | L2 | 2.60 | 4 | 55 | 3 |
+| `L2_2_42_1_69` | 2_42 | L2 | 26.83 | 2 | 120 | 2 |
+| `L2_2_60_112_114` | 2_60 | L2 | 1.13 | 7 | 81 | 4 |
+| `L3_3_16_13_15` | 3_16 | L3 | 1.56 | 7 | 149 | 3 |
+| `L3_3_2_33_61` | 3_2 | L3 | 7.69 | 4 | 189 | 3 |
+| `L3_3_43_2_19` | 3_43 | L3 | 1.84 | 1 | 60 | 1 |
+
+One category, `Fuse`, spans 25 edges over 22 tasks, 23 distinct region sets, one-to-seven hunks, and 55-to-268
+changed lines. Reading the rows, the named decision is the same — collapse two passes and drop a materialized
+intermediate — while its textual realization shares almost nothing in size, shape or location. That is a much weaker
+statement than "the mapping is provably many-to-many", and it is stated as observation rather than measurement:
+anyone can open these eight diffs and disagree about whether one decision is being described.
 
 Two structural facts also remain: `WarpReduce` and `SharedMemoryTransform` are unobservable in a Triton-only corpus
 and are exactly the two categories that never act as primary labels — evidence that granularity is pinned to the
@@ -759,6 +781,18 @@ programme should be re-targeted or withdrawn. Note that this is a test we expect
 Ansor-style search over a well-specified schedule space is a formidable baseline [10], and an LLM earns nothing here
 by being more expressive.
 
+There is a deeper asymmetry that the compiler analogy conceals, and it is the weakest joint in the whole thesis.
+Between assembly, IR and a high-level language sit compilers: relations that are effectively total functions, so an
+abstraction layer can be *deleted* and re-derived with confidence. Sul and Ré's own version of the retirement
+argument depends on exactly this, and they name the deal honestly — "we took that deal because the compiler was right
+more often than we were" [36]. Between a named transformation and its code, however, sits an LLM, and the relation
+`a → ΔP` is a stochastic map, not a function. Everything in this paper that treats a transformation as an object —
+including the credit assignment that motivated it — inherits that gap. Two consequences follow: realizing a chosen
+action is a *first-class failure mode* rather than an implementation detail (which is why Section 4.5 control 3
+requires reporting it separately), and the abstract's `φ : ΔP → a` in the reverse direction is no more guaranteed to
+exist than the forward one. If realizers are unreliable, a transformation-level action space buys nothing no matter
+how well the vocabulary fits, and that is exactly the outcome Section 4.3's Oracle-action branch is designed to catch.
+
 ### 5.4 Agent skill design is the same question in a different costume
 
 A related debate concerns the long natural-language instruction files (skills) attached to coding agents. Systems
@@ -952,10 +986,10 @@ It is pinned to the abstraction level of whatever the model is asked to emit, an
 three levels (CUDA C++, Triton, high-level framework graph) with different natural vocabularies at each. Any
 transfer claim must be intra-level unless a mapping between levels is specified.
 
-### 7.5 Two meta-findings about how this paper was produced
+### 7.5 Three meta-findings about how this paper was produced
 
-These are not confessions of style; both changed what we believe about the results above, and both bear directly on
-the methodological claim this area is making about automated research.
+These are not confessions of style; all three changed what we believe about the results above, and all three bear
+directly on the methodological claim this area is making about automated research.
 
 **(1) A verification harness can be numerically exhaustive and methodologically blind.** Our integrity stage ran 69
 assertions re-derived from raw data, and passed 69/69 while the headline statistical conclusion of Section 3.6 was
@@ -975,6 +1009,17 @@ against. We rejected the quotation, and correspondingly weakened Section 1.1 —
 unverifiable claim that happens to favour the paper's thesis. Reviewers under an advocacy mandate, including ones
 disposed to attack, have an incentive structure that can generate supporting artefacts; their citations need the same
 provenance discipline as any other source, and this paper cannot claim that its own review stage satisfied it.
+
+**(3) A five-seat panel from one model family is one reviewer, not five.** Sul and Ré's blog carries an aside that
+reads as a prediction about this paper's own quality gate: a multi-agent "three-way review" is a sensible
+architecture, but nothing guarantees the three reviewers are checking different things, and they may converge on the
+same blind spot [36]. Our Stage 3 panel has exactly that shape — five distinct mandates, one cognitive family — and
+we observed both the benefit and the failure. Two reviewers independently found the statistical error that four
+earlier stages of self-checking had certified, which is corroboration a single reviewer could not have supplied, and
+that alone justified the panel. But panel diversity of *persona* is not diversity of *origin*: on the evidence of
+incident (2), a fabricated citation from one seat is a fabricated citation from all five, and no amount of role
+labeling inside a single model family substitutes for an outside reviewer. We keep the five-mandate structure because
+it found real problems, and we refuse to describe it as independent review.
 
 ### 7.6 What this paper does not show
 
@@ -1082,6 +1127,7 @@ asked to question a method.
 33. X. Wang, Y. Chen, L. Yuan, Y. Zhang, Y. Li, H. Peng, H. Ji. **Executable Code Actions Elicit Better LLM Agents (CodeAct).** ICML 2024. arXiv:2402.01030. *Consolidates agent actions into executable Python as a unified action space; up to 20% higher success rate over text/JSON action formats across 17 models.*
 34. Z. Yu, J. Zhang, H. Su, Y. Zhao, Y. Wu, M. Deng, J. Xiang, Y. Lin, L. Tang, Y. Luo, B. Liu, C. Wu. **ReCode: Unify Plan and Action for Universal Granularity Control.** arXiv:2510.23564, 2025. *High-level plans as placeholder functions recursively decomposed into primitive actions; dissolves the plan/action boundary.*
 35. C. Zhang. **From Reasoning to Agentic: Credit Assignment in Reinforcement Learning for Large Language Models.** arXiv:2604.09459, 2026. *69-paper corpus (56 core methods) organised by credit granularity; six-diagnostic identification framework.*
+36. S. Sul, C. Ré. **Retire the Abstractions.** Hazy Research blog, 5 August 2026. url:https://hazyresearch.stanford.edu/blog/2026-08-05-retire-the-abstractions — *non-archival; included because it is the source of the determinism-asymmetry and abstraction-contract arguments used in Sections 2.3 and 5.3, and its URL and page title were resolved programmatically by `scripts/verify_references.py` like any other reference.*
 
 ---
 

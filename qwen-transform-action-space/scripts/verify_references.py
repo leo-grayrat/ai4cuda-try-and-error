@@ -45,6 +45,10 @@ ARXIV_ID = re.compile(r"arXiv:(\d{4}\.\d{4,5})", re.I)
 # An earlier terminator class excluded ')', which truncated the Elsevier DOI at
 # "(99" and produced a bogus 404 for reference 11.
 DOI = re.compile(r"doi:(10\.\d{4,9}/\S+)", re.I)
+# Non-archival scholarly sources (research-blog posts, position pieces) are allowed
+# only if the URL resolves AND its page title matches the cited title. Citing a blog
+# is not exempt from provenance checking; it just checks a different resolver.
+URL = re.compile(r"url:(https?://\S+?)(?=[\s)]|$)", re.I)
 
 
 def clean_doi(raw: str) -> str:
@@ -137,6 +141,28 @@ def crossref_record(doi: str) -> dict | None:
     }
 
 
+def web_title(url: str) -> dict | None:
+    """Fetch a non-archival source; return its <title> and full text for checks.
+
+    Web pages carry no structured author list, so authors are verified by searching
+    the page text for each cited surname. That is a real check, not an exemption:
+    an entry naming an author the page does not mention still fails.
+    """
+    raw = get(url, "web")
+    if raw is None:
+        return None
+    text = raw.decode("utf-8", "replace")
+    m = re.search(r"<title[^>]*>(.*?)</title>", text, re.S | re.I)
+    title = re.sub(r"\s+", " ", m.group(1)).strip() if m else ""
+    body = re.sub(r"<[^>]+>", " ", text)
+    body = re.sub(r"\s+", " ", body)
+    return {"title": title, "authors": [], "text": body}
+
+
+def norm_name(s: str) -> str:
+    return re.sub(r"[^a-z\u00e0-\u024f]+", "", s.lower())
+
+
 def main() -> int:
     text = PAPER.read_text(encoding="utf-8")
     cut = text.find("\n## References")
@@ -158,32 +184,45 @@ def main() -> int:
     for num, body in sorted(refs.items()):
         am = ARXIV_ID.search(body)
         dm = DOI.search(body)
+        um = URL.search(body)
         rec, ident, kind = None, None, None
         if am:
             ident, kind, rec = am.group(1), "arXiv", ax.get(am.group(1))
         elif dm:
             ident, kind = clean_doi(dm.group(1)), "DOI"
             rec = crossref_record(ident)
+        elif um:
+            ident, kind = um.group(1), "URL"
+            rec = web_title(ident)
         else:
             results.append({"ref": num, "verdict": "NO_IDENTIFIER", "detail": body[:90]})
             continue
 
-        if not rec:
+        if not rec or not rec.get("title"):
             results.append({"ref": num, "verdict": "UNRESOLVED", "id": ident, "kind": kind})
             continue
 
         t_entry = entry_title(body)
         t_live = rec["title"]
         ne, nl = norm(t_entry), norm(t_live)
-        # Entries may append a descriptive clause after the title, so allow the live
-        # title to be a prefix of the entry title or vice versa. No venue-based
-        # exemption is granted: a DOI that resolves to the proceedings record rather
-        # than the paper must be reported, not waved through.
-        title_ok = ne.startswith(nl) or nl.startswith(ne) or ne == nl
+        if kind == "URL":
+            # web page titles carry site suffixes ("... · Hazy Research") and the
+            # entry may add a venue clause; require the cited title as a substring
+            title_ok = bool(nl) and (ne in nl or nl in ne or ne.startswith(nl))
+        else:
+            # Entries may append a descriptive clause after the title, so allow the live
+            # title to be a prefix of the entry title or vice versa. No venue-based
+            # exemption is granted: a DOI that resolves to the proceedings record rather
+            # than the paper must be reported, not waved through.
+            title_ok = ne.startswith(nl) or nl.startswith(ne) or ne == nl
 
         surnames = [s.lower() for s in entry_surnames(body)]
-        live_all = " ".join(rec["authors"]).lower()
-        missing = [s for s in surnames if s and s not in live_all]
+        if kind == "URL":
+            page = norm_name(rec.get("text", ""))
+            missing = [s for s in surnames if norm_name(s) not in page]
+        else:
+            live_all = " ".join(rec["authors"]).lower()
+            missing = [s for s in surnames if s and s not in live_all]
         authors_ok = (not surnames) or (not missing)
 
         verdict = "PASS" if (title_ok and authors_ok) else "MISMATCH"

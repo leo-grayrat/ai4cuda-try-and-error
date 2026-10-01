@@ -384,8 +384,19 @@
       "entry_title": "From Reasoning to Agentic: Credit Assignment in Reinforcement Learning for Large Language ",
       "live_title": "From Reasoning to Agentic: Credit Assignment in Reinforcement Learning for Large Language ",
       "missing_surnames": []
+    },
+    {
+      "ref": 36,
+      "kind": "URL",
+      "id": "https://hazyresearch.stanford.edu/blog/2026-08-05-retire-the-abstractions",
+      "verdict": "PASS",
+      "title_ok": true,
+      "authors_ok": true,
+      "entry_title": "Retire the Abstractions.",
+      "live_title": "Retire the Abstractions · Hazy Research",
+      "missing_surnames": []
     }
   ],
-  "pass": 35,
-  "total": 35
+  "pass": 36,
+  "total": 36
 }

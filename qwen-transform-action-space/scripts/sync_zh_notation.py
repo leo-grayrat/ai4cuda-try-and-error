@@ -37,6 +37,18 @@ REPLACEMENTS = [
     (f"{BACKTICK}a = (tau, l, theta){BACKTICK}", f"{BACKTICK}a = (τ, ℓ, θ){BACKTICK}"),
     (f"{BACKTICK}a = (tau, l, theta){BACKTICK}", f"{BACKTICK}a = (τ, ℓ, θ){BACKTICK}"),
     (f"{BACKTICK}phi : Delta P -> a{BACKTICK}", f"{BACKTICK}φ : ΔP → a{BACKTICK}"),
+    # LaTeX-mapped variant an interpreter introduced in Section 5.3, which the numeric
+    # alignment gate cannot see because it carries no digits
+    (
+        f"{BACKTICK}phi : \\Delta P \\to a{BACKTICK}",
+        f"{BACKTICK}φ : ΔP → a{BACKTICK}",
+    ),
+    (f"{BACKTICK}a \\to \\Delta P{BACKTICK}", f"{BACKTICK}a → ΔP{BACKTICK}"),
+    # Standalone romanised "phi" left in the Chinese parts. In a Chinese document the
+    # bare token "phi" is never legitimate prose, so a word-boundary mapping is safe
+    # and catches every context (bare, backticked, inside a longer clause).
+    ("`phi`", f"{BACKTICK}φ{BACKTICK}"),
+    (" phi ", " φ "),
     # statistics: keep the Chinese wording aligned with the English plug-in/BC pair
     (
         "（互信息 0.70 比特，p = 0.0005）",

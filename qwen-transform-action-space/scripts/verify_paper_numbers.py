@@ -173,7 +173,22 @@ def main() -> int:
           ("informative test is not compression" in abstract.lower()
            or "identity" in abstract.lower()),
           abstract[-200:])
-    check("abstract reports the coarse comparator too", "4.26" in abstract)
+    # The abstract no longer leans on the compression comparison at all -- that was the
+    # argument Section 3.5 retired -- so requiring it to quote the 4.26-bit comparator
+    # would push the paper to re-add a withdrawn claim. The invariant that matters is
+    # conditional: IF the abstract cites a compression figure, it must also mark the
+    # comparison non-evidential.
+    cites_compression = "2.67" in abstract or "4.26" in abstract
+    if cites_compression:
+        check("abstract qualifies the compression comparison",
+              ("not compression" in abstract.lower()
+               or "identity" in abstract.lower()
+               or "coarse summary" in abstract.lower()),
+              "cites 2.67/4.26 without the non-evidence qualifier")
+    else:
+        check("abstract rests on the permutation test, not on compression",
+              "permutation" in abstract.lower() and "0.0005" in abstract,
+              abstract[:120])
     sec36 = paper.split("### 3.6")[1].split("### 3.7")[0] if "### 3.6" in paper else ""
     for token in ["Miller", "permutation", "0.0005", "0.752", "0.436"]:
         check(f"3.6 reports corrected statistic/method: {token}", token in sec36, token)

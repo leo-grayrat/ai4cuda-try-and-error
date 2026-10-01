@@ -35,7 +35,12 @@ INTENDED_SECTIONS = [
 CJK = re.compile(r"[\u3000-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uff00-\uffef]")
 CITE = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
 REF_LINE = re.compile(r"^(\d+)\.\s+(.+)$", re.M)
-ID_PAT = re.compile(r"(arXiv:(?:\d{4}\.\d{4,5}(?:v\d+)?)|doi:10\.\d{4,9}/\S+)")
+# A reference is acceptable if it carries an arXiv id, a DOI, or a resolvable URL.
+# The url: form is for non-archival scholarly sources (research blogs, position
+# pieces); verify_references.py actually resolves it rather than trusting it.
+ID_PAT = re.compile(
+    r"(arXiv:(?:\d{4}\.\d{4,5}(?:v\d+)?)|doi:10\.\d{4,9}/\S+|url:https?://\S+)"
+)
 
 
 def main() -> int:

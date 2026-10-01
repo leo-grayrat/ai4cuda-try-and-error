@@ -113,7 +113,23 @@ def main() -> int:
     absent = [c for c in set(critical) if c in en and c not in zh]
     print(f"critical statistics present in EN but missing in ZH: {len(absent)} {absent}")
 
-    ok = ref_ok and not missing_r and not extra_r and not absent
+    # 4. symbol parity. Numeric multisets cannot see notation drift: an interpreter
+    # may legally render `φ : ΔP → a` as `phi : \Delta P \to a` and every digit still
+    # matches. These forms must be identical across the two documents.
+    sym_fail = []
+    for name, needle in [
+        ("ascii action triple", "a = (tau, l, theta)"),
+        ("latex phi form", "phi : \\Delta P"),
+        ("latex arrow form", "a \\to \\Delta P"),
+    ]:
+        for doc, text in (("en", en), ("zh", zh)):
+            if needle in text:
+                sym_fail.append(f"{doc} still contains {name}")
+    n_en, n_zh = en.count("φ"), zh.count("φ")
+    print(f"symbol parity: phi count en={n_en} zh={n_zh} | offenders={sym_fail}")
+    sym_ok = not sym_fail and n_en == n_zh and n_en > 0
+
+    ok = ref_ok and not missing_r and not extra_r and not absent and sym_ok
     print()
     if ok:
         print("ZH ALIGNMENT: PASS")
