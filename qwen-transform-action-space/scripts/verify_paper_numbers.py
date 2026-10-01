@@ -196,6 +196,25 @@ def main() -> int:
     check("2.1 table includes the turn/tool-call cut", "Turn / tool call" in paper)
     check("Section 4 defines the Brute-search arm", "Brute-search" in paper)
 
+    # Stage 3' NEW-1 regression guard: no section may still assert the reversed
+    # v1 conclusion outside the explicit correction narrative about it.
+    sec52 = paper.split("### 5.2")[1].split("### 5.3")[0] if "### 5.2" in paper else ""
+    check("5.2 no longer asserts labels 'do not out-predict' surface structure",
+          "do not out-predict" not in sec52, "stale reversed claim survives")
+    check("5.2 records the reversal explicitly", "reversed" in sec52.lower() or "wrongly read" in sec52)
+    check("7.3 discloses the oracle false-pass dependency",
+          "[20,24]" in paper or "false pass" in paper.lower() or "admits false passes" in paper.lower())
+    # NEW-2 targeted check, replacing an earlier generic line scan that flagged any
+    # standalone "69": that scan misfired on speedup literals ("69x") and on the
+    # historically correct statement that the v1 harness passed 69/69. A brittle
+    # substring audit is exactly the failure this paper documents, so the check is
+    # scoped to the two sentences that describe the harness state.
+    check("3.6 lesson states v1 count AND current count",
+          "69" in sec36 and "112" in sec36,
+          "sec36 mentions 69=%s 112=%s" % ("69" in sec36, "112" in sec36))
+    check("7.5 describes the historical 69/69 pass accurately",
+          "69/69" in paper.split("### 7.5")[1].split("### 7.6")[0])
+
     # ---- every Other edge really is a backend substitution -------------
     others = [r for r in recs if r["primary"] == "Other"]
     check("Other count == 5", len(others) == 5, str(len(others)))

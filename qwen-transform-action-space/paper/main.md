@@ -457,9 +457,10 @@ speedup ratio on 55 edges, 53 of which also changed autotuning configuration (Se
 metadata we did not re-time, on a sample we have already shown cannot estimate distributions. It is an argument for
 running Section 4, not a substitute for it.
 
-**The methodological lesson we keep.** Our own integrity harness asserted 69 numeric claims and passed all of them,
-then certified the section as reproducible. It compared *paper number to script output* and never *script method to
-valid method*, so it was structurally blind to exactly this class of error. The pipeline's verification stage found
+**The methodological lesson we keep.** Our own integrity harness asserted 69 numeric claims and passed every one of
+them (the harness now carries 112, having absorbed the corrections below), then certified the section as
+reproducible. It compared *paper number* to *script output* and never *script method* to *valid method*, so it was
+structurally blind to exactly this class of error. The pipeline's verification stage found
 three real problems in the references and none in the statistics. This is the same failure mode that Section 4.4
 warns about, arriving from an unexpected direction: engineering acceptance is not methodological validity, and a
 reconciliation table is not a peer review. We therefore treat the review stage that caught this as a component the
@@ -692,9 +693,12 @@ LLM agents such as Voyager [14]. Our `a = (tau, l, theta)` is an option with par
 things we should inherit rather than re-derive: the formal machinery for policies over sub-policies, and a candid
 literature on *when higher-level actions fail to help*. Recent work on option-critic pathologies reports policy
 necrosis and redundant coverage - learned options that are never used or that overlap so much that the hierarchy
-buys nothing [13]. Our Section 3.6 finding, that semantic labels do not out-predict surface structure, is a mild
-preview of that class of result and should be read as prior evidence that the naive positive outcome is not
-automatic.
+buys nothing [13]. That literature is the reason we insisted in Section 4.3 on pre-committing negative and
+indeterminate branches rather than only a winning one. Our own result should not be read as a preview of those
+pathologies, and an earlier draft of this paper wrongly read it as one: Section 3.6 originally reported that
+semantic labels failed to out-predict surface structure, which would have been a mild instance of "the higher level
+buys nothing". Corrected calibration reversed that finding (Section 3.6), so the hierarchy here is neither
+confirmed nor shown redundant by our data — it remains exactly the open question that [13] and Section 4 are about.
 
 ### 5.3 The compiler lineage is a warning too
 
@@ -879,14 +883,19 @@ expose exactly this, and its neutral outcome is the pre-registered end of this r
 ### 7.3 Sampling, attribution, and measurement limits
 
 The annotated 55 edges are a multi-hunk-enriched biased sample and cannot estimate population label frequencies.
-Speedup is taken from corpus metadata without re-measurement; 9 of 55 edges show >10x gains over parent, at least
-two of which had parents already near reference speed, so some gains are plausibly timing artefacts. 53 of 55 edges
-change autotuning configuration alongside structure, so per-action attribution in Section 3.5-3.7 is confounded by
-construction. The trajectory corpus was produced by a *search* procedure rather than by a policy learning from a
-reward, and the distribution of visited programs is therefore not the on-policy distribution that a Section 4
-experiment would face. Finally, `phi` is never actually constructed in this paper - we assert that the diffs have
-labels, not that a mechanical map from diff to label exists, and the gap between those two is a separate research
-question (automatic action recognition) that we deliberately did not open here.
+**The eligibility gate itself is inherited from the corpus: every edge is conditioned on the benchmark's own
+`correctness == true`, and two of the papers we cite argue that this oracle admits false passes [20,24]. Sections
+3.4-3.6 therefore rest on a filter we have shown reason to distrust, and a mutation-hardened oracle could change
+which edges count as successes at all.** Related measurement gaps: the ">5% faster" threshold has no noise floor
+because timing was taken from corpus metadata and never re-measured; `fast_p`'s baseline convention is not audited;
+9 of 55 edges show >10× gains over parent, at least two of which had parents already near reference speed, so some
+realized-speedup values used as the Section 3.6 outcome are plausibly timing artefacts; 53 of 55 edges change
+autotuning alongside structure, so per-action attribution in Sections 3.5-3.7 is confounded by construction. The
+trajectory corpus was produced by a *search* procedure rather than by a policy learning from a reward, so the
+visited-program distribution is not the on-policy distribution a Section-4 experiment would face. Finally, `phi` is
+never constructed here — we assert that the diffs have labels, not that a mechanical map from diff to label exists —
+and the gap between those two is a separate research question (automatic action recognition) that we deliberately did
+not open.
 
 ### 7.4 Language dependence
 
@@ -901,9 +910,9 @@ transfer claim must be intra-level unless a mapping between levels is specified.
 These are not confessions of style; both changed what we believe about the results above, and both bear directly on
 the methodological claim this area is making about automated research.
 
-**(1) A verification harness can be numerically exhaustive and methodologically blind.** Our integrity stage runs
-69 assertions re-derived from raw data, and it passed 69/69 while the headline statistical conclusion of Section 3.6
-was wrong. It compared *paper number* to *script output* and never *script method* to *valid method*; a
+**(1) A verification harness can be numerically exhaustive and methodologically blind.** Our integrity stage ran 69
+assertions re-derived from raw data, and passed 69/69 while the headline statistical conclusion of Section 3.6 was
+wrong. It compared *paper number* to *script output* and never *script method* to *valid method*; a
 misapplied bias correction propagates through it perfectly, because the number it checks is the number the bug
 produced. The same harness also faithfully certified a figure that Section 3.5 now identifies as an identity.
 This is the failure mode Section 4.4 warns about — internal rigour increasing while the question stays untouched —
