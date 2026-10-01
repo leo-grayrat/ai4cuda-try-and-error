@@ -839,7 +839,11 @@ programming performance, LLMs remain uncompetitive with `torch.compile` for kern
 large-scale RL to close that gap [1]. On the other hand, most tokens in a CUDA kernel are ordinary programming
 tokens — `for`, `if`, `float`, `int`, `*`, `[]`, `+` — with only a small, highly patterned minority that is
 CUDA-specific, so a corpus-frequency account of why token-level training should be *unusually* unstable in this
-domain is hard to sustain on first principles. On that reading, low-probability-tail blowups are more plausibly a
+domain is hard to sustain on first principles. And the account is not domain-specific in the way that would make it
+a CUDA result: whatever rarity a target domain has in pretraining — an obscure programming language, a hardware
+description language, a formal proof language — should produce the same low-probability tail. If the explanation
+transfers to every rare domain, it cannot be the explanation of anything about GPUs. On that reading,
+low-probability-tail blowups are more plausibly a
 train–inference mismatch and out-of-distribution-context problem of long multi-turn tool use — swallowing compile
 errors, profiler dumps, and odd intermediate program states — than a statement about learning theory for CUDA
 syntax, which is consistent with the general finding that training-inference mismatch, not domain rarity, is what
