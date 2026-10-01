@@ -1,0 +1,277 @@
+@@ -1,32 +1,265 @@
+ import torch
+ import torch.nn as nn
++import triton
++import triton.language as tl
++
++# Triton autotune configs for the pooling kernel
++AUTOTUNE_CONFIGS = [
++    triton.Config({"BLOCK": 128}, num_warps=2, num_stages=2),
++    triton.Config({"BLOCK": 256}, num_warps=4, num_stages=2),
++    triton.Config({"BLOCK": 512}, num_warps=4, num_stages=2),
++    triton.Config({"BLOCK": 1024}, num_warps=8, num_stages=3),
++]
++
++
++@triton.autotune(AUTOTUNE_CONFIGS, key=['N', 'C', 'DHW'])
++@triton.jit
++def mean_spatial_kernel(
++    x_ptr,           # pointer to input tensor (N, C, D, H, W)
++    out_ptr,         # pointer to output tensor (N*C,) float32 where each entry = mean over spatial
++    N, C, D, H, W,   # dims
++    stride_n, stride_c, stride_d, stride_h, stride_w,  # strides of input tensor
++    DHW,             # total spatial elements = D*H*W
++    BLOCK: tl.constexpr,
++):
++    """
++    Each program computes the mean over spatial dims for one (n, c) pair.
++    Grid size = N * C. program_id selects idx in [0..N*C)
++    The kernel processes the spatial dimension in chunks of size BLOCK.
++    """
++    pid = tl.program_id(0)  # linear id in [0, N*C)
++    n = pid // C
++    c = pid % C
++
++    base = n * stride_n + c * stride_c  # base offset into x for this (n,c)
++
++    acc = tl.zeros((1,), dtype=tl.float32)[0]
++
++    # Loop over chunks of spatial positions
++    num_iters = (DHW + BLOCK - 1) // BLOCK
++    for it in range(num_iters):
++        offs = it * BLOCK + tl.arange(0, BLOCK)
++        mask = offs < DHW
++
++        # compute d,h,w from linear offset offs
++        # offs is a vector; do integer arithmetic
++        wh = H * W
++        d = offs // wh
++        rem = offs - d * wh
++        h = rem // W
++        w = rem - h * W
++
++        # compute addresses for loads
++        addr = base + d * stride_d + h * stride_h + w * stride_w
++
++        vals = tl.load(x_ptr + addr, mask=mask, other=0.0)
++        # cast to float32 accumulator
++        acc = acc + tl.cast(vals, tl.float32)
++
++    # divide by total elements to get mean
++    mean_val = acc / tl.cast(DHW, tl.float32)
++    # store result to out_ptr at index pid (one value per (n,c))
++    tl.store(out_ptr + pid, mean_val)
++
++
++def triton_global_avg_pool3d(x: torch.Tensor):
++    """
++    Compute AdaptiveAvgPool3d((1,1,1)) using a Triton kernel.
++    Accepts input x of shape (N, C, D, H, W). Returns (N, C, 1, 1, 1) float32 tensor.
++    The kernel accumulates in float32 for accuracy even if input is float16.
++    """
++    assert x.is_cuda, "Triton pooling requires CUDA tensor"
++    N, C, D, H, W = x.shape
++    DHW = D * H * W
++
++    # Ensure input is contiguous in default layout for easier stride calculations.
++    # We try to avoid unnecessary copying if already contiguous.
++    if not x.is_contiguous():
++        x = x.contiguous()
++
++    # Prepare output flat tensor of shape (N*C,)
++    out = torch.empty((N * C,), dtype=torch.float32, device=x.device)
++
++    stride_n, stride_c, stride_d, stride_h, stride_w = x.stride()
++
++    # grid size: one program per (n,c)
++    grid = (N * C,)
++
++    mean_spatial_kernel[grid](
++        x,
++        out,
++        N, C, D, H, W,
++        stride_n, stride_c, stride_d, stride_h, stride_w,
++        DHW,
++    )
++    # reshape to (N, C, 1, 1, 1)
++    out = out.view(N, C, 1, 1, 1)
++    return out
++
+ 
+ class ModelNew(nn.Module):
+     """
+-    Optimized Model: folds a constant scalar scale_factor into the ConvTranspose3d weights (and bias),
+-    removing the need for a separate elementwise multiply during forward. The rest of the ops use PyTorch.
+-    This preserves the original model semantics while eliminating an extra memory pass.
++    Optimized Model:
++      - Folds constant scalar scale_factor into ConvTranspose3d weights at init.
++      - Lazily folds BatchNorm3d parameters into conv weights when switching to eval(),
++        removing the BN op entirely for inference.
++      - On CUDA inference, optionally casts conv params and runtime inputs to float16
++        and uses autocast to leverage Tensor Cores.
++      - Replaces AdaptiveAvgPool3d with a fused Triton kernel that computes the mean across
++        D,H,W in a single efficient kernel (accumulates in float32 for accuracy).
+     """
+     def __init__(self, in_channels, out_channels, kernel_size, scale_factor, eps=1e-5, momentum=0.1):
+         super(ModelNew, self).__init__()
+         self.conv_transpose = nn.ConvTranspose3d(in_channels, out_channels, kernel_size)
+         self.scale_factor = float(scale_factor)
+-        # Fold the constant scalar into the conv weights (and bias if present).
+-        # Use .data to mutate in-place so no extra graph is created; this is safe for a constant scalar.
++        # Fold the constant scalar into conv params immediately
+         with torch.no_grad():
+             self.conv_transpose.weight.data.mul_(self.scale_factor)
+             if self.conv_transpose.bias is not None:
+                 self.conv_transpose.bias.data.mul_(self.scale_factor)
+ 
+         self.batch_norm = nn.BatchNorm3d(out_channels, eps=eps, momentum=momentum)
+-        self.global_avg_pool = nn.AdaptiveAvgPool3d((1, 1, 1))
++        # Keep an nn.Identity placeholder for folded BN
++        self.global_avg_pool = None  # we replace pooling with triton kernel; keep for compatibility if needed
++
++        self._bn_folded = False
++        self._cast_conv_to_fp16 = True  # for inference on CUDA, convert conv params to fp16
++
++        # Hints for cuDNN on Ampere
++        if torch.cuda.is_available():
++            torch.backends.cudnn.benchmark = True
++            try:
++                torch.backends.cuda.matmul.allow_tf32 = True
++            except Exception:
++                pass
++
++    def _fold_bn_into_conv(self):
++        """
++        Fold BatchNorm3d parameters into ConvTranspose3d weights and bias.
++        After folding, replace batch_norm with Identity to remove the op.
++        """
++        if self._bn_folded:
++            return
++        if not isinstance(self.batch_norm, nn.BatchNorm3d):
++            self._bn_folded = True
++            return
++
++        bn = self.batch_norm
++        conv = self.conv_transpose
++
++        # Ensure conv has a bias
++        if conv.bias is None:
++            conv.bias = nn.Parameter(torch.zeros(conv.out_channels, device=conv.weight.device, dtype=conv.weight.dtype))
++
++        dev = conv.weight.device
++        with torch.no_grad():
++            # compute folding in fp32 for stability
++            w_fp32 = conv.weight.detach().to(dtype=torch.float32, device=dev).clone()
++            b_fp32 = conv.bias.detach().to(dtype=torch.float32, device=dev).clone()
++
++            if bn.weight is not None:
++                gamma = bn.weight.detach().to(dtype=torch.float32, device=dev)
++            else:
++                gamma = torch.ones(conv.out_channels, device=dev, dtype=torch.float32)
++            if bn.bias is not None:
++                beta = bn.bias.detach().to(dtype=torch.float32, device=dev)
++            else:
++                beta = torch.zeros(conv.out_channels, device=dev, dtype=torch.float32)
++
++            running_mean = bn.running_mean.detach().to(dtype=torch.float32, device=dev)
++            running_var = bn.running_var.detach().to(dtype=torch.float32, device=dev)
++            eps = float(bn.eps)
++
++            scale = gamma / torch.sqrt(running_var + eps)
++
++            # reshape scale for broadcasting across weight dims
++            shape = [conv.out_channels] + [1] * (w_fp32.ndim - 1)
++            w_fp32.mul_(scale.view(shape))
++            b_fp32 = (b_fp32 - running_mean) * scale + beta
++
++            # write back
++            conv.weight.data.copy_(w_fp32.to(conv.weight.dtype))
++            conv.bias.data.copy_(b_fp32.to(conv.bias.dtype))
++
++            # remove batch norm
++            self.batch_norm = nn.Identity()
++            self._bn_folded = True
++
++            # Optionally cast conv params to float16 and make contiguous in channels_last_3d
++            if torch.cuda.is_available() and self._cast_conv_to_fp16:
++                try:
++                    w = conv.weight.detach().contiguous(memory_format=torch.channels_last_3d).to(dtype=torch.float16)
++                    conv.weight = nn.Parameter(w)
++                    conv.bias = nn.Parameter(conv.bias.detach().to(dtype=torch.float16))
++                except Exception:
++                    try:
++                        conv.weight = nn.Parameter(conv.weight.detach().contiguous())
++                    except Exception:
++                        pass
++
++    def eval(self):
++        """
++        On switching to eval, fold BN into conv so inference path is simpler and faster.
++        """
++        super(ModelNew, self).eval()
++        with torch.no_grad():
++            self._fold_bn_into_conv()
++        return self
+ 
+     def forward(self, x):
+-        x = self.conv_transpose(x)
+-        # No explicit multiply needed; scalar has been folded into weights.
+-        x = self.batch_norm(x)
+-        x = self.global_avg_pool(x)
+-        return x
++        # Training path: keep original semantics (float32 ops)
++        if self.training or not x.is_cuda:
++            # do conv, then PyTorch pooling (keeps autograd)
++            x = self.conv_transpose(x)
++            x = self.batch_norm(x)
++            # fallback to PyTorch pooling for correctness in training / CPU
++            x = nn.functional.adaptive_avg_pool3d(x, (1, 1, 1))
++            return x
++
++        # Inference (CUDA) path: BN should be folded; use fp16 conv + Triton pooling for speed
++        # If BN hasn't been folded yet, fold now (eval() usually calls this).
++        if not self._bn_folded:
++            # Do folding in-place (no gradient)
++            with torch.no_grad():
++                self._fold_bn_into_conv()
++
++        # If conv params are float16 and on CUDA, run with autocast to use Tensor Cores
++        use_fp16 = (self.conv_transpose.weight.dtype == torch.float16)
++
++        if use_fp16:
++            # Prepare input: cast to float16 and attempt to use channels_last_3d memory format for cudnn performance
++            # We will make a contiguous tensor in the default layout afterwards for Triton pooling to read easily.
++            try:
++                x_opt = x.contiguous(memory_format=torch.channels_last_3d).to(dtype=torch.float16)
++            except Exception:
++                x_opt = x.to(dtype=torch.float16).contiguous()
++
++            # Run conv under autocast to ensure efficient kernels
++            with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):
++                out = self.conv_transpose(x_opt)
++                # batch_norm should be Identity after folding, but keep call for safety
++                out = self.batch_norm(out)
++
++            # Ensure tensor is contiguous in default layout for Triton kernel (avoids complex stride handling)
++            if not out.is_contiguous():
++                out = out.contiguous()
++
++            # Run Triton-based global average pool which accumulates in float32 and returns float32 result
++            pooled = triton_global_avg_pool3d(out)
++
++            # Match typical PyTorch dtype for outputs (convert to float32)
++            return pooled
++
++        else:
++            # conv params are float32 or not cast; run normally but still use Triton pooling for speed
++            out = self.conv_transpose(x)
++            out = self.batch_norm(out)
++            # ensure contiguous for triton kernel
++            if not out.is_contiguous():
++                out = out.contiguous()
++            pooled = triton_global_avg_pool3d(out)
++            return pooled
++
+ 
+ # The following constants and helper functions mirror the original module's interface
+ batch_size = 16

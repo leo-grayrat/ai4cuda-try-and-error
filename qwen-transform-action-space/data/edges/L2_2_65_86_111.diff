@@ -1,0 +1,132 @@
+@@ -85,89 +85,51 @@
+ 
+ class ModelNew(nn.Module):
+     """
+-    Optimized model:
+-      - Uses PyTorch's highly-optimized conv2d for the convolution.
+-      - Fuses AvgPool2d + Sigmoid + Sum into a single autotuned Triton kernel that computes
+-        per-chunk partial sums (no atomics) and then reduces them with a fast GPU reduction.
+-      - Kernel is autotuned over BLOCK sizes and warp counts to pick the best configuration on the device.
++    Optimized model (folded pooling):
++      - Fold AvgPool2d(pool_k, stride=pool_k) into the convolution weights so that a single
++        Conv2d with stride=pool_k produces the pooled output directly. This removes the Triton
++        pooling kernel, the partial-buffer pattern, and extra memory traffic / kernel launches.
++      - After folding, forward simply applies the conv, sigmoid, and sum.
+     """
+     def __init__(self, in_channels, out_channels, kernel_size, pool_kernel_size):
+         super(ModelNew, self).__init__()
+-        # Keep PyTorch conv2d (cuDNN/ATen) for highly-optimized convolution
+-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size)
+-        self.pool_k = pool_kernel_size
+-        self.pool_stride = pool_kernel_size  # default behavior of AvgPool2d(pool_k)
++        # Create a base conv to obtain initial weights/bias, then fold the average pooling into a
++        # larger kernel and replace the conv with one that has stride=pool_kernel_size.
++        base_conv = nn.Conv2d(in_channels, out_channels, kernel_size, bias=True)
++        pool_k = pool_kernel_size
++
++        # Prepare tensors for folding: base_conv.weight shape: (out, in, k, k)
++        W = base_conv.weight.detach()  # (out, in, k, k)
++        out_ch, in_ch, kH, kW = W.shape
++        assert kH == kW and isinstance(pool_k, int), "expected square kernels and integer pool_k"
++
++        # Reshape so we can use conv2d to compute spatial full-convolution of each (out,in) kernel
++        W_reshaped = W.view(out_ch * in_ch, 1, kH, kW)  # (out*in, 1, k, k)
++        avg_kernel = torch.full((1, 1, pool_k, pool_k), 1.0 / (pool_k * pool_k), dtype=W.dtype)
++
++        # Full spatial convolution: pad = pool_k - 1 to compute full convolution (output size = k + pool_k - 1)
++        folded = torch.nn.functional.conv2d(W_reshaped, avg_kernel, padding=pool_k - 1)
++        new_k = kH + pool_k - 1
++        folded = folded.view(out_ch, in_ch, new_k, new_k)
++
++        # Create new conv with stride = pool_k and the enlarged kernel that already incorporates averaging.
++        new_conv = nn.Conv2d(in_channels, out_channels, kernel_size=new_k, stride=pool_k, bias=True)
++
++        # Initialize new_conv weights and bias from folded result and base bias
++        with torch.no_grad():
++            new_conv.weight.copy_(folded)
++            if base_conv.bias is not None:
++                new_conv.bias.copy_(base_conv.bias.detach())
++            else:
++                new_conv.bias.zero_()
++
++        self.conv = new_conv
++        # We no longer need separate pool_k or pool_stride at runtime; conv stride does pooling.
++        self.pool_k = pool_k
+ 
+     def forward(self, x):
+-        # x: (B, in_channels, H, W)
+-        x_conv = self.conv(x)  # use optimized PyTorch conv
+-
+-        B, C, Hc, Wc = x_conv.shape
+-        pool_k = self.pool_k
+-        stride = self.pool_stride
+-
+-        # compute pooled output dims (same behavior as nn.AvgPool2d with kernel=pool_k and stride=pool_k)
+-        outH = (Hc - pool_k) // stride + 1
+-        outW = (Wc - pool_k) // stride + 1
+-
+-        # Ensure contiguous layout for reliable strides
+-        x_conv = x_conv.contiguous()
+-
+-        # total windows per batch
+-        N_per_batch = C * outH * outW
+-
+-        if N_per_batch == 0:
+-            return torch.zeros(B, device=x_conv.device, dtype=x_conv.dtype)
+-
+-        # choose BLOCK via autotuning (configs specified in decorator)
+-        # number of chunks (programs per batch)
+-        # Note: kernel's BLOCK is selected by autotuner; we compute num_chunks based on N_per_batch
+-        # We'll conservatively compute the maximum number of chunks assuming smallest BLOCK=128 to size partial buffer.
+-        # However Triton kernel will only access up to actual num_chunks computed with chosen BLOCK.
+-        # Compute num_chunks for chosen BLOCK at runtime by using a safe overestimate approach:
+-        # We will launch grid with num_chunks computed for the smallest BLOCK=128 so kernel won't be out-of-bounds.
+-        # To be precise and avoid overallocating partial, compute num_chunks with BLOCK=128 (smallest config).
+-        smallest_block = 128
+-        num_chunks = (N_per_batch + smallest_block - 1) // smallest_block
+-
+-        # Allocate partial output buffer: shape (B, num_chunks)
+-        # We'll store floats (fp32)
+-        partial = torch.empty((B, num_chunks), device=x_conv.device, dtype=x_conv.dtype)
+-
+-        # Input strides in elements
+-        sB = x_conv.stride(0)
+-        sC = x_conv.stride(1)
+-        sH = x_conv.stride(2)
+-        sW = x_conv.stride(3)
+-
+-        # Launch Triton kernel: grid (B, num_chunks). The autotuner will pick the best BLOCK config.
+-        grid = (B, num_chunks)
+-        _pool_sigmoid_partial_kernel_autotuned[grid](
+-            x_conv,                # inp_ptr
+-            partial,               # partial_ptr
+-            B, C, Hc, Wc,
+-            outH, outW,
+-            pool_k, stride,
+-            sB, sC, sH, sW,
+-            num_chunks,            # out_stride (chunks per batch)
+-            N_per_batch
+-        )
+-
+-        # Reduce partials per batch on GPU using a fast vectorized sum
+-        # Only valid partial entries were written by the kernel; any leftover positions (if num_chunks overestimated)
+-        # will contain uninitialized data. To avoid relying on that, we mask entries beyond actual chunks.
+-        # Compute true number of chunks given autotuner-chosen BLOCK by inspecting how many non-zero writes we expect:
+-        # The kernel wrote exactly ceil(N_per_batch / BLOCK_chosen) chunks; we don't have BLOCK_chosen directly here,
+-        # but the kernel wrote partials for indices < ceil(N_per_batch / BLOCK_chosen) and zero for out-of-range lanes.
+-        # To remain safe and simple, we perform the reduction only up to the number of chunks that could contain valid data:
+-        # compute the exact chunks used for the smallest_block lower bound -> it's safe and covers all actual chunks.
+-        # For correctness, we compute the real number of chunks based on N_per_batch and smallest_block:
+-        real_chunks = (N_per_batch + smallest_block - 1) // smallest_block
+-        if real_chunks < num_chunks:
+-            used_partial = partial[:, :real_chunks]
+-        else:
+-            used_partial = partial
+-
+-        out = used_partial.sum(dim=1)
+-
++        # Single conv produces pooled outputs due to stride=pool_k
++        x_conv = self.conv(x)  # (B, C_out, outH, outW)
++        x_sig = torch.sigmoid(x_conv)
++        out = torch.sum(x_sig, dim=[1, 2, 3])
+         return out

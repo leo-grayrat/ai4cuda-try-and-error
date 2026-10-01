@@ -1,0 +1,169 @@
+@@ -1,17 +1,121 @@
+ import torch
+ import torch.nn as nn
+-import torch.nn.functional as F
++import triton
++import triton.language as tl
+ 
+-# The Triton fused kernel has been removed. The per-channel multiplier is folded into
+-# the Conv2d weights/bias at forward time inside ModelNew.forward to avoid an extra
+-# full-output elementwise pass and reduce memory traffic.
++# Autotune configurations chosen to favor large contiguous elementwise workloads on Ampere (A6000).
++# We prefer larger BLOCK_SIZE to maximize throughput for the big (B*C*H*W) elementwise pass.
++AUTOTUNE_CONFIGS = [
++    triton.Config({"BLOCK_SIZE": 2048},  num_warps=4, num_stages=2),
++    triton.Config({"BLOCK_SIZE": 4096},  num_warps=4, num_stages=2),
++    triton.Config({"BLOCK_SIZE": 8192},  num_warps=8, num_stages=3),
++]
++
++
++@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['B', 'C', 'HW'])
++@triton.jit
++def fused_mul_lrelu_gelu_kernel(
++    x_ptr,        # pointer to input tensor (flattened)
++    m_ptr,        # pointer to multiplier vector per channel (length C)
++    out_ptr,      # pointer to output tensor (flattened)
++    B,            # batch size
++    C,            # channels
++    HW,           # height * width
++    neg_slope,    # leaky relu negative slope (float)
++    BLOCK_SIZE: tl.constexpr,
++):
++    """
++    Each program processes a contiguous tile of size BLOCK_SIZE along the HW dimension
++    for a specific (batch, channel) slice. This avoids per-element division to compute
++    channel indices and allows loading the per-channel multiplier once per tile.
++    """
++    bc = tl.program_id(0)         # which (batch * C + channel) slice
++    tile = tl.program_id(1)       # which tile along the HW axis
++
++    start = tile * BLOCK_SIZE
++    offs = start + tl.arange(0, BLOCK_SIZE)
++    mask = offs < HW
++
++    # Flattened index into contiguous NCHW memory laid out as (B*C*HW)
++    base = bc * HW
++    idx = base + offs
++
++    # Load input values for this tile
++    x_vals = tl.load(x_ptr + idx, mask=mask, other=0.0)
++
++    # Determine channel once for this bc slice (scalar)
++    channel = bc % C
++
++    # Load multiplier for this channel as a scalar (single load)
++    # Broadcast by multiplying with the vector x_vals
++    m_val = tl.load(m_ptr + channel)
++
++    # Multiply by channel multiplier
++    vals = x_vals * m_val
++
++    # LeakyReLU: vals if vals >= 0 else vals * neg_slope
++    zero = tl.zeros_like(vals)
++    vals = tl.where(vals >= zero, vals, vals * neg_slope)
++
++    # GELU approximation via sigmoid approximation: gelu(x) ~ x * sigmoid(1.702 * x)
++    t = 1.702 * vals
++    sig = 1.0 / (1.0 + tl.exp(-t))
++    out_vals = vals * sig
++
++    # Store results
++    tl.store(out_ptr + idx, out_vals, mask=mask)
++
++
++def triton_fused_mul_lrelu_gelu(x: torch.Tensor, m: torch.Tensor, neg_slope: float = 0.01):
++    """
++    Fused operator that multiplies per-channel, applies LeakyReLU, and GELU in one Triton kernel.
++    Inputs:
++      - x: Tensor of shape [B, C, H, W] (CUDA, float32)
++      - m: Tensor of shape [C] or [C,1,1] (CUDA, float32)
++    Returns:
++      - out: Tensor with same shape as x
++    """
++    assert x.is_cuda and m.is_cuda, "Inputs must be CUDA tensors"
++    assert x.dtype == torch.float32 and m.dtype == torch.float32, "Only float32 supported"
++
++    x = x.contiguous()
++    B, C, H, W = x.shape
++    HW = H * W
++    BC = B * C
++
++    # Flattened views for pointer arithmetic
++    x_flat = x.view(-1)
++    out = torch.empty_like(x)
++    out_flat = out.view(-1)
++
++    m_flat = m.contiguous().view(-1)
++    assert m_flat.numel() == C, f"Multiplier length {m_flat.numel()} != channels {C}"
++
++    # Grid: one program per (batch,channel) and tile along HW
++    grid = lambda meta: (
++        BC,
++        (HW + meta['BLOCK_SIZE'] - 1) // meta['BLOCK_SIZE'],
++    )
++
++    fused_mul_lrelu_gelu_kernel[grid](
++        x_flat,               # x_ptr
++        m_flat,               # m_ptr
++        out_flat,             # out_ptr
++        B,
++        C,
++        HW,
++        float(neg_slope),
++    )
++    return out
+ 
+ 
+ class ModelNew(nn.Module):
+     """
+-    Optimized model that folds the per-channel multiplier into the Conv2d parameters
+-    at forward time to avoid an extra full-output elementwise pass. Preserves training
+-    semantics by applying the multiplier to a copy of the convolution weights/bias.
++    Optimized Model:
++      - Uses PyTorch's Conv2d for convolution (leveraging cuDNN)
++      - Fuses the per-channel multiplication, LeakyReLU, and GELU into a single Triton kernel
++        that loads the per-channel multiplier once per tile (scalar load) and processes large
++        contiguous HW tiles for maximum throughput on Ampere GPUs.
+     """
+     def __init__(self, in_channels, out_channels, kernel_size, multiplier_shape, negative_slope: float = 0.01):
+         super(ModelNew, self).__init__()
+@@ -19,33 +123,17 @@
+         init = torch.randn(multiplier_shape)
+         self.multiplier = nn.Parameter(init)
+         self.negative_slope = negative_slope
+-        self.leaky_relu = nn.LeakyReLU()
+ 
+     def forward(self, x):
+-        # Ensure multiplier is on same device and dtype
++        # Convolution using PyTorch's optimized backend
++        x = self.conv(x)
++
++        # Ensure multiplier is on same device and dtype as x
+         m = self.multiplier
+         if m.device != x.device:
+             m = m.to(x.device)
+         if m.dtype != x.dtype:
+             m = m.to(x.dtype)
+ 
+-        # Prepare scaled weights and bias (apply multiplier per-output-channel).
+-        # self.conv.weight shape: [out_channels, in_channels, kh, kw]
+-        # multiplier shape: (out_channels, 1, 1) -> view as (out_channels,1,1,1) to broadcast
+-        w = self.conv.weight
+-        w_scaled = w * m.view(-1, 1, 1, 1)
+-
+-        b = self.conv.bias
+-        if b is not None:
+-            b_scaled = b * m.view(-1)
+-        else:
+-            b_scaled = None
+-
+-        # Use functional conv to apply scaled params without modifying the stored parameters.
+-        x = F.conv2d(x, w_scaled, b_scaled, stride=self.conv.stride,
+-                     padding=self.conv.padding, dilation=self.conv.dilation, groups=self.conv.groups)
+-
+-        # Activation: LeakyReLU followed by GELU
+-        x = self.leaky_relu(x)
+-        x = torch.nn.functional.gelu(x)
+-        return x
++        # Call Triton fused kernel
++        return triton_fused_mul_lrelu_gelu(x, m, self.negative_slope)

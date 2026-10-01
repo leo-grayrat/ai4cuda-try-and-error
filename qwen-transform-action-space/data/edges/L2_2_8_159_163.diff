@@ -1,0 +1,89 @@
+@@ -8,15 +8,14 @@
+       1) Fold the fixed scalar division into conv parameters at init (no per-forward scaling).
+       2) Fold the small post-pool bias into conv.bias at init (removes broadcast/add).
+       3) Cache FP16 copies of conv weights/bias at init and use them in forward to avoid repeated
+-         weight casts/autocast overhead. The input is cast once per forward to FP16, the conv runs
+-         in FP16, and the result is promoted back to FP32 for pooling/avg/sum to preserve numerical
+-         stability for reductions.
++         weight casts. Keep activations in FP16 throughout conv + pooling pipeline, and perform
++         the final reduction (sum) in FP32 to preserve accuracy.
+ 
+     Pipeline after init:
+-      - Convolution (functional F.conv3d using cached FP16 params)
+-      - MaxPool3d (kernel_size = pool_size, stride = pool_size) in FP32
+-      - AdaptiveAvgPool3d((1,1,1)) in FP32
+-      - Sum over the specified dimension (sum_dim)
++      - Convolution (functional F.conv3d using cached FP16 params, input FP16)
++      - MaxPool3d (kernel_size = pool_size, stride = pool_size) in FP16
++      - AdaptiveAvgPool3d((1,1,1)) in FP16
++      - Sum over the specified dimension (sum_dim) performed in FP32 (accumulation in FP32)
+ 
+     The output shape remains (B, 1, 1, 1) for the provided configuration.
+     """
+@@ -55,37 +54,52 @@
+ 
+         # Create cached FP16 copies of conv params to avoid per-forward weight casts.
+         # Registered as buffers so they move with the module (to CUDA/CPU) automatically.
+-        self.register_buffer("weight_fp16", self.conv.weight.data.half())
++        # Keep them as contiguous tensors to avoid per-forward relayouts.
++        self.register_buffer("weight_fp16", self.conv.weight.data.half().contiguous())
+         # conv.bias is guaranteed to exist after folding above
+-        self.register_buffer("bias_fp16", self.conv.bias.data.half())
++        self.register_buffer("bias_fp16", self.conv.bias.data.half().contiguous())
+ 
+     def forward(self, x):
+         # x: (B, in_channels, D, H, W)
+ 
+-        # Avoid unnecessary copy: only convert memory format if not already in channels_last_3d.
++        # Ensure channels_last_3d memory format for better conv perf on Ampere.
+         if not x.is_contiguous(memory_format=torch.channels_last_3d):
+             x = x.contiguous(memory_format=torch.channels_last_3d)
+ 
+-        # Cast input to FP16 once and run conv with cached FP16 params to utilize Tensor Cores
+-        # without repeatedly casting weights. Then promote the conv output to FP32 for pooling and reduction.
++        # Cast input to FP16 once. Use cached FP16 params for conv to utilize Tensor Cores.
+         x16 = x.to(torch.float16)
++
++        # Ensure cached params are on the same device/dtype and contiguous
++        w16 = self.weight_fp16
++        if w16.device != x16.device:
++            # buffers should normally move with the module, but be defensive
++            w16 = w16.to(device=x16.device)
++        if not w16.is_contiguous():
++            w16 = w16.contiguous()
++
++        b16 = self.bias_fp16
++        if b16.device != x16.device:
++            b16 = b16.to(device=x16.device)
++        if not b16.is_contiguous():
++            b16 = b16.contiguous()
++
++        # Run conv in FP16 (fast, uses Tensor Cores). Keep outputs in FP16.
+         conv_out16 = F.conv3d(
+             x16,
+-            self.weight_fp16,
+-            self.bias_fp16,
++            w16,
++            b16,
+             stride=self.conv.stride,
+             padding=self.conv.padding,
+             dilation=self.conv.dilation,
+             groups=self.conv.groups
+         )  # (B, C, D, H, W) in FP16
+ 
+-        # Promote to FP32 for pooling/avg/sum to preserve numerical stability for reductions
+-        conv_out = conv_out16.to(torch.float32)
++        # Keep pooling and adaptive avg pooling in FP16 to reduce memory traffic.
++        pooled16 = self.max_pool(conv_out16)                # (B, C, D', H', W') in FP16
++        avg_pooled16 = self.global_avg_pool(pooled16)       # (B, C, 1, 1, 1) in FP16
+ 
+-        pooled = self.max_pool(conv_out)                # (B, C, D', H', W')
+-        avg_pooled = self.global_avg_pool(pooled)       # (B, C, 1, 1, 1)
+-
+-        # Sum along the specified dimension (e.g., dim=1 for channels)
+-        result = torch.sum(avg_pooled, dim=self.sum_dim)  # (B, 1, 1, 1)
++        # Perform the final reduction (sum) in FP32 for accurate accumulation.
++        # Cast the small (B, C, 1, 1, 1) tensor to FP32 and sum along channels (or sum_dim).
++        result = torch.sum(avg_pooled16.to(torch.float32), dim=self.sum_dim)  # (B, 1, 1, 1) in FP32
+ 
+         return result

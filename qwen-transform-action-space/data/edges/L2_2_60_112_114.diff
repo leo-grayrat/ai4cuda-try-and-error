@@ -1,0 +1,135 @@
+@@ -3,42 +3,16 @@
+ import triton
+ import triton.language as tl
+ 
+-# Optimization applied:
+-# - Split work into two kernels:
+-#   1) _swish_inplace_kernel: cheap pointwise in-place Swish (x := x * sigmoid(x))
+-#   2) _gn_affine_hardswish_kernel: reads swished x, computes per-(N,G) mean/var, normalizes,
+-#      applies per-channel affine, and HardSwish.
+-# - Use a larger BLOCK_SPATIAL to reduce loop overhead (tuned to 1024 here).
+-# - Keep accumulators in fp32 and precompute denom_inv = 1.0 / (Cg * S) to replace division with multiply.
+-
+-@triton.jit
+-def _swish_inplace_kernel(
+-    x_ptr,      # input/output pointer (conv output), shape (N, C, S) flattened as ((n*C + c) * S + s)
+-    N, C, D, H, W, S,
+-    BLOCK_SPATIAL: tl.constexpr,  # number of contiguous spatial elements processed per vector (constexpr)
+-):
+-    n = tl.program_id(0)
+-    c = tl.program_id(1)
+-
+-    base_ptr = x_ptr + ((n * C + c) * S)
+-    offs = tl.arange(0, BLOCK_SPATIAL)
+-
+-    for start in range(0, S, BLOCK_SPATIAL):
+-        idx = start + offs
+-        mask = idx < S
+-        ptrs = base_ptr + idx
+-
+-        vals = tl.load(ptrs, mask=mask, other=0.0)
+-        # swish: x * sigmoid(x)
+-        sig = 1.0 / (1.0 + tl.exp(-vals))
+-        s = vals * sig
+-
+-        tl.store(ptrs, s, mask=mask)
+-
++# Optimization applied (revised):
++# - Fuse Swish into the GroupNorm/Affine/HardSwish kernel (compute swish on-the-fly when loading values)
++#   to remove the in-place kernel and an extra global write/read.
++# - Use a warp/vector-friendly BLOCK_SPATIAL (256) to improve vectorization and reduce mask overhead.
++# - Use tl.rsqrt(var + eps) for invstd (1/sqrt) which can be faster on Ampere.
++# - Keep accumulators in fp32 and the channel-outer / spatial-inner ordering for contiguous loads.
+ 
+ @triton.jit
+ def _gn_affine_hardswish_kernel(
+-    x_ptr,        # input pointer (already swished)
++    x_ptr,        # input pointer (raw conv output), shape (N, C, S) flattened as ((n*C + c) * S + s)
+     out_ptr,      # output pointer (same shape as x)
+     weight_ptr,   # per-channel affine weight shape (C,)
+     bias_ptr,     # per-channel affine bias shape (C,)
+@@ -56,7 +30,7 @@
+     total_sum = 0.0
+     total_sumsq = 0.0
+ 
+-    # iterate channels first for contiguous loads
++    # iterate channels first for contiguous loads, compute swish on-the-fly to avoid extra pass
+     for c_in_group in range(0, Cg):
+         c = g * Cg + c_in_group
+         base_ptr = x_ptr + ((n * C + c) * S)
+@@ -66,8 +40,11 @@
+             mask = idx < S
+             ptrs = base_ptr + idx
+ 
+-            # x is already swished (fp32)
+-            s_vals = tl.load(ptrs, mask=mask, other=0.0)
++            # load raw conv outputs
++            vals = tl.load(ptrs, mask=mask, other=0.0)
++            # swish: x * sigmoid(x)
++            sig = 1.0 / (1.0 + tl.exp(-vals))
++            s_vals = vals * sig
+ 
+             total_sum += tl.sum(s_vals)
+             total_sumsq += tl.sum(s_vals * s_vals)
+@@ -76,9 +53,10 @@
+     denom_inv = 1.0 / (1.0 * (Cg * S))
+     mean = total_sum * denom_inv
+     var = total_sumsq * denom_inv - mean * mean
+-    invstd = 1.0 / tl.sqrt(var + eps)
++    # use rsqrt for 1/sqrt which can be faster on Ampere
++    invstd = tl.rsqrt(var + eps)
+ 
+-    # Second pass: normalize and write outputs
++    # Second pass: normalize and write outputs (compute swish again on-the-fly)
+     for c_in_group in range(0, Cg):
+         c = g * Cg + c_in_group
+         base_ptr = x_ptr + ((n * C + c) * S)
+@@ -93,7 +71,10 @@
+             mask = idx < S
+             ptrs = base_ptr + idx
+ 
+-            s_vals = tl.load(ptrs, mask=mask, other=0.0)  # already swished
++            vals = tl.load(ptrs, mask=mask, other=0.0)
++            # swish on-the-fly (same as used for stats)
++            sig = 1.0 / (1.0 + tl.exp(-vals))
++            s_vals = vals * sig
+ 
+             # normalize
+             norm = (s_vals - mean) * invstd
+@@ -114,9 +95,11 @@
+     """
+     Optimized Model that:
+       - Keeps PyTorch ConvTranspose3d for convolution transpose (leverages cuDNN/cuBLAS)
+-      - Splits Swish into a cheap in-place kernel and runs a GroupNorm+Affine+HardSwish kernel that
+-        reads the already-swished values. This reduces duplicate exp/sigmoid computations.
+-      - Larger BLOCK_SPATIAL is chosen to reduce loop overhead on Ampere GPUs.
++      - Fuses Swish into a single GroupNorm+Affine+HardSwish Triton kernel:
++          * Computes swish(x) on-the-fly while loading values
++          * Computes per-sample-per-group mean and invstd within the same kernel
++          * Normalizes, applies per-channel affine, and HardSwish, writing outputs
++      - This removes an entire global write+read and a kernel launch compared to the 2-kernel approach.
+     """
+     def __init__(self, in_channels, out_channels, kernel_size, stride, padding, groups, eps, bias=True):
+         super(ModelNew, self).__init__()
+@@ -146,18 +129,10 @@
+             b = self.bias.contiguous()
+ 
+             # Tuned block size (constexpr) for spatial tiles.
+-            # For S=16*32*32=16384, 1024 reduces loop iterations and aligns well with warps.
+-            BLOCK_SPATIAL = 1024
++            # Use 256 which is a multiple of 32 (warp) and 4 (float4) for good vectorization on Ampere.
++            BLOCK_SPATIAL = 256
+ 
+-            # 1) In-place swish: grid per (N, C)
+-            grid_swish = lambda meta: (N, C)
+-            _swish_inplace_kernel[grid_swish](
+-                x_contig,
+-                N, C, D, H, W, S,
+-                BLOCK_SPATIAL=BLOCK_SPATIAL
+-            )
+-
+-            # 2) GroupNorm + Affine + HardSwish: grid per (N, G)
++            # Single fused kernel: grid per (N, G)
+             grid_gn = lambda meta: (N, G)
+             _gn_affine_hardswish_kernel[grid_gn](
+                 x_contig, out, w, b,

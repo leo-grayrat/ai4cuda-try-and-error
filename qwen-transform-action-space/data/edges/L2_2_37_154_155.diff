@@ -1,0 +1,228 @@
+@@ -4,17 +4,18 @@
+ import triton.language as tl
+ from torch.cuda.amp import autocast
+ 
+-# Fused Triton kernel: Swish + Bias + GroupNorm
+-# Operates on FP16 activations & params, uses FP32 accumulators for reductions.
++# Fused Triton kernel:
++# Performs Swish(x) + bias, then GroupNorm with per-channel affine.
++# Inputs and params are read in FP16 to reduce memory traffic; computations for reductions and final affine are in FP32.
+ @triton.jit
+ def _fused_swish_bias_groupnorm_kernel(
+-    x_ptr,            # input pointer (N, C) in FP16
++    x_ptr,            # pointer to input (N, C) in FP16 or FP32 (we pass FP16)
+     bias_ptr,         # bias pointer (C,) in FP16
+     gn_weight_ptr,    # groupnorm weight pointer (C,) in FP16
+     gn_bias_ptr,      # groupnorm bias pointer (C,) in FP16
+-    out_ptr,          # output pointer (N, C) in FP16
++    out_ptr,          # output pointer (N, C) in FP32
+     N,                # batch size
+-    C,                # channels (out_features)
++    C,                # number of channels
+     G,                # number of groups
+     group_size,       # channels per group (int)
+     group_size_f,     # channels per group (float)
+@@ -25,32 +26,32 @@
+     g = tl.program_id(0)                       # group index
+     nb = tl.program_id(1)                      # which block of rows
+ 
+-    # Row indices for this program (BLOCK_N is constexpr)
++    # Row indices handled by this program
+     n_start = nb * BLOCK_N
+     offs_n = n_start + tl.arange(0, BLOCK_N)   # (BLOCK_N,)
+     mask_n = offs_n < N                         # (BLOCK_N,)
+ 
+-    # Row offsets to add when loading/storing (row * C)
++    # Row base offsets (row * C) for loading/storing
+     row_offs = offs_n[:, None] * C             # (BLOCK_N, 1)
+ 
+     # Channel tiling for the group
+     c_base = g * group_size
+     tiles = (group_size + BLOCK_C - 1) // BLOCK_C
+ 
+-    # FP32 accumulators per row
++    # FP32 accumulators for per-row sum and sum of squares
+     sum_v = tl.zeros((BLOCK_N,), dtype=tl.float32)
+     sum_sq = tl.zeros((BLOCK_N,), dtype=tl.float32)
+ 
+-    # First pass: accumulate mean and variance stats across channel tiles
++    # First pass: compute per-row sum and sum of squares across group's channels
+     for t in range(tiles):
+-        offs_c = c_base + t * BLOCK_C + tl.arange(0, BLOCK_C)  # (BLOCK_C,)
++        offs_c = c_base + t * BLOCK_C + tl.arange(0, BLOCK_C)   # (BLOCK_C,)
+         col_offs = offs_c[None, :]                              # (1, BLOCK_C)
+         ptrs = x_ptr + row_offs + col_offs                      # (BLOCK_N, BLOCK_C)
+ 
+         mask_c = (offs_c < C) & (offs_c < c_base + group_size)  # (BLOCK_C,)
+         mask = mask_n[:, None] & mask_c[None, :]                # (BLOCK_N, BLOCK_C)
+ 
+-        # Load activation tile (FP16) and cast to FP32 for compute
++        # Load activation tile (FP16) and cast to FP32
+         x_tile = tl.load(ptrs, mask=mask, other=0.0)
+         x_fp32 = tl.cast(x_tile, tl.float32)
+ 
+@@ -58,12 +59,12 @@
+         sig = 1.0 / (1.0 + tl.exp(-x_fp32))
+         v_fp32 = x_fp32 * sig
+ 
+-        # Add per-channel bias (broadcast across rows)
++        # Load bias tile and add (broadcast across rows)
+         b_tile = tl.load(bias_ptr + offs_c, mask=mask_c, other=0.0)
+         b_fp32 = tl.cast(b_tile, tl.float32)
+         v_fp32 = v_fp32 + b_fp32[None, :]
+ 
+-        # Accumulate sums per row
++        # Accumulate per-row sums
+         sum_v = sum_v + tl.sum(v_fp32, axis=1)
+         sum_sq = sum_sq + tl.sum(v_fp32 * v_fp32, axis=1)
+ 
+@@ -72,7 +73,11 @@
+     var = sum_sq / group_size_f - mean * mean
+     invstd = 1.0 / tl.sqrt(var + eps)
+ 
+-    # Second pass: compute normalized outputs and store (as FP16)
++    # Expand mean and invstd to (BLOCK_N, 1) for vectorized operations
++    mean_exp = mean[:, None]    # (BLOCK_N, 1)
++    invstd_exp = invstd[:, None]
++
++    # Second pass: compute normalized outputs and store as FP32
+     for t in range(tiles):
+         offs_c = c_base + t * BLOCK_C + tl.arange(0, BLOCK_C)
+         col_offs = offs_c[None, :]
+@@ -81,7 +86,7 @@
+         mask_c = (offs_c < C) & (offs_c < c_base + group_size)
+         mask = mask_n[:, None] & mask_c[None, :]
+ 
+-        # Load input tile and params
++        # Load activation tile and params
+         x_tile = tl.load(ptrs, mask=mask, other=0.0)
+         x_fp32 = tl.cast(x_tile, tl.float32)
+ 
+@@ -98,19 +103,22 @@
+         gb_fp32 = tl.cast(gb_tile, tl.float32)
+ 
+         # Normalize & affine (in FP32)
+-        out_fp32 = (v_fp32 - mean[:, None]) * invstd[:, None] * w_fp32[None, :] + gb_fp32[None, :]
++        out_fp32 = (v_fp32 - mean_exp) * invstd_exp * w_fp32[None, :] + gb_fp32[None, :]
+ 
+-        # Cast to FP16 for storage to reduce memory traffic
+-        out_tile = tl.cast(out_fp32, tl.float16)
++        # Store to FP32 output
+         out_ptrs = out_ptr + row_offs + col_offs
+-        tl.store(out_ptrs, out_tile, mask=mask)
++        tl.store(out_ptrs, out_fp32, mask=mask)
+ 
+ 
+ def fused_swish_bias_groupnorm(x: torch.Tensor, bias: torch.Tensor, gn_weight: torch.Tensor, gn_bias: torch.Tensor, G: int, eps: float):
+     """
+     Wrapper that launches the Triton kernel to perform:
+       out = GroupNorm( Swish(x) + bias )
+-    Works on inputs x in FP16 or FP32 (we convert to FP16 for kernel), returns FP32 tensor.
++    Inputs:
++      x: (N, C) - torch.Tensor on CUDA
++      bias, gn_weight, gn_bias: (C,) - torch.Tensor on CUDA
++    Returns:
++      out: (N, C) torch.float32 tensor
+     """
+     assert x.is_cuda and bias.is_cuda and gn_weight.is_cuda and gn_bias.is_cuda, "All tensors must be on CUDA"
+     N, C = x.shape
+@@ -118,30 +126,31 @@
+     group_size = C // G
+     group_size_f = float(group_size)
+ 
+-    # Tuned tile sizes for large batch on Ampere (A6000)
+-    BLOCK_N = 1024  # large row-block to reduce kernel-launch and increase work per program
++    # Tuned tile sizes for A6000 / Ampere with large batch dimension.
++    # These values are chosen to balance occupancy and memory throughput.
++    BLOCK_N = 256
+     vec = 32
+-    BLOCK_C = min(((group_size + vec - 1) // vec) * vec, 256)  # channel block aligned to vector size
++    BLOCK_C = min(((group_size + vec - 1) // vec) * vec, 128)
+ 
+-    # Prepare inputs: use FP16 for activations and params to reduce memory traffic
++    # Ensure inputs/params are contiguous FP16 for efficient loads
+     x_in = x.half().contiguous() if x.dtype != torch.float16 else x.contiguous()
+     bias_h = bias.half().contiguous() if bias.dtype != torch.float16 else bias.contiguous()
+     gw_h = gn_weight.half().contiguous() if gn_weight.dtype != torch.float16 else gn_weight.contiguous()
+     gb_h = gn_bias.half().contiguous() if gn_bias.dtype != torch.float16 else gn_bias.contiguous()
+ 
+-    # Output in FP16 from kernel, will cast back to FP32 for API compatibility
+-    out_h = torch.empty((N, C), device=x.device, dtype=torch.float16)
++    # Output in FP32 (matches original model dtype)
++    out = torch.empty((N, C), device=x.device, dtype=torch.float32)
+ 
+-    # Grid: axis0 = groups, axis1 = number of batch blocks
++    # Grid: axis0 = groups, axis1 = batch-blocks
+     grid = (G, (N + BLOCK_N - 1) // BLOCK_N)
+ 
+     _fused_swish_bias_groupnorm_kernel[grid](
+-        x_in, bias_h, gw_h, gb_h, out_h,
++        x_in, bias_h, gw_h, gb_h, out,
+         N, C, G, group_size, group_size_f, float(eps),
+         BLOCK_C=BLOCK_C, BLOCK_N=BLOCK_N
+     )
+ 
+-    return out_h.float()
++    return out
+ 
+ 
+ class ModelNew(nn.Module):
+@@ -151,28 +160,27 @@
+       x = swish(x)
+       x = x + bias
+       x = groupnorm(x)
+-
+-    The Linear is executed under autocast (FP16 TensorCores), and the postprocessing
+-    (Swish + bias + GroupNorm) is fused into a Triton kernel operating on FP16 with FP32 reductions.
++    The linear (nn.Linear) is executed under autocast (FP16 TensorCores),
++    and the postprocessing (Swish + bias + GroupNorm) is fused into a Triton kernel.
+     """
+     def __init__(self, in_features, out_features, num_groups, bias_shape):
+         super(ModelNew, self).__init__()
+         self.matmul = nn.Linear(in_features, out_features)
+-        # keep the original separate bias parameter
++        # keep the original bias parameter
+         self.bias = nn.Parameter(torch.randn(bias_shape))
+-        # Create GroupNorm to hold weight, bias, and eps (we won't call its forward)
++        # Create a GroupNorm module to hold weight, bias, and eps (we won't call its forward directly)
+         self.group_norm = nn.GroupNorm(num_groups, out_features)
+-        # Ensure parameters are float32 by default (matches original semantics)
++        # Ensure parameters are in fp32 by default (preserve original semantics)
+         self.bias.data = self.bias.data.float()
+         self.group_norm.weight.data = self.group_norm.weight.data.float()
+         self.group_norm.bias.data = self.group_norm.bias.data.float()
+ 
+     def forward(self, x):
+-        # 1) Linear (use autocast to run GEMM in FP16 where possible)
++        # 1) Linear (use autocast to enable TensorCores on Ampere)
+         with autocast(dtype=torch.float16):
+             x_lin = self.matmul(x)
+ 
+-        # 2) Prepare params and call fused Triton kernel (operates on FP16)
++        # 2) Fused postprocessing in Triton
+         device = x_lin.device
+         bias = self.bias.to(device)
+         gn_w = self.group_norm.weight.to(device)
+@@ -180,13 +188,12 @@
+         G = self.group_norm.num_groups
+         eps = float(self.group_norm.eps)
+ 
+-        # Call fused Triton kernel; returns FP32 tensor
+         out = fused_swish_bias_groupnorm(x_lin, bias, gn_w, gn_b, G, eps)
+ 
+         return out
+ 
+ 
+-# keep helper globals/functions to match original API
++# Keep original globals and helper functions to match interface
+ batch_size = 32768
+ in_features = 1024
+ out_features = 4096
+@@ -194,7 +201,6 @@
+ bias_shape = (out_features,)
+ 
+ def get_inputs():
+-    # Provide CUDA inputs for benchmarking / execution
+     return [torch.rand(batch_size, in_features).cuda()]
+ 
+ def get_init_inputs():

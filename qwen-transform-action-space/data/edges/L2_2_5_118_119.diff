@@ -1,0 +1,32 @@
+@@ -3,13 +3,12 @@
+ import triton
+ import triton.language as tl
+ 
+-# Autotune configs chosen for large contiguous buffers on Ampere (NVIDIA A6000).
+-# Prefer large BLOCK sizes to reduce kernel-launch overhead and maximize throughput.
++# Autotune configs chosen to favor occupancy and balanced resource usage on Ampere (NVIDIA A6000).
++# Use smaller, well-aligned BLOCK sizes and modest warp/stage counts to improve utilization.
+ AUTOTUNE_CONFIGS = [
+-    triton.Config({"BLOCK": 8192},  num_warps=4, num_stages=3),
+-    triton.Config({"BLOCK": 16384}, num_warps=4, num_stages=3),
+-    triton.Config({"BLOCK": 32768}, num_warps=8, num_stages=3),
+-    triton.Config({"BLOCK": 65536}, num_warps=8, num_stages=4),
++    triton.Config({"BLOCK": 4096},  num_warps=4, num_stages=2),
++    triton.Config({"BLOCK": 8192},  num_warps=4, num_stages=2),
++    triton.Config({"BLOCK": 16384}, num_warps=8, num_stages=3),
+ ]
+ 
+ @triton.autotune(configs=AUTOTUNE_CONFIGS, key=['n_elements'])
+@@ -111,9 +110,9 @@
+         # Convert to fp16 for convolution compute
+         x_h = x.half()
+ 
+-        # Use channels_last memory format to help cuDNN / driver choose optimal kernels on Ampere
+-        # (applies to NHWC-like layouts). This may improve convolution throughput.
+-        x_h = x_h.contiguous(memory_format=torch.channels_last)
++        # Keep the default NCHW layout (contiguous). For ConvTranspose2d, forcing channels_last can
++        # trigger non-optimal code paths or extra layout transforms; use default layout for stability.
++        x_h = x_h.contiguous()
+ 
+         # Run conv_transpose in fp16 (fast, Tensor Cores)
+         out_h = self.conv_transpose(x_h)

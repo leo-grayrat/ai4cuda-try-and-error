@@ -1,0 +1,210 @@
+@@ -6,12 +6,12 @@
+ 
+ # Autotune configs tuned for Ampere (A6000)
+ AUTOTUNE_CONFIGS = [
+-    triton.Config({"BLOCK": 1024}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK": 2048}, num_warps=8, num_stages=2),
+-    triton.Config({"BLOCK": 4096}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK": 256}, num_warps=4, num_stages=2),
++    triton.Config({"BLOCK": 512}, num_warps=4, num_stages=2),
++    triton.Config({"BLOCK": 1024}, num_warps=8, num_stages=2),
+ ]
+ 
+-@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['n_elements', 'C', 'S'])
++@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['n_spatial', 'C', 'S'])
+ @triton.jit
+ def _fused_bn_relu_kernel(
+     x_ptr,            # pointer to input data
+@@ -20,38 +20,48 @@
+     bias_ptr,         # pointer to bn bias (beta)
+     mean_ptr,         # pointer to running_mean
+     var_ptr,          # pointer to running_var
+-    n_elements,       # total number of elements in x
++    n_spatial,        # total spatial positions per channel across the batch (N * H * W)
++    S,                # spatial size per sample (H*W)
+     C,                # number of channels
+-    S,                # spatial size per channel (H*W)
+     eps,              # epsilon for batchnorm
+     BLOCK: tl.constexpr
+ ):
+-    # Each program handles a contiguous block of elements
+-    start = tl.program_id(0) * BLOCK
+-    offs = start + tl.arange(0, BLOCK)
+-    mask = offs < n_elements
++    """
++    Channel-tiled kernel:
++    grid = (C, ceil(n_spatial / BLOCK))
++    program_id(0) -> channel index
++    program_id(1) -> which BLOCK of the channel's spatial positions
++    """
++    channel = tl.program_id(0)
++    block_idx = tl.program_id(1)
+ 
+-    # Load input values (masked)
+-    vals = tl.load(x_ptr + offs, mask=mask, other=0.0)
++    offs = block_idx * BLOCK + tl.arange(0, BLOCK)
++    mask = offs < n_spatial
+ 
+-    # Compute channel index for each offset
+-    # Layout is N, C, H, W flattened as contiguous N-major: channel = (offs // S) % C
+-    idx_div_s = offs // S
+-    channel_idx = idx_div_s % C
++    # Per-channel params loaded once (scalars)
++    w = tl.load(weight_ptr + channel, other=1.0)
++    b = tl.load(bias_ptr + channel, other=0.0)
++    m = tl.load(mean_ptr + channel, other=0.0)
++    v = tl.load(var_ptr + channel, other=1.0)
+ 
+-    # Load per-channel params (addresses are vectors)
+-    # We must cast channel_idx to pointer indexing; tl.load supports vector addresses
+-    w = tl.load(weight_ptr + channel_idx, mask=mask, other=1.0)
+-    b = tl.load(bias_ptr + channel_idx, mask=mask, other=0.0)
+-    m = tl.load(mean_ptr + channel_idx, mask=mask, other=0.0)
+-    v = tl.load(var_ptr + channel_idx, mask=mask, other=1.0)
++    # Precompute scale = gamma / sqrt(var + eps)
++    scale = w / tl.sqrt(v + eps)
+ 
+-    # Apply batchnorm (using running stats) and then ReLU
+-    inv = 1.0 / tl.sqrt(v + eps)
+-    out = (vals - m) * inv * w + b
++    # Map the per-channel spatial index (offs in [0, n_spatial)) to the flattened offset
++    # For input layout flattened as (N, C, H, W) with contiguous memory, an element index for
++    # channel c with per-channel linear index idx (where idx = n*S + s) has flattened offset:
++    # flattened_offs = n * C * S + channel * S + s
++    n_idx = offs // S       # batch index for each per-channel index
++    s_idx = offs - n_idx * S
++    # Compute flattened offsets
++    flattened = n_idx * (C * S) + channel * S + s_idx
++
++    vals = tl.load(x_ptr + flattened, mask=mask, other=0.0)
++
++    out = (vals - m) * scale + b
+     out = tl.where(out > 0.0, out, 0.0)
+ 
+-    tl.store(out_ptr + offs, out, mask=mask)
++    tl.store(out_ptr + flattened, out, mask=mask)
+ 
+ 
+ def fused_bn_relu(x: torch.Tensor, bn: nn.BatchNorm2d):
+@@ -74,7 +84,7 @@
+     x = x.contiguous()
+     N, C, H, W = x.shape
+     S = H * W
+-    n_elements = x.numel()
++    n_spatial = N * S
+ 
+     out = torch.empty_like(x, device=x.device)
+ 
+@@ -86,9 +96,11 @@
+     running_var = bn.running_var.detach().to(device).contiguous()
+     eps = float(bn.eps)
+ 
+-    # Launch Triton kernel
+-    grid = lambda meta: ((n_elements + meta["BLOCK"] - 1) // meta["BLOCK"],)
+-    _fused_bn_relu_kernel[grid](x, out, weight, bias, running_mean, running_var, n_elements, C, S, eps)
++    # Launch Triton kernel with channel-tiled grid: (C, ceil(n_spatial/BLOCK))
++    grid = lambda meta: (C, (n_spatial + meta["BLOCK"] - 1) // meta["BLOCK"])
++    _fused_bn_relu_kernel[grid](
++        x, out, weight, bias, running_mean, running_var, n_spatial, S, C, eps
++    )
+     return out
+ 
+ 
+@@ -108,6 +120,31 @@
+ 
+     def forward(self, x: torch.Tensor):
+         # x is expected to be contiguous and of shape (N, in_features, H, W)
++        # Fast path: if module is in eval (bn not training) fold BN into conv weights to avoid
++        # a separate BN pass. Cache folded weights/biases as buffers so they persist and move with the module.
++        if (not self.training) and (not self.bn.training) and x.is_cuda:
++            if not hasattr(self, "folded_weight") or self.folded_weight.device != self.conv.weight.device:
++                with torch.no_grad():
++                    C_out = self.conv.weight.shape[0]
++                    device = self.conv.weight.device
++                    gamma = self.bn.weight.detach().to(device) if self.bn.weight is not None else torch.ones(C_out, device=device)
++                    beta = self.bn.bias.detach().to(device) if self.bn.bias is not None else torch.zeros(C_out, device=device)
++                    rm = self.bn.running_mean.detach().to(device)
++                    rv = self.bn.running_var.detach().to(device)
++                    eps = float(self.bn.eps)
++                    inv = gamma / torch.sqrt(rv + eps)
++                    w_fold = self.conv.weight * inv.view(-1, 1, 1, 1)
++                    b_fold = beta - inv * rm
++                    if self.conv.bias is not None:
++                        b_fold = b_fold + self.conv.bias.detach().to(device)
++                    # Register buffers so they move with the module
++                    self.register_buffer("folded_weight", w_fold)
++                    self.register_buffer("folded_bias", b_fold)
++            out = F.conv2d(x, self.folded_weight, self.folded_bias, stride=self.conv.stride, padding=self.conv.padding, dilation=self.conv.dilation, groups=self.conv.groups)
++            # Apply ReLU (keeps semantics of BN->ReLU->Conv by relying on conv to include BN's effect;
++            # ReLU is still required)
++            return F.relu(out, inplace=False)
++        # Fallback (training or CPU): use existing fused BN+ReLU wrapper then conv
+         out = fused_bn_relu(x, self.bn)
+         out = self.conv(out)
+         return out
+@@ -165,6 +202,29 @@
+         self.pool = nn.AvgPool2d(kernel_size=2, stride=2)
+ 
+     def forward(self, x: torch.Tensor):
++        # Fast-path: fold BN into 1x1 conv in eval mode to avoid separate BN pass
++        if (not self.training) and (not self.bn.training) and x.is_cuda:
++            if not hasattr(self, "folded_weight") or self.folded_weight.device != self.conv.weight.device:
++                with torch.no_grad():
++                    C_out = self.conv.weight.shape[0]
++                    device = self.conv.weight.device
++                    gamma = self.bn.weight.detach().to(device) if self.bn.weight is not None else torch.ones(C_out, device=device)
++                    beta = self.bn.bias.detach().to(device) if self.bn.bias is not None else torch.zeros(C_out, device=device)
++                    rm = self.bn.running_mean.detach().to(device)
++                    rv = self.bn.running_var.detach().to(device)
++                    eps = float(self.bn.eps)
++                    inv = gamma / torch.sqrt(rv + eps)
++                    w_fold = self.conv.weight * inv.view(-1, 1, 1, 1)
++                    b_fold = beta - inv * rm
++                    if self.conv.bias is not None:
++                        b_fold = b_fold + self.conv.bias.detach().to(device)
++                    self.register_buffer("folded_weight", w_fold)
++                    self.register_buffer("folded_bias", b_fold)
++            out = F.conv2d(x, self.folded_weight, self.folded_bias, stride=self.conv.stride, padding=self.conv.padding, dilation=self.conv.dilation, groups=self.conv.groups)
++            out = F.relu(out, inplace=False)
++            out = self.pool(out)
++            return out
++        # Fallback (training or CPU)
+         out = fused_bn_relu(x, self.bn)
+         out = self.conv(out)
+         out = self.pool(out)
+@@ -208,10 +268,31 @@
+         self.classifier = nn.Linear(num_features, num_classes)
+ 
+     def forward(self, x: torch.Tensor) -> torch.Tensor:
+-        # Initial conv + fused bn + relu + maxpool
+-        x = self.conv1(x)
+-        x = fused_bn_relu(x, self.bn1)
+-        x = self.maxpool(x)
++        # Initial conv1 + bn1 (folded in eval) + relu + maxpool
++        if (not self.training) and (not self.bn1.training) and x.is_cuda:
++            if not hasattr(self, "folded_conv1_weight") or self.folded_conv1_weight.device != self.conv1.weight.device:
++                with torch.no_grad():
++                    C_out = self.conv1.weight.shape[0]
++                    device = self.conv1.weight.device
++                    gamma = self.bn1.weight.detach().to(device) if self.bn1.weight is not None else torch.ones(C_out, device=device)
++                    beta = self.bn1.bias.detach().to(device) if self.bn1.bias is not None else torch.zeros(C_out, device=device)
++                    rm = self.bn1.running_mean.detach().to(device)
++                    rv = self.bn1.running_var.detach().to(device)
++                    eps = float(self.bn1.eps)
++                    inv = gamma / torch.sqrt(rv + eps)
++                    w_fold = self.conv1.weight * inv.view(-1, 1, 1, 1)
++                    b_fold = beta - inv * rm
++                    if self.conv1.bias is not None:
++                        b_fold = b_fold + self.conv1.bias.detach().to(device)
++                    self.register_buffer("folded_conv1_weight", w_fold)
++                    self.register_buffer("folded_conv1_bias", b_fold)
++            x = F.conv2d(x, self.folded_conv1_weight, self.folded_conv1_bias, stride=self.conv1.stride, padding=self.conv1.padding, dilation=self.conv1.dilation, groups=self.conv1.groups)
++            x = F.relu(x, inplace=False)
++            x = self.maxpool(x)
++        else:
++            x = self.conv1(x)
++            x = fused_bn_relu(x, self.bn1)
++            x = self.maxpool(x)
+ 
+         for i, block in enumerate(self.dense_blocks):
+             x = block(x)

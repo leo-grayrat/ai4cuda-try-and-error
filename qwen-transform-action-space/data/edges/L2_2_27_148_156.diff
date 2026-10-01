@@ -1,0 +1,318 @@
+@@ -1,186 +1,180 @@
+ import torch
+ import torch.nn as nn
+-import torch.nn.functional as F
+ import triton
+ import triton.language as tl
++import torch.nn.functional as F
+ 
+-# Triton kernel: compute final (B, C) outputs after HardSwish + GroupNorm + spatial mean
+-# Inputs are pre-reduced sums:
+-#  - S_c: sum over spatial dims of activated x, shape (B, C)
+-#  - SS_c: sum over spatial dims of activated x^2, shape (B, C)  (not used directly in kernel but kept for symmetry)
+-#  - S_group: per-group sums, shape (B, G)
+-#  - SS_group: per-group squares, shape (B, G)
+-# weight and bias are per-channel affine params (shape (C,))
+-# The kernel computes:
+-#   mu_g = S_group / (Cg * P)
+-#   var_g = SS_group / (Cg * P) - mu_g^2
+-#   invstd = 1 / sqrt(var_g + eps)
+-#   mean_c = S_c / P
+-#   out = weight_c * invstd * (mean_c - mu_g) + bias_c
+-#
+-# This avoids materializing the full normalized tensor and fuses ops into a single elementwise kernel.
++# Triton kernel: compute per-channel sums and sum-of-squares over spatial dims
+ @triton.jit
+-def _gn_mean_kernel(
+-    S_c_ptr,                 # pointer to (B, C) sums over spatial dims
+-    S_group_ptr,             # pointer to (B, G) group sums
+-    SS_group_ptr,            # pointer to (B, G) group squares
+-    weight_ptr,              # pointer to (C,)
+-    bias_ptr,                # pointer to (C,)
+-    out_ptr,                 # pointer to (B, C) output
+-    B,                       # batch size (int)
+-    C,                       # number of channels (int)
+-    G,                       # number of groups (int)
+-    Cg,                      # channels per group (int)
+-    inv_group_P,             # 1.0 / (Cg * P) (float)
+-    invP,                    # 1.0 / P (float)
+-    eps,                     # eps for GroupNorm (float)
+-    BLOCK: tl.constexpr      # block size for channels
++def _act_reduce_kernel(
++    x_ptr,        # pointer to input conv output flattened (B*C*P)
++    S_c_ptr,      # pointer to (B, C) sums
++    SS_c_ptr,     # pointer to (B, C) sums of squares
++    B, C, P,      # dims (P = D*H*W)
++    c_start,      # channel start index for this block (int)
++    BLOCK: tl.constexpr,   # number of channels processed by program
++    SP_BLOCK: tl.constexpr # spatial tile size (constexpr)
++):
++    # program indexing
++    batch_idx = tl.program_id(0)
++    c_block = tl.program_id(1)
++    c_off = c_block * BLOCK
++    offs = c_off + tl.arange(0, BLOCK)
++    mask = offs < C
++
++    # flattened base index for (batch, channel, 0)
++    # address for spatial index s is: ((batch_idx*C + channel) * P) + s
++    base_chan = (batch_idx * C + offs) * P  # shape (BLOCK,)
++
++    acc = tl.zeros((BLOCK,), dtype=tl.float32)
++    acc2 = tl.zeros((BLOCK,), dtype=tl.float32)
++
++    sp_range = tl.arange(0, SP_BLOCK)  # constexpr
++
++    # iterate spatial tiles
++    for s0 in range(0, P, SP_BLOCK):
++        s_idx = s0 + sp_range  # shape (SP_BLOCK,)
++        addr = base_chan[:, None] + s_idx[None, :]  # (BLOCK, SP_BLOCK)
++        mask_sp = mask[:, None] & (s_idx[None, :] < P)
++        vals = tl.load(x_ptr + addr, mask=mask_sp, other=0.0)  # (BLOCK, SP_BLOCK)
++
++        # HardSwish: x * clamp(x + 3, 0, 6) / 6
++        t = vals + 3.0
++        t = tl.where(t > 6.0, 6.0, t)
++        t = tl.where(t < 0.0, 0.0, t)
++        h = vals * (t * (1.0 / 6.0))
++
++        # accumulate
++        acc += tl.sum(h, 1)
++        acc2 += tl.sum(h * h, 1)
++
++    base_bc = batch_idx * C
++    tl.store(S_c_ptr + base_bc + offs, acc, mask=mask)
++    tl.store(SS_c_ptr + base_bc + offs, acc2, mask=mask)
++
++
++# Triton kernel: for each (batch, group) compute group stats and finalize per-channel outputs
++@triton.jit
++def _group_finalize_kernel(
++    S_c_ptr,      # pointer to (B, C)
++    SS_c_ptr,     # pointer to (B, C)
++    weight_ptr,   # pointer to (C,)
++    bias_ptr,     # pointer to (C,)
++    out_ptr,      # pointer to (B, C) output
++    B, C, G, Cg, P,
++    eps: tl.constexpr
+ ):
+     batch_idx = tl.program_id(0)
+-    c_block = tl.program_id(1)
+-    c_start = c_block * BLOCK
+-    offs = c_start + tl.arange(0, BLOCK)
+-    mask = offs < C
++    group_idx = tl.program_id(1)
+ 
+-    # memory layout expected: row-major (B, C) for S_c and (B, G) for group tensors
++    # compute base offsets
+     base_bc = batch_idx * C
+-    base_bg = batch_idx * G
++    ch_start = group_idx * Cg
++    # accumulate group sums
++    s_group = 0.0
++    ss_group = 0.0
++    # sum over channels in group
++    for i in range(Cg):
++        c = ch_start + i
++        # guard for safety (shouldn't be needed if Cg*G == C)
++        if c < C:
++            s_group += tl.load(S_c_ptr + base_bc + c)
++            ss_group += tl.load(SS_c_ptr + base_bc + c)
+ 
+-    # Load per-channel sums for this batch
+-    s_c = tl.load(S_c_ptr + base_bc + offs, mask=mask, other=0.0)
+-
+-    # Compute group index for each channel in this block and load group sums from (B, G)
+-    # group_id is an integer vector with values in [0, G)
+-    group_id = offs // Cg
+-    # guard loads with same mask so inactive lanes read harmless values
+-    s_group = tl.load(S_group_ptr + base_bg + group_id, mask=mask, other=0.0)
+-    ss_group = tl.load(SS_group_ptr + base_bg + group_id, mask=mask, other=0.0)
+-
+-    w = tl.load(weight_ptr + offs, mask=mask, other=1.0)
+-    b_ = tl.load(bias_ptr + offs, mask=mask, other=0.0)
+-
++    # compute group mean and invstd
++    inv_group_P = 1.0 / (Cg * P)
+     mu = s_group * inv_group_P
+     var = ss_group * inv_group_P - mu * mu
+     invstd = 1.0 / tl.sqrt(var + eps)
+-    mean_c = s_c * invP
+ 
+-    out = w * invstd * (mean_c - mu) + b_
+-    tl.store(out_ptr + base_bc + offs, out, mask=mask)
++    # write outputs for each channel in group
++    for i in range(Cg):
++        c = ch_start + i
++        if c < C:
++            s_c = tl.load(S_c_ptr + base_bc + c)
++            mean_c = s_c / P
++            w = tl.load(weight_ptr + c)
++            b = tl.load(bias_ptr + c)
++            out = w * invstd * (mean_c - mu) + b
++            tl.store(out_ptr + base_bc + c, out)
+ 
+ 
+-def triton_groupnorm_mean(S_c: torch.Tensor,
+-                          SS_c: torch.Tensor,
+-                          S_group: torch.Tensor,
+-                          SS_group: torch.Tensor,
++def triton_groupnorm_mean(x: torch.Tensor,
+                           weight: torch.Tensor,
+                           bias: torch.Tensor,
+                           num_groups: int,
+-                          P: int,
+                           eps: float):
+     """
+-    Wrapper to prepare tensors and launch the Triton kernel that computes the final (B, C) output.
+-
+-    Inputs:
+-      - S_c, SS_c: (B, C)
+-      - S_group, SS_group: (B, G) where G = num_groups
+-      - weight, bias: (C,)
+-    Returns:
+-      - out: (B, C) tensor on same device/dtype as inputs
++    2-step approach without atomics:
++      1) _act_reduce_kernel: compute per-channel sums S_c and SS_c (B, C)
++      2) _group_finalize_kernel: reduce per-channel stats to per-group stats and compute final (B, C)
+     """
+-    assert S_c.is_cuda and S_group.is_cuda and weight.is_cuda
+-
+-    B, C = S_c.shape
++    assert x.is_cuda
++    B, C, D, H, W = x.shape
++    device = x.device
++    dtype = x.dtype
++    P = D * H * W
+     G = num_groups
+     Cg = C // G
+-    device = S_c.device
+ 
+-    # Keep group tensors in (B, G) layout; avoid expanding to (B, C)
+-    S_c = S_c.contiguous()
+-    SS_c = SS_c.contiguous()
+-    S_group = S_group.contiguous()
+-    SS_group = SS_group.contiguous()
+-    weight = weight.contiguous() if weight is not None else torch.ones(C, device=device, dtype=S_c.dtype)
+-    bias = bias.contiguous() if bias is not None else torch.zeros(C, device=device, dtype=S_c.dtype)
++    x = x.contiguous()
++    S_c = torch.empty((B, C), device=device, dtype=dtype)
++    SS_c = torch.empty((B, C), device=device, dtype=dtype)
++
++    # Kernel tuning parameters
++    BLOCK = min(64, C)
++    SP_BLOCK = 256 if P >= 256 else P
++    grid1 = (B, (C + BLOCK - 1) // BLOCK)
++
++    # Launch first kernel: compute S_c and SS_c
++    _act_reduce_kernel[grid1](
++        x, S_c, SS_c,
++        B, C, P,
++        0,  # c_start unused (kept for signature compatibility)
++        BLOCK=BLOCK,
++        SP_BLOCK=SP_BLOCK
++    )
++
++    # Prepare affine params
++    if weight is None:
++        weight = torch.ones((C,), device=device, dtype=dtype)
++    if bias is None:
++        bias = torch.zeros((C,), device=device, dtype=dtype)
++    weight = weight.contiguous()
++    bias = bias.contiguous()
+ 
+     out = torch.empty_like(S_c)
+ 
+-    # Choose a BLOCK that adapts to small C to avoid wasted lanes
+-    BLOCK = min(128, C)
+-    grid = (B, (C + BLOCK - 1) // BLOCK)
+-    inv_group_P = 1.0 / (Cg * P)
+-    invP = 1.0 / P
++    grid2 = (B, G)
++    # eps passed as constexpr: convert to float
++    _group_finalize_kernel[grid2](
++        S_c, SS_c, weight, bias, out,
++        B, C, G, Cg, P,
++        float(eps)
++    )
+ 
+-    _gn_mean_kernel[grid](
+-        S_c, S_group, SS_group,
+-        weight, bias, out,
+-        B, C, G, Cg, inv_group_P, invP, eps,
+-        BLOCK=BLOCK
+-    )
+     return out
+ 
+ 
+ class ModelNew(nn.Module):
+     """
+-    Optimized Model that:
+-      - Uses PyTorch Conv3d for convolution (retains optimized CuDNN/cuBLAS path)
+-      - Fuses HardSwish + GroupNorm + mean-over-spatial into a small number of GPU reductions
+-        and a final Triton kernel that computes the per-channel outputs (B, C) without materializing
+-        the full normalized tensor.
++    Optimized Model:
++      - Uses native nn.Conv3d for convolution
++      - Fuses HardSwish + GroupNorm + spatial mean via two Triton kernels:
++          (1) per-channel HardSwish + reduction (no atomics)
++          (2) per-group reduction + final affine output
+     """
+     def __init__(self, in_channels, out_channels, kernel_size, num_groups=4, bias=True):
+         super(ModelNew, self).__init__()
+         self.conv = nn.Conv3d(in_channels, out_channels, kernel_size, bias=bias)
+-        # We keep the GroupNorm layer for parameters (weight/bias/eps), but we won't call its forward.
+         self.group_norm = nn.GroupNorm(num_groups, out_channels)
+         self.num_groups = num_groups
+ 
+     def forward(self, x):
+-        # x: (B, C_in, D, H, W)
+         x = self.conv(x)  # (B, C, D, H, W)
+-
+-        # Apply HardSwish activation
+-        # We need sums over spatial dims of activated x and activated x^2
+-        x_act = F.hardswish(x)  # (B, C, D, H, W)
+-
+-        # Reduce sums over spatial dimensions (D, H, W)
+-        # These are efficient GPU reductions in PyTorch
+-        spatial_dims = (2, 3, 4)
+-        S_c = x_act.sum(dim=spatial_dims)             # (B, C)
+-        SS_c = (x_act * x_act).sum(dim=spatial_dims)  # (B, C)
+-
+-        B, C = S_c.shape
+         G = self.num_groups
+-        Cg = C // G
+-        P = 1
+-        for d in spatial_dims:
+-            # compute P = D*H*W using actual sizes of x_act
+-            pass
+-        # compute spatial size P from tensor shape
+-        P = x_act.shape[2] * x_act.shape[3] * x_act.shape[4]
+-
+-        # Compute per-group sums by reshaping (B, C) -> (B, G, Cg) and summing across channels in group
+-        S_group = S_c.view(B, G, Cg).sum(dim=2)      # (B, G)
+-        SS_group = SS_c.view(B, G, Cg).sum(dim=2)    # (B, G)
+-
+-        # Affine parameters from GroupNorm; handle cases where affine is disabled
+         weight = self.group_norm.weight if self.group_norm.weight is not None else None
+         bias = self.group_norm.bias if self.group_norm.bias is not None else None
+         eps = float(self.group_norm.eps)
+-
+-        # Launch Triton kernel to compute final (B, C) outputs
+-        out = triton_groupnorm_mean(S_c, SS_c, S_group, SS_group, weight, bias, G, P, eps)
++        out = triton_groupnorm_mean(x, weight, bias, G, eps)
+         return out
+-
+-
+-# === Test / helper config (kept to match original interface) ===
+-batch_size = 1024
+-in_channels = 3
+-out_channels = 16
+-depth, height, width = 16, 32, 32
+-kernel_size = 4
+-
+-def get_inputs():
+-    return [torch.rand(batch_size, in_channels, depth, height, width).cuda().float()]
+-
+-def get_init_inputs():
+-    return [in_channels, out_channels, kernel_size]

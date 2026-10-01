@@ -1,0 +1,65 @@
+@@ -243,38 +243,40 @@
+     h_idx = pos // W
+     w_idx = pos % W
+ 
+-    # channel offsets for this program
++    # channel offsets for this program (vector of BLOCK_C channels)
+     c_start = pid_c * BLOCK_C
+     c_offs = c_start + tl.arange(0, BLOCK_C)
+     mask_c = c_offs < C
+ 
+-    # For each channel in the tile, load params once and process the spatial block
+-    for i in range(0, BLOCK_C):
+-        c = c_start + i
+-        m_c = c < C
+-        if m_c:
+-            # load per-channel params as scalars
+-            gamma = tl.load(weight_ptr + c, mask=1, other=1.0)
+-            beta = tl.load(bias_ptr + c, mask=1, other=0.0)
+-            mean = tl.load(mean_ptr + c, mask=1, other=0.0)
+-            var = tl.load(var_ptr + c, mask=1, other=1.0)
+-            inv = 1.0 / tl.sqrt(var + eps)
++    # Vectorized load of per-channel parameters (shape BLOCK_C)
++    gamma = tl.load(weight_ptr + c_offs, mask=mask_c, other=1.0)   # (BLOCK_C,)
++    beta = tl.load(bias_ptr + c_offs, mask=mask_c, other=0.0)      # (BLOCK_C,)
++    mean = tl.load(mean_ptr + c_offs, mask=mask_c, other=0.0)     # (BLOCK_C,)
++    var = tl.load(var_ptr + c_offs, mask=mask_c, other=1.0)       # (BLOCK_C,)
++    inv = 1.0 / tl.sqrt(var + eps)                                # (BLOCK_C,)
+ 
+-            # compute addresses for this channel across the spatial block:
+-            # addr = (((n * C) + c) * H + h) * W + w
+-            base = n_idx * (C * H * W)
+-            base = base + c * (H * W)
+-            addr = base + h_idx * W + w_idx  # shape (BLOCK,)
++    # Build addresses for the whole tile: shape (BLOCK_C, BLOCK)
++    base_n = n_idx * (C * H * W)          # (BLOCK,)
++    base_c = c_offs * (H * W)             # (BLOCK_C,)
++    addr = base_n.reshape(1, BLOCK) + base_c.reshape(BLOCK_C, 1) + h_idx.reshape(1, BLOCK) * W + w_idx.reshape(1, BLOCK)
+ 
+-            # load the input spatial block for this channel
+-            vals = tl.load(x_ptr + addr, mask=mask_sp, other=0.0)
++    # Mask for the load/store of the whole 2D tile
++    mask_in = mask_c.reshape(BLOCK_C, 1) & mask_sp.reshape(1, BLOCK)
+ 
+-            # apply batchnorm using running stats and ReLU
+-            out_vals = (vals - mean) * inv * gamma + beta
+-            out_vals = tl.where(out_vals > 0.0, out_vals, 0.0)
++    # Load the input tile (BLOCK_C, BLOCK) in a single vectorized call
++    vals = tl.load(x_ptr + addr, mask=mask_in, other=0.0)  # (BLOCK_C, BLOCK)
+ 
+-            # store results
+-            tl.store(out_ptr + addr, out_vals, mask=mask_sp)
++    # Broadcast per-channel params to (BLOCK_C, 1) and compute the whole tile at once
++    gamma_v = gamma.reshape(BLOCK_C, 1)
++    beta_v = beta.reshape(BLOCK_C, 1)
++    mean_v = mean.reshape(BLOCK_C, 1)
++    inv_v = inv.reshape(BLOCK_C, 1)
++
++    out_vals = (vals - mean_v) * inv_v * gamma_v + beta_v
++    out_vals = tl.where(out_vals > 0.0, out_vals, 0.0)
++
++    # Store the result tile back
++    tl.store(out_ptr + addr, out_vals, mask=mask_in)
+ 
+ 
+ def fused_bn_relu(x: torch.Tensor, bn: nn.BatchNorm2d):

@@ -1,0 +1,96 @@
+@@ -6,17 +6,17 @@
+ 
+ # Autotune configurations for elementwise kernels
+ AUTOTUNE_CONFIGS = [
+-    triton.Config({"BLOCK": 256},  num_warps=1, num_stages=2),
+-    triton.Config({"BLOCK": 512},  num_warps=2, num_stages=2),
+     triton.Config({"BLOCK": 1024}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK": 2048}, num_warps=8, num_stages=2),
++    triton.Config({"BLOCK": 2048}, num_warps=4, num_stages=2),
++    triton.Config({"BLOCK": 4096}, num_warps=4, num_stages=2),
+ ]
+ 
+ @triton.autotune(configs=AUTOTUNE_CONFIGS, key=['n_elements'])
+ @triton.jit
+-def _relu_kernel(x_ptr, out_ptr, n_elements, BLOCK: tl.constexpr):
++def _relu_kernel(x_ptr, n_elements, BLOCK: tl.constexpr):
+     """
+-    Elementwise ReLU kernel: out = max(0, x)
++    In-place elementwise ReLU kernel: x = max(0, x)
++    Writes the result back to x_ptr in-place to avoid extra allocations.
+     """
+     pid = tl.program_id(0)
+     start = pid * BLOCK
+@@ -24,13 +24,14 @@
+     mask = offs < n_elements
+     vals = tl.load(x_ptr + offs, mask=mask, other=0.0)
+     res = tl.where(vals < 0.0, 0.0, vals)
+-    tl.store(out_ptr + offs, res, mask=mask)
++    tl.store(x_ptr + offs, res, mask=mask)
+ 
+ @triton.autotune(configs=AUTOTUNE_CONFIGS, key=['n_elements'])
+ @triton.jit
+-def _relu6_kernel(x_ptr, out_ptr, n_elements, BLOCK: tl.constexpr):
++def _relu6_kernel(x_ptr, n_elements, BLOCK: tl.constexpr):
+     """
+-    Elementwise ReLU6 kernel: out = clamp(x, 0, 6)
++    In-place elementwise ReLU6 kernel: x = clamp(x, 0, 6)
++    Writes the result back to x_ptr in-place.
+     """
+     pid = tl.program_id(0)
+     start = pid * BLOCK
+@@ -39,37 +40,39 @@
+     vals = tl.load(x_ptr + offs, mask=mask, other=0.0)
+     clamped_hi = tl.where(vals > 6.0, 6.0, vals)
+     clamped = tl.where(clamped_hi < 0.0, 0.0, clamped_hi)
+-    tl.store(out_ptr + offs, clamped, mask=mask)
++    tl.store(x_ptr + offs, clamped, mask=mask)
+ 
+ 
+ def triton_relu(x: torch.Tensor) -> torch.Tensor:
+     """
+-    Wrapper for the Triton ReLU kernel.
++    Wrapper for the in-place Triton ReLU kernel.
++    This performs the activation in-place on the (contiguous) input tensor and returns it.
++    Note: in-place ops can interfere with autograd; this is intended primarily for inference.
+     """
+     assert x.is_cuda, "triton_relu expects CUDA tensors."
+-    x_contig = x.contiguous()
+-    out = torch.empty_like(x_contig)
+-    n = x_contig.numel()
++    if not x.is_contiguous():
++        x = x.contiguous()
++    n = x.numel()
+     if n == 0:
+-        return out
++        return x
+     grid = lambda meta: ((n + meta["BLOCK"] - 1) // meta["BLOCK"],)
+-    _relu_kernel[grid](x_contig, out, n)
+-    return out
++    _relu_kernel[grid](x, n)
++    return x
+ 
+ 
+ def triton_relu6(x: torch.Tensor) -> torch.Tensor:
+     """
+-    Wrapper for the Triton ReLU6 kernel.
++    Wrapper for the in-place Triton ReLU6 kernel.
+     """
+     assert x.is_cuda, "triton_relu6 expects CUDA tensors."
+-    x_contig = x.contiguous()
+-    out = torch.empty_like(x_contig)
+-    n = x_contig.numel()
++    if not x.is_contiguous():
++        x = x.contiguous()
++    n = x.numel()
+     if n == 0:
+-        return out
++        return x
+     grid = lambda meta: ((n + meta["BLOCK"] - 1) // meta["BLOCK"],)
+-    _relu6_kernel[grid](x_contig, out, n)
+-    return out
++    _relu6_kernel[grid](x, n)
++    return x
+ 
+ 
+ class ModelNew(nn.Module):

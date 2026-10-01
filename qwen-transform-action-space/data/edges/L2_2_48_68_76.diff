@@ -1,0 +1,128 @@
+@@ -26,28 +26,30 @@
+ ):
+     """
+     Kernel layout:
+-      grid = (N, C, ceil(R / BLOCK_SIZE))
+-    Each program processes one (n,c) pair and a contiguous BLOCK_SIZE slice of the spatial positions.
++      grid = (N*C, ceil(R / BLOCK_SIZE))
++    Each program processes one (nc) index corresponding to (n,c) and a contiguous BLOCK_SIZE slice of the spatial positions.
+     """
+-    n = tl.program_id(0)
+-    c = tl.program_id(1)
+-    rb = tl.program_id(2)
++    nc = tl.program_id(0)                       # index in [0, N*C)
++    rb = tl.program_id(1)                       # which block of the R dimension
+     r_start = rb * BLOCK_SIZE
+     offs = r_start + tl.arange(0, BLOCK_SIZE)
+     mask = offs < R
+ 
+-    # linear indices into the flattened tensor for (n,c): ((n * C) + c) * R + offs
+-    base = (n * C + c) * R
++    # linear indices into the flattened tensor: (nc * R) + offs where nc = n*C + c
++    base = nc * R
+     idx = base + offs
+ 
+     # load input values (masked) - inputs provided as fp16
+     x = tl.load(inp_ptr + idx, mask=mask, other=0.0)
+ 
++    # compute channel index
++    c = nc % C
++
+     # load per-channel bias (fp16)
+     b = tl.load(bias_ptr + c)
+ 
+     # fused operations in fp16:
+-    # 1) scaling was folded into conv weights, so x is already scaled
++    # 1) input already scaled into weights, so y = x
+     y = x
+ 
+     # 2) tanh(y) via exp formula
+@@ -57,8 +59,11 @@
+     # 3) multiply by bias
+     z = tanh_y * b
+ 
+-    # 4) sigmoid(z)
+-    out = 1.0 / (1.0 + tl.exp(-z))
++    # 4) sigmoid(z) via tanh identity: sigmoid(z) = 0.5 * (1 + tanh(z/2))
++    u = z * 0.5
++    eu = tl.exp(u * 2.0)   # exp(z)
++    tanh_u = (eu - 1.0) / (eu + 1.0)
++    out = 0.5 * (1.0 + tanh_u)
+ 
+     # store result (fp16)
+     tl.store(out_ptr + idx, out, mask=mask)
+@@ -68,8 +73,8 @@
+     """
+     Wrapper that launches the Triton kernel to compute:
+       out = sigmoid( tanh(inp) * bias_c )
+-    where scaling has been folded into the conv weights prior to calling this wrapper.
+-    This wrapper converts tensors to fp16, runs the kernel in fp16, then casts result back.
++    It expects the conv output `inp` to already be in fp16 to avoid extra casts.
++    The kernel runs in fp16 and returns an fp16 tensor.
+     """
+     assert inp.is_cuda and bias.is_cuda, "All tensors must be on CUDA."
+ 
+@@ -81,21 +86,19 @@
+     # Prepare per-channel 1D bias in fp16
+     bias_1d = bias.contiguous().view(C).half()
+ 
+-    # operate in fp16 inside the kernel
+-    inp_h = inp.half()
+-    out_h = torch.empty_like(inp_h)
++    # inp is expected to be fp16 already; output will be fp16
++    out = torch.empty_like(inp)
+ 
+-    # grid: (N, C, ceil(R / BLOCK_SIZE))
+-    grid = lambda meta: (N, C, (R + meta["BLOCK_SIZE"] - 1) // meta["BLOCK_SIZE"])
++    # grid: (N*C, ceil(R / BLOCK_SIZE))
++    grid = lambda meta: (N * C, (R + meta["BLOCK_SIZE"] - 1) // meta["BLOCK_SIZE"])
+ 
+     # Launch kernel (fp16 tensors)
+     _fused_conv_postop_kernel[grid](
+-        inp_h, out_h, bias_1d,
++        inp, out, bias_1d,
+         N, C, R
+     )
+ 
+-    # cast back to input dtype (usually fp32)
+-    return out_h.to(inp.dtype)
++    return out
+ 
+ 
+ class ModelNew(nn.Module):
+@@ -124,20 +127,27 @@
+         else:
+             scaled_bias = None
+ 
+-        # Use functional conv3d with the scaled weight/bias and same conv params.
+-        x = F.conv3d(
+-            x,
+-            scaled_weight,
+-            scaled_bias,
++        # To avoid an extra fp32 -> fp16 roundtrip, run the conv in fp16 directly.
++        orig_dtype = x.dtype
++        x_h = x.half()
++        scaled_weight_h = scaled_weight.half()
++        scaled_bias_h = scaled_bias.half() if scaled_bias is not None else None
++
++        # Use functional conv3d with the scaled half-precision weight/bias and same conv params.
++        x_h = F.conv3d(
++            x_h,
++            scaled_weight_h,
++            scaled_bias_h,
+             stride=self.conv.stride,
+             padding=self.conv.padding,
+             dilation=self.conv.dilation,
+             groups=self.conv.groups,
+         )
+ 
+-        # fused elementwise post-ops implemented in Triton (expects fp32 input; wrapper will cast)
+-        x = fused_postops(x, self.bias)
+-        return x
++        # fused elementwise post-ops implemented in Triton (expects fp16 input)
++        x_h = fused_postops(x_h, self.bias)
++        # cast back to original dtype (fp32) to preserve API
++        return x_h.to(orig_dtype)
+ 
+ 
+ # Input generation helpers (same semantics as original)

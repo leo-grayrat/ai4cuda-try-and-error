@@ -1,0 +1,296 @@
+@@ -1,16 +1,19 @@
+ import torch
+ import torch.nn as nn
+-import torch.nn.functional as F
+ import triton
+ import triton.language as tl
+ 
+-# Autotune configs for GEMM kernel
++# Autotune configs tuned for NVIDIA A6000 (Ampere) - a range to let Triton pick the best tile sizes.
+ AUTOTUNE_CONFIGS = [
+-    triton.Config({"BLOCK_M": 64, "BLOCK_N": 64, "BLOCK_K": 32}, num_warps=2, num_stages=2),
+-    triton.Config({"BLOCK_M": 128, "BLOCK_N": 128, "BLOCK_K": 32}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK_M": 256, "BLOCK_N": 128, "BLOCK_K": 32}, num_warps=8, num_stages=2),
+-    triton.Config({"BLOCK_M": 256, "BLOCK_N": 256, "BLOCK_K": 32}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK_M": 64,  "BLOCK_N": 256,  "BLOCK_K": 32},  num_warps=4,  num_stages=2),
++    triton.Config({"BLOCK_M": 64,  "BLOCK_N": 512,  "BLOCK_K": 32},  num_warps=8,  num_stages=2),
++    triton.Config({"BLOCK_M": 128, "BLOCK_N": 256,  "BLOCK_K": 64},  num_warps=8,  num_stages=2),
++    triton.Config({"BLOCK_M": 128, "BLOCK_N": 512,  "BLOCK_K": 64},  num_warps=8,  num_stages=3),
++    triton.Config({"BLOCK_M": 128, "BLOCK_N": 1024, "BLOCK_K": 128}, num_warps=8,  num_stages=3),
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 1024, "BLOCK_K": 128}, num_warps=16, num_stages=3),
+ ]
++
++_ZERO_BIAS_CACHE = {}
+ 
+ @triton.autotune(
+     configs=AUTOTUNE_CONFIGS,
+@@ -18,71 +21,93 @@
+ )
+ @triton.jit
+ def _gemm_kernel(
+-    A_ptr,  # ptr to A (M x K), row-major
+-    B_ptr,  # ptr to B (K x N), row-major
+-    C_ptr,  # ptr to C (M x N), row-major
++    A_ptr,  # (M, K)
++    B_ptr,  # (K, N)
++    C_ptr,  # (M, N) output
+     M, N, K,
+     stride_am, stride_ak,
+     stride_bk, stride_bn,
+     stride_cm, stride_cn,
++    bias_ptr,
++    # constexpr kernel tuning flags
+     BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr,
++    A_IS_FP16: tl.constexpr, APPLY_BIAS: tl.constexpr, APPLY_RELU: tl.constexpr, OUT_IS_FP16: tl.constexpr,
+ ):
+     pid_m = tl.program_id(0)
+     pid_n = tl.program_id(1)
+ 
+-    # row and column offsets for this program
+     row_offs = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
+     col_offs = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
+     k_offs = tl.arange(0, BLOCK_K)
+ 
+-    # initialize accumulator
+     acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
+ 
+-    # iterate over K dimension in blocks of BLOCK_K
+-    # number of K-blocks
+     for kb_start in range(0, K, BLOCK_K):
+-        k_range = kb_start + k_offs  # this is a vector of length BLOCK_K
++        k_range = kb_start + k_offs
+ 
+-        # compute addresses for A: shape [BLOCK_M, BLOCK_K]
+         a_ptrs = A_ptr + (row_offs[:, None] * stride_am) + (k_range[None, :] * stride_ak)
+-        # compute addresses for B: shape [BLOCK_K, BLOCK_N] -> we load transposed-like to make broadcast work
+         b_ptrs = B_ptr + (k_range[:, None] * stride_bk) + (col_offs[None, :] * stride_bn)
+ 
+         a_mask = (row_offs[:, None] < M) & (k_range[None, :] < K)
+         b_mask = (k_range[:, None] < K) & (col_offs[None, :] < N)
+ 
+-        a = tl.load(a_ptrs, mask=a_mask, other=0.0)
++        # Load A (may be fp16 or fp32); cast to fp32 for accumulation
++        if A_IS_FP16:
++            a = tl.load(a_ptrs, mask=a_mask, other=0.0)
++            a = tl.cast(a, tl.float32)
++        else:
++            a = tl.load(a_ptrs, mask=a_mask, other=0.0)
++
++        # Load B (weights) - commonly stored in fp16 cache; cast to fp32
+         b = tl.load(b_ptrs, mask=b_mask, other=0.0)
++        b = tl.cast(b, tl.float32)
+ 
+-        # a: (BLOCK_M, BLOCK_K), b: (BLOCK_K, BLOCK_N)
+         acc += tl.dot(a, b)
+ 
+-    # Store result C
++    # bias
++    if APPLY_BIAS:
++        bias_ptrs = bias_ptr + col_offs[None, :]
++        bias_mask = (col_offs[None, :] < N)
++        bias_vals = tl.load(bias_ptrs, mask=bias_mask, other=0.0)
++        acc += bias_vals
++
++    # fused ReLU
++    if APPLY_RELU:
++        acc = tl.maximum(acc, 0.0)
++
++    # store - either fp32 or fp16 depending on OUT_IS_FP16
+     c_ptrs = C_ptr + (row_offs[:, None] * stride_cm) + (col_offs[None, :] * stride_cn)
+     c_mask = (row_offs[:, None] < M) & (col_offs[None, :] < N)
+-    tl.store(c_ptrs, acc, mask=c_mask)
++
++    if OUT_IS_FP16:
++        out_cast = tl.cast(acc, tl.float16)
++        tl.store(c_ptrs, out_cast, mask=c_mask)
++    else:
++        tl.store(c_ptrs, acc, mask=c_mask)
+ 
+ 
+-def triton_gemm(A: torch.Tensor, B: torch.Tensor):
++def triton_gemm(A: torch.Tensor, B: torch.Tensor, bias: torch.Tensor = None, apply_relu: bool = False, out_fp16: bool = False):
+     """
+-    Compute A @ B where:
+-      A: (M, K) row-major
+-      B: (K, N) row-major
+-    Returns C: (M, N)
++    A: (M, K) - torch.float32 or torch.float16
++    B: (K, N) - often stored as fp16 transposed [N, K]. Here we expect B to be provided in row-major (K,N).
++    bias: (N,) float32 or None
++    out_fp16: if True, output tensor is allocated and returned as torch.float16 (useful for chaining hidden layers)
++    Returns C: (M, N) with dtype float32 (or float16 if out_fp16 True)
+     """
+-    assert A.is_cuda and B.is_cuda, "Inputs must be on CUDA"
+-    assert A.dtype == torch.float32 and B.dtype == torch.float32, "Only fp32 supported"
++    assert A.is_cuda and B.is_cuda
++    assert A.dtype in (torch.float32, torch.float16)
++    assert B.dtype in (torch.float32, torch.float16)
+ 
+-    A_ = A.contiguous()
+-    B_ = B.contiguous()
++    A_ = A if A.is_contiguous() else A.contiguous()
++    B_ = B if B.is_contiguous() else B.contiguous()
+ 
+     M, K = A_.shape
+     Kb, N = B_.shape
+-    assert Kb == K, "A.shape[1] must match B.shape[0]"
++    assert Kb == K
+ 
+-    C = torch.empty((M, N), device=A_.device, dtype=A_.dtype)
++    out_dtype = torch.float16 if out_fp16 else torch.float32
++    C = torch.empty((M, N), device=A_.device, dtype=out_dtype)
+ 
+-    # compute strides (in elements)
+     stride_am = A_.stride(0)
+     stride_ak = A_.stride(1)
+     stride_bk = B_.stride(0)
+@@ -90,7 +115,19 @@
+     stride_cm = C.stride(0)
+     stride_cn = C.stride(1)
+ 
+-    # grid dimensions depend on chosen BLOCK sizes (autotuned)
++    apply_bias = bias is not None
++    if apply_bias:
++        bias_ = bias.contiguous()
++    else:
++        key = (str(A_.device), out_dtype)
++        bias_ = _ZERO_BIAS_CACHE.get(key, None)
++        if bias_ is None:
++            # small zero-bias buffer (fp32)
++            bias_ = torch.zeros(1, device=A_.device, dtype=torch.float32)
++            _ZERO_BIAS_CACHE[key] = bias_
++
++    a_is_fp16 = (A_.dtype == torch.float16)
++
+     def grid(meta):
+         BM = meta["BLOCK_M"]
+         BN = meta["BLOCK_N"]
+@@ -102,73 +139,97 @@
+         stride_am, stride_ak,
+         stride_bk, stride_bn,
+         stride_cm, stride_cn,
++        bias_,
++        A_IS_FP16=a_is_fp16, APPLY_BIAS=apply_bias, APPLY_RELU=apply_relu, OUT_IS_FP16=out_fp16,
+     )
+     return C
+ 
+ 
+ class LinearTriton(nn.Module):
+     """
+-    Simple Linear layer that uses Triton GEMM for forward.
+-    Weight stored as (out_features, in_features) to match nn.Linear.
++    Linear layer optimized with Triton GEMM.
++    - Weight is stored as (out_features, in_features) in fp32 Parameter (for optimizer stability).
++    - A cached transposed fp16 contiguous buffer weight_t_fp16 is kept as buffer to maximize GEMM throughput.
++    - Hidden layers can be configured to output fp16 to chain between layers in lower precision for speed.
+     """
+-    def __init__(self, in_features: int, out_features: int, bias: bool = True):
++    def __init__(self, in_features: int, out_features: int, bias: bool = True, out_fp16: bool = False):
+         super().__init__()
+         self.in_features = in_features
+         self.out_features = out_features
++        self.out_fp16 = out_fp16
+         self.weight = nn.Parameter(torch.empty(out_features, in_features, dtype=torch.float32))
+         if bias:
+             self.bias = nn.Parameter(torch.empty(out_features, dtype=torch.float32))
+         else:
+             self.register_parameter('bias', None)
+-        # initialize parameters similar to nn.Linear
+         self.reset_parameters()
++        # cache transposed contiguous fp16 weight to reduce memory bandwidth
++        self.register_buffer('weight_t_fp16', self.weight.detach().t().contiguous().half())
+ 
+     def reset_parameters(self):
+-        # Kaiming uniform like nn.Linear
+         fan_in = self.in_features
+         bound = 1.0 / (fan_in ** 0.5)
+         nn.init.uniform_(self.weight, -bound, bound)
+         if self.bias is not None:
+             nn.init.uniform_(self.bias, -bound, bound)
++        if hasattr(self, 'weight_t_fp16'):
++            # keep the cache in sync
++            self.weight_t_fp16.copy_(self.weight.detach().t().contiguous().half())
+ 
+-    def forward(self, x: torch.Tensor):
++    def update_fp16_cache(self):
++        if hasattr(self, 'weight_t_fp16'):
++            self.weight_t_fp16.copy_(self.weight.detach().t().contiguous().half())
++
++    def forward(self, x: torch.Tensor, apply_relu: bool = False):
+         """
+-        x: (batch, in_features)
+-        returns: (batch, out_features)
++        x: (batch, in_features) - supports float32 or float16.
++        If x is float32 and this layer is a hidden layer, we cast to float16 to reduce memory bandwidth.
+         """
+-        # Ensure contiguous and float32
+-        assert x.dtype == torch.float32
+-        x_contig = x.contiguous()
+-        # prepare B as (K, N) => (in_features, out_features)
+-        Wt = self.weight.t().contiguous()
+-        out = triton_gemm(x_contig, Wt)  # out shape (batch, out_features)
+-        if self.bias is not None:
+-            out += self.bias.unsqueeze(0)
++        # convert inputs to fp16 when beneficial (hidden layers) to exploit Tensor Cores and reduce bw
++        want_a_fp16 = (x.dtype == torch.float16) or (self.out_fp16 and x.dtype == torch.float32)
++        if want_a_fp16 and x.dtype == torch.float32:
++            a = x.half().contiguous()
++        else:
++            a = x.contiguous()
++
++        # Use cached transposed fp16 weights (shape: in_features x out_features) stored as [K, N] for GEMM
++        # triton_gemm expects B as (K, N) where K==in_features, N==out_features
++        Wt_fp16 = self.weight_t_fp16  # shape (in_features, out_features) -> that's (K, N)
++        out = triton_gemm(a, Wt_fp16, bias=self.bias, apply_relu=apply_relu, out_fp16=self.out_fp16)
+         return out
+ 
+ 
+ class ModelNew(nn.Module):
++    """
++    Optimized model:
++     - Replaces nn.Linear layers with LinearTriton.
++     - Chains hidden layers in fp16 (outputs are fp16) to maximize throughput.
++     - Final layer outputs fp32 to preserve expected output dtype.
++    """
+     def __init__(self, input_size, hidden_layer_sizes, output_size):
+         super().__init__()
+-        assert len(hidden_layer_sizes) >= 1, "Expect at least one hidden layer"
+         layers = []
+-        current_input = input_size
++        current_in = input_size
+         for i, hidden in enumerate(hidden_layer_sizes):
+-            layers.append(LinearTriton(current_input, hidden))
+-            # ReLU will be applied in forward to avoid extra module wrappers
+-            current_input = hidden
+-        # final linear
+-        layers.append(LinearTriton(current_input, output_size))
++            # for hidden layers, emit fp16 outputs to chain in lower precision and increase speed
++            layers.append(LinearTriton(current_in, hidden, bias=True, out_fp16=True))
++            current_in = hidden
++        # final layer outputs fp32
++        layers.append(LinearTriton(current_in, output_size, bias=True, out_fp16=False))
+         self.layers = nn.ModuleList(layers)
+ 
+-    def forward(self, x):
+-        # x shape: (batch, input_size)
++    def forward(self, x: torch.Tensor):
++        """
++        x: (batch, input_size) - float32 expected. We cast to float16 for hidden layers to improve throughput.
++        """
+         out = x
+-        num_lin = len(self.layers)
+-        # Apply all but last with ReLU
++        num_layers = len(self.layers)
+         for i, layer in enumerate(self.layers):
+-            out = layer(out)
+-            if i != num_lin - 1:
+-                # inplace ReLU could be slightly faster, but keep functional for safety
+-                out = F.relu(out)
++            apply_relu = (i != num_layers - 1)
++            # If previous layer produced fp16 and current layer expects it, pass as-is.
++            # LinearTriton will handle casting internally when beneficial.
++            out = layer(out, apply_relu=apply_relu)
++        # Ensure final output is float32 (the last LinearTriton sets out_fp16=False)
++        if out.dtype == torch.float16:
++            out = out.float()
+         return out

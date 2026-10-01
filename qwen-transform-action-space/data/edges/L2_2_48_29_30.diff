@@ -1,0 +1,138 @@
+@@ -1,47 +1,120 @@
+ import torch
+ import torch.nn as nn
++import triton
++import triton.language as tl
++
++# Autotune different block sizes / warps for best performance on Ampere (A6000).
++AUTOTUNE_CONFIGS = [
++    triton.Config({"BLOCK": 256}, num_warps=2, num_stages=2),
++    triton.Config({"BLOCK": 512}, num_warps=4, num_stages=2),
++    triton.Config({"BLOCK": 1024}, num_warps=4, num_stages=2),
++    triton.Config({"BLOCK": 2048}, num_warps=8, num_stages=2),
++    triton.Config({"BLOCK": 4096}, num_warps=8, num_stages=3),
++]
++
++@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['S', 'C', 'B'])
++@triton.jit
++def _fused_pointwise_kernel(
++    x_ptr,       # pointer to input tensor (flattened view)
++    scale_ptr,   # pointer to per-channel scale (length C)
++    bias_ptr,    # pointer to per-channel bias (length C)
++    out_ptr,     # pointer to output tensor (flattened view)
++    C,           # number of channels (int)
++    S,           # spatial size per channel (int)
++    B,           # batch size (int)
++    BLOCK: tl.constexpr
++):
++    # program ids
++    pid_c = tl.program_id(0)   # channel idx [0..C)
++    pid_b = tl.program_id(1)   # batch idx [0..B)
++    pid_s = tl.program_id(2)   # block index over spatial dimension
++
++    # compute spatial offsets for this block
++    offs = tl.arange(0, BLOCK)
++    start = pid_s * BLOCK
++    idx_spatial = start + offs                    # spatial indices for this block
++    mask = idx_spatial < S                        # mask for valid spatial positions
++
++    # compute flattened base index: ((batch * C + channel) * S)
++    base = (pid_b * C + pid_c) * S
++    idx = base + idx_spatial                      # final flattened indices
++
++    # load input (masked)
++    x = tl.load(x_ptr + idx, mask=mask, other=0.0)
++
++    # load per-channel scalars (scalar loads; safe because pid_c < C by grid)
++    s = tl.load(scale_ptr + pid_c)
++    b = tl.load(bias_ptr + pid_c)
++
++    # fused computation: y = sigmoid( tanh(x * s) * b )
++    y = x * s
++
++    # tanh via exp: tanh(y) = 2/(1+exp(-2y)) - 1
++    expv = tl.exp(-2.0 * y)
++    tanh_y = 2.0 / (1.0 + expv) - 1.0
++
++    z = tanh_y * b
++
++    # sigmoid: 1/(1+exp(-z))
++    out_val = 1.0 / (1.0 + tl.exp(-z))
++
++    # store result (masked)
++    tl.store(out_ptr + idx, out_val, mask=mask)
++
++
+ def fused_pointwise(x: torch.Tensor, scale: torch.Tensor, bias: torch.Tensor):
+     """
+-    Fused pointwise implemented with PyTorch operations.
+-    Applies: out = sigmoid( tanh( x * scale ) * bias )
+-    scale and bias are per-channel tensors of shape (C,) or (C,1,1,1).
++    Wrapper to launch the Triton fused pointwise kernel.
++    x: tensor of shape (B, C, D, H, W), contiguous, CUDA
++    scale: tensor of shape (C, 1, 1, 1) or (C,), CUDA
++    bias: tensor of shape (C, 1, 1, 1) or (C,), CUDA
+     """
+     assert x.is_cuda and scale.is_cuda and bias.is_cuda, "All tensors must be on CUDA."
+     assert x.dtype == torch.float32 and scale.dtype == torch.float32 and bias.dtype == torch.float32
+ 
+-    # ensure contiguous input
+     x = x.contiguous()
+-    # reshape scale/bias to broadcast over (B, C, D, H, W)
+-    scale_b = scale.reshape(1, -1, 1, 1, 1)
+-    bias_b = bias.reshape(1, -1, 1, 1, 1)
++    B, C, D, H, W = x.shape
++    S = D * H * W  # spatial size per channel
+ 
+-    y = x * scale_b
+-    y = torch.tanh(y)
+-    y = y * bias_b
+-    y = torch.sigmoid(y)
+-    return y
++    # Flatten per-channel params to 1D contiguous tensors
++    scale1 = scale.reshape(-1).contiguous()
++    bias1 = bias.reshape(-1).contiguous()
++    assert scale1.numel() == C and bias1.numel() == C, "scale/bias length must match channels"
++
++    out = torch.empty_like(x)
++
++    # autotune grid depends on meta["BLOCK"]
++    grid = lambda meta: (C, B, (S + meta["BLOCK"] - 1) // meta["BLOCK"])
++
++    _fused_pointwise_kernel[grid](
++        x, scale1, bias1, out,
++        C, S, B
++    )
++    return out
+ 
+ 
+ class ModelNew(nn.Module):
+     """
+     Optimized Model:
+-      - Uses PyTorch's Conv3d for the convolution.
+-      - Fuses the following elementwise operations into a single Triton kernel:
+-          x = conv(x)
++      - Uses PyTorch Conv3d for convolution (keeps highly-optimized cuDNN/ATen conv).
++      - Fuses the sequence of elementwise ops into a Triton kernel:
+           x = x * scaling_factor
+           x = tanh(x)
+           x = x * bias
+           x = sigmoid(x)
+-      This reduces memory traffic and kernel launch overhead for the elementwise sequence.
++      This reduces memory traffic and kernel-launch overhead for the elementwise chain.
+     """
+     def __init__(self, in_channels, out_channels, kernel_size, scaling_factor, bias_shape):
+         super(ModelNew, self).__init__()
++        # Keep PyTorch conv (uses cuDNN/cuBLAS optimizations)
+         self.conv = nn.Conv3d(in_channels, out_channels, kernel_size)
+-        # keep parameters with original shapes to preserve semantics
++
++        # Keep parameters in original shapes to preserve semantics
+         self.scaling_factor = nn.Parameter(torch.randn(bias_shape))
+         self.bias = nn.Parameter(torch.randn(bias_shape))
+ 
+     def forward(self, x):
+         x = self.conv(x)
++        # fused elementwise operations in one Triton kernel
+         x = fused_pointwise(x, self.scaling_factor, self.bias)
+         return x

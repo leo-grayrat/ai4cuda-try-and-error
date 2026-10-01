@@ -1,0 +1,163 @@
+@@ -3,93 +3,105 @@
+ import triton
+ import triton.language as tl
+ 
+-# Autotune configurations for the Triton kernel
++# Autotune configs chosen for A6000/Ampere; tune BLOCK size and warps.
+ AUTOTUNE_CONFIGS = [
++    triton.Config({"BLOCK": 512},  num_warps=4, num_stages=2),
+     triton.Config({"BLOCK": 1024}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK": 2048}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK": 4096}, num_warps=8, num_stages=2),
++    triton.Config({"BLOCK": 2048}, num_warps=8, num_stages=2),
++    triton.Config({"BLOCK": 4096}, num_warps=8, num_stages=3),
+ ]
+ 
+ 
+-@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['M', 'C'])
++@triton.autotune(configs=AUTOTUNE_CONFIGS, key=["M", "C"])
+ @triton.jit
+-def _min_channel_kernel(x_ptr, out_ptr, M, C, BLOCK: tl.constexpr):
++def _min_double_tanh_kernel(
++    x_ptr,            # pointer to conv output (flattened tensor)
++    out_ptr,          # pointer to output (flattened tensor)
++    N, C, H, W, M,    # non-constexpr kernel args
++    BLOCK: tl.constexpr
++):
+     """
+-    Expect x_ptr to point to a flattened tensor with layout (N, H, W, C) contiguous
+-    (i.e., channels are the fastest-changing dimension). For each (n,h,w) position
+-    (flattened into index in [0, M)), compute the minimum across the channel
+-    dimension C and write it to out_ptr.
+-    - x_ptr points to a tensor with shape (N, H, W, C) flattened (length M * C).
+-    - out_ptr points to a tensor with shape (N, 1, H, W) flattened (length M).
+-    M = N * H * W
++    For each (n, h, w) position (flattened index in [0, M)), compute the minimum
++    across channels and then apply tanh(tanh(min_val)) before storing to out_ptr.
++    Layout assumed: x is contiguous with shape (N, C, H, W), standard NCHW.
++    Output layout: contiguous (N, 1, H, W) flattened.
+     """
+     pid = tl.program_id(0)
+     block_start = pid * BLOCK
+-    offs = block_start + tl.arange(0, BLOCK)
+-    mask = offs < M  # mask for valid positions
++    offs = block_start + tl.arange(0, BLOCK)              # linear positions in [0, M)
++    mask = offs < M
+ 
+-    # In layout (N, H, W, C) flattened, the base address for each (n,h,w) is offs * C,
+-    # and channel c is at base + c.
+-    base = offs * C
++    # compute per-position sample index n and spatial index s
++    S = H * W
++    # offs is linear index: offs = n * S + s
++    n = offs // S
++    s = offs - n * S  # s in [0, S)
+ 
+-    # Load channel 0 as initial minimum
+-    min_vals = tl.load(x_ptr + base, mask=mask, other=1e9)
++    # compute base offset for sample n in flattened x: base_n = n * (C * S)
++    base_n = n * (C * S)
+ 
++    # initialize min values with channel 0
++    addr0 = base_n + 0 * S + s
++    min_vals = tl.load(x_ptr + addr0, mask=mask, other=1e9)
++
++    # iterate over remaining channels
+     c = 1
++    # loop in python; Triton will unroll/compile
+     while c < C:
+-        vals = tl.load(x_ptr + base + c, mask=mask, other=1e9)
++        addr = base_n + c * S + s
++        vals = tl.load(x_ptr + addr, mask=mask, other=1e9)
+         min_vals = tl.minimum(min_vals, vals)
+         c += 1
+ 
+-    tl.store(out_ptr + offs, min_vals, mask=mask)
++    # compute tanh(x) using exp formulation: tanh(x) = (e - 1) / (e + 1) where e = exp(2x)
++    # apply tanh twice
++    e1 = tl.exp(min_vals * 2.0)
++    tanh1 = (e1 - 1.0) / (e1 + 1.0)
++
++    e2 = tl.exp(tanh1 * 2.0)
++    tanh2 = (e2 - 1.0) / (e2 + 1.0)
++
++    # store result into output (shape flattened length M)
++    out_addr = offs  # output layout (N,1,H,W) flattened matches n*S + s
++    tl.store(out_ptr + out_addr, tanh2, mask=mask)
+ 
+ 
+-def triton_min_over_channels(x: torch.Tensor) -> torch.Tensor:
++def triton_min_double_tanh(x: torch.Tensor) -> torch.Tensor:
+     """
+-    Wrapper that computes min over channel dimension using Triton kernel.
+-    Input x: (N, C, H, W), float32, CUDA.
+-    Output: (N, 1, H, W), float32, CUDA.
++    Wrapper to launch Triton kernel that computes min over channels and then
++    applies tanh twice. Input: (N, C, H, W) contiguous float32 tensor on CUDA.
++    Output: (N, 1, H, W) contiguous float32 tensor on CUDA.
+     """
+-    assert x.is_cuda, "Input must be on CUDA"
+-    assert x.dtype == torch.float32, "Only float32 is supported"
+-
++    assert x.is_cuda, "Input must be on CUDA."
++    assert x.dtype == torch.float32, "Only float32 is supported."
++    x = x.contiguous()
+     N, C, H, W = x.shape
+-    M = N * H * W
+-
+-    # Permute to (N, H, W, C) so channel is the fastest-changing dim and contiguous
+-    x_perm = x.permute(0, 2, 3, 1).contiguous()  # shape: (N, H, W, C)
+-    x_flat = x_perm.view(-1)  # length M * C
++    S = H * W
++    M = N * S
+ 
+     out = torch.empty((N, 1, H, W), device=x.device, dtype=x.dtype)
+ 
+-    grid = lambda meta: ((M + meta['BLOCK'] - 1) // meta['BLOCK'],)
+-    # Launch kernel; autotune will pick BLOCK
+-    _min_channel_kernel[grid](x_flat, out.view(-1), M, C)
++    grid = lambda meta: ((M + meta["BLOCK"] - 1) // meta["BLOCK"],)
++
++    # Launch Triton kernel. The autotuner will select BLOCK and other launch params.
++    _min_double_tanh_kernel[grid](x, out, N, C, H, W, M)
+     return out
+ 
+ 
+ class ModelNew(nn.Module):
+     """
+     Optimized Model:
+-      - Use the original PyTorch Conv2d for the convolution.
+-      - Use a Triton kernel to compute min across the channel dimension,
+-        producing (N, 1, H, W).
+-      - Apply two tanh activations (kept as PyTorch ops) on the reduced tensor.
++      - Use PyTorch's highly-optimized Conv2d (cuDNN).
++      - Use a Triton kernel to compute min over channels and immediately apply
++        tanh(tanh(x)) to avoid an extra intermediate tensor and extra GPU memory traffic.
+     """
+     def __init__(self, in_channels, out_channels, kernel_size):
+         super(ModelNew, self).__init__()
+         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size)
+ 
+     def forward(self, x):
+-        # Perform convolution in PyTorch (uses optimized cuDNN)
+-        conv_out = self.conv(x)  # shape: (N, C, H, W)
+-
+-        # Compute min over channels using Triton kernel (fused reduction)
+-        reduced = triton_min_over_channels(conv_out)  # shape: (N, 1, H, W)
+-
+-        # Apply activations (two tanh calls as in original model)
+-        out = torch.tanh(reduced)
+-        out = torch.tanh(out)
++        conv_out = self.conv(x)                # (N, C, H, W), contiguous
++        out = triton_min_double_tanh(conv_out) # (N, 1, H, W)
+         return out
+ 
+ 
+@@ -101,6 +113,7 @@
+ kernel_size = 3
+ 
+ def get_inputs():
++    # Return CUDA tensors for execution
+     return [torch.rand(batch_size, in_channels, height, width).cuda().float()]
+ 
+ def get_init_inputs():

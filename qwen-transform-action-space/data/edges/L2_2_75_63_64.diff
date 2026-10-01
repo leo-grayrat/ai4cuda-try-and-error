@@ -1,0 +1,152 @@
+@@ -4,11 +4,13 @@
+ import triton.language as tl
+ 
+ # Autotune configurations chosen for Ampere (A6000)
++# Add larger BLOCK_K values and M/N tile sizes that are friendly to tensor cores (multiples of 128)
+ AUTOTUNE_CONFIGS = [
++    triton.Config({"BLOCK_M": 128, "BLOCK_N": 128, "BLOCK_K": 128}, num_warps=8, num_stages=2),
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 256, "BLOCK_K": 128}, num_warps=8, num_stages=2),
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 128, "BLOCK_K": 128}, num_warps=8, num_stages=2),
++    triton.Config({"BLOCK_M": 128, "BLOCK_N": 256, "BLOCK_K": 128}, num_warps=8, num_stages=2),
+     triton.Config({"BLOCK_M": 128, "BLOCK_N": 128, "BLOCK_K": 64}, num_warps=8, num_stages=2),
+-    triton.Config({"BLOCK_M": 256, "BLOCK_N": 128, "BLOCK_K": 64}, num_warps=8, num_stages=2),
+-    triton.Config({"BLOCK_M": 128, "BLOCK_N": 256, "BLOCK_K": 64}, num_warps=8, num_stages=2),
+-    triton.Config({"BLOCK_M": 256, "BLOCK_N": 256, "BLOCK_K": 64}, num_warps=8, num_stages=2),
+     # keep a smaller fallback config
+     triton.Config({"BLOCK_M": 64,  "BLOCK_N": 128, "BLOCK_K": 32}, num_warps=4, num_stages=2),
+ ]
+@@ -68,47 +70,46 @@
+     tl.store(c_ptrs, acc, mask=c_mask)
+ 
+ 
+-def triton_linear(input: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor = None):
++def triton_linear(input: torch.Tensor, B_t_fp16: torch.Tensor, bias: torch.Tensor = None):
+     """
+-    Compute input @ weight.T (+ bias) using a Triton matmul kernel.
+-    input: (batch, in_features)
+-    weight: (out_features, in_features)  # we pass weight as-is (no copy/transpose)
+-    bias: (out_features,) or None
+-    returns: (batch, out_features)
++    Compute input @ weight.T (+ bias) using a Triton matmul kernel optimized for mixed precision.
++    - input: (batch, in_features) as float32 (will be cast to float16 for matmul)
++    - B_t_fp16: weight transposed and contiguous in shape (K, N), stored as float16
++      (this should be cached by the caller to avoid repeated transposes)
++    - bias: (out_features,) or None, treated as float32 and added in-kernel
++    returns: (batch, out_features) as float32
+     """
+-    assert input.is_cuda and weight.is_cuda, "Triton kernel requires CUDA tensors."
+-    assert input.dtype == torch.float32 and weight.dtype == torch.float32, "Only float32 supported."
+-
++    assert input.is_cuda and B_t_fp16.is_cuda, "Triton kernel requires CUDA tensors."
++    # We accept float32 input and fp16 weight; we will do fp16 compute with fp32 accumulation.
+     A = input.contiguous()
+-    # Pass weight as-is to avoid an expensive transpose+copy.
+-    B = weight  # shape (out_features, in_features) == (N, K) logically
++    # B_t_fp16 is expected to be (K, N) contiguous and already float16
++    B = B_t_fp16
+ 
+     M = A.shape[0]
+     K = A.shape[1]
+-    # N is out_features
+-    N = B.shape[0]
++    N = B.shape[1]
+ 
+-    C = torch.empty((M, N), device=A.device, dtype=A.dtype)
++    # Output is stored in fp32 (accumulated in fp32 inside kernel)
++    C = torch.empty((M, N), device=A.device, dtype=torch.float32)
+ 
+-    stride_am = A.stride(0)
+-    stride_ak = A.stride(1)
+-    # We want the kernel to index B as B[k, col] via pointer arithmetic:
+-    # address = B_ptr + k * stride_bk + col * stride_bn
+-    # For weight laid out as (N, K) (row-major), weight.stride() == (K, 1)
+-    # So set stride_bk = stride along K (weight.stride(1)), stride_bn = stride along N (weight.stride(0))
+-    stride_bk = B.stride(1)
+-    stride_bn = B.stride(0)
++    # Convert A to fp16 for compute (contiguous)
++    A_fp16 = A.to(torch.float16).contiguous()
++
++    stride_am = A_fp16.stride(0)
++    stride_ak = A_fp16.stride(1)
++    stride_bk = B.stride(0)
++    stride_bn = B.stride(1)
+     stride_cm = C.stride(0)
+     stride_cn = C.stride(1)
+ 
+-    # Prepare a compact 1D bias vector to pass to the kernel (fuse bias add inside kernel).
++    # Prepare bias as fp32 vector
+     if bias is None:
+-        bias_vec = torch.zeros((N,), device=A.device, dtype=A.dtype)
++        bias_vec = torch.zeros((N,), device=A.device, dtype=torch.float32)
+     else:
+         b = bias
+-        if b.device != A.device or b.dtype != A.dtype:
+-            b = b.to(A.device, dtype=A.dtype)
+-        # Try flattening trailing dims into a 1D vector of length N
++        if b.device != A.device or b.dtype != torch.float32:
++            b = b.to(A.device, dtype=torch.float32)
++        # Flatten trailing dims into a 1D vector of length N if possible
+         if b.numel() == N:
+             bias_vec = b.reshape(-1)
+         else:
+@@ -117,7 +118,6 @@
+                 if b_flat.numel() == N:
+                     bias_vec = b_flat
+                 else:
+-                    # fallback: attempt a generic reshape (may raise if incompatible)
+                     bias_vec = b.reshape(-1)
+             except Exception:
+                 bias_vec = b.reshape(-1)
+@@ -128,9 +128,9 @@
+         return ( (M + meta['BLOCK_M'] - 1) // meta['BLOCK_M'],
+                  (N + meta['BLOCK_N'] - 1) // meta['BLOCK_N'] )
+ 
+-    # Launch kernel and let kernel fuse the linear bias into the accumulation
++    # Launch kernel: A_fp16 and B (fp16) are used for loads/compute; C and bias are fp32
+     _matmul_kernel[grid](
+-        A, B, C, bias_vec,
++        A_fp16, B, C, bias_vec,
+         M, N, K,
+         stride_am, stride_ak,
+         stride_bk, stride_bn,
+@@ -138,7 +138,6 @@
+         stride_bias
+     )
+ 
+-    # Bias already fused into C inside the Triton kernel.
+     return C
+ 
+ 
+@@ -155,6 +154,9 @@
+         self.group_norm = nn.GroupNorm(num_groups, out_features)
+         # External bias (separate from Linear.bias)
+         self.bias = nn.Parameter(torch.randn(bias_shape))
++        # Cache for transposed contiguous FP16 weight to avoid repeated transposes
++        self._cached_W_t = None
++        self._cached_W_ptr = 0
+ 
+     def forward(self, x):
+         # x: (batch, in_features), float32, CUDA
+@@ -168,9 +170,21 @@
+         if x.dtype != torch.float32:
+             x = x.to(torch.float32)
+ 
+-        x = triton_linear(x, W, b_lin)
++        # Lazily prepare a cached transposed contiguous FP16 weight (shape (K, N))
++        # Refresh cache only when the underlying weight storage changes.
++        W_ptr = W.data_ptr()
++        if (self._cached_W_t is None) or (self._cached_W_ptr != W_ptr):
++            # Transpose and make contiguous, then convert to FP16 for high-throughput compute
++            # Store on the same device as the input
++            self._cached_W_t = W.t().contiguous().to(x.device, dtype=torch.float16)
++            self._cached_W_ptr = W_ptr
++
++        # Call triton_linear with the cached transposed FP16 weight.
++        # triton_linear will cast the input to FP16 for compute and return FP32 output.
++        x = triton_linear(x, self._cached_W_t, b_lin)
+ 
+         # Apply GroupNorm using PyTorch (leverages optimized kernels)
++        # GroupNorm expects FP32 input, x is FP32 as returned by triton_linear
+         x = self.group_norm(x)
+ 
+         # Compute min across feature/channel dimension (dim=1)

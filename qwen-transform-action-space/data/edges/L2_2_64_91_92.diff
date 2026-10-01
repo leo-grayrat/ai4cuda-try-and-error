@@ -1,0 +1,21 @@
+@@ -149,12 +149,14 @@
+         self.linear = nn.Linear(in_features, out_features, bias=bias)
+ 
+     def forward(self, x):
+-        # fused: linear followed by logsumexp across output features
+-        weight = self.linear.weight
+-        bias = self.linear.bias if self.linear.bias is not None else None
+-
+-        # compute (B,1) result using Triton kernel
+-        x_lse = triton_logsumexp_linear(x, weight, bias)
++        # Use cuBLAS-backed linear for the heavy GEMM, then compute logsumexp.
++        # This is significantly faster for large matrices than a single-CTA Triton streaming GEMM.
++        # Ensure contiguous inputs for best cuBLAS performance.
++        x = x.contiguous()
++        # compute full linear output (B, OUT) using PyTorch/cuBLAS
++        out_full = F.linear(x, self.linear.weight, self.linear.bias)
++        # compute logsumexp over output features -> shape (B, 1)
++        x_lse = out_full.logsumexp(dim=1, keepdim=True)
+ 
+         # apply activations (elementwise on small (B,1) tensor)
+         x_act = F.leaky_relu(x_lse, negative_slope=0.01)

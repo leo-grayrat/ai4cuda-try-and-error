@@ -1,0 +1,249 @@
+@@ -3,97 +3,193 @@
+ import triton
+ import triton.language as tl
+ 
+-# Autotune configurations for the Triton kernel
++# Autotune configs: try a few block sizes / warp counts to find best on the target GPU.
+ AUTOTUNE_CONFIGS = [
+-    triton.Config({"BLOCK_SIZE": 256}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK_SIZE": 512}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK_SIZE": 1024}, num_warps=8, num_stages=2),
++    triton.Config({"BLOCK_SIZE": 64},  num_warps=4, num_stages=2),
++    triton.Config({"BLOCK_SIZE": 128}, num_warps=4, num_stages=2),
++    triton.Config({"BLOCK_SIZE": 256}, num_warps=8, num_stages=3),
+ ]
+ 
+ 
+-@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['n_elements'])
++@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['N', 'C', 'D_out', 'H_out', 'W_out', 'Dp', 'Hp', 'Wp'])
+ @triton.jit
+-def _fused_leakyrelu_mul_kernel(
+-    x_ptr,           # pointer to input tensor
+-    mul_ptr,         # pointer to multiplier tensor (same number of elements as x)
+-    out_ptr,         # pointer to output tensor
+-    n_elements,      # total # elements
+-    neg_slope,       # negative slope for LeakyReLU (float scalar)
++def _fused_leakyrelu_mul_pool_kernel(
++    x_ptr,        # pointer to input tensor (flattened, shape: N*C*D_out*H_out*W_out)
++    mul_ptr,      # pointer to multiplier tensor (length C)
++    out_ptr,      # pointer to output tensor (flattened, shape: N*C*Dp*Hp*Wp)
++    N, C,
++    D_out, H_out, W_out,   # dimensions of conv output
++    Dp, Hp, Wp,            # dimensions after pooling (D_out/2, H_out/2, W_out/2)
++    neg_slope,
+     BLOCK_SIZE: tl.constexpr
+ ):
+-    pid = tl.program_id(0)
+-    offsets = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
+-    mask = offsets < n_elements
++    # grid:
++    #  program_id(1) -> nc index in [0, N*C)
++    #  program_id(0) -> block of pooled spatial indices
++    nc = tl.program_id(1)
++    pstart = tl.program_id(0) * BLOCK_SIZE
++    offs_p = pstart + tl.arange(0, BLOCK_SIZE)
++    mask_p = offs_p < (Dp * Hp * Wp)
+ 
+-    # load inputs (masked)
+-    x = tl.load(x_ptr + offsets, mask=mask, other=0.0)
+-    m = tl.load(mul_ptr + offsets, mask=mask, other=0.0)
++    # flatten sizes
++    in_spatial = D_out * H_out * W_out
++    out_spatial = Dp * Hp * Wp
++    HWp = Hp * Wp
++    HW_out = H_out * W_out
+ 
+-    # first LeakyReLU
+-    y1 = tl.where(x > 0.0, x, x * neg_slope)
+-    # multiply by per-element multiplier
+-    y2 = y1 * m
++    # base pointers (flattened per (n,c) slice)
++    base_in = nc * in_spatial
++    base_out = nc * out_spatial
++
++    # compute pooled 3D indices (pd, ph, pw) for each pooled index in the block
++    # offs_p is tl.tensor-like supporting // and %
++    pd = offs_p // HWp
++    rem = offs_p - pd * HWp
++    ph = rem // Wp
++    pw = rem - ph * Wp
++
++    # compute the 2x2x2 input window coords for each pooled position
++    d0 = pd * 2
++    d1 = d0 + 1
++    h0 = ph * 2
++    h1 = h0 + 1
++    w0 = pw * 2
++    w1 = w0 + 1
++
++    # compute linear offsets for each of 8 elements per pooled window
++    # For memory safety, create masks for valid pooled outputs; input coords derived from valid pooled coords are valid
++    # but we'll use mask_p for all tl.load/store operations.
++    # Compute the flattened input offsets (relative to base_in)
++    offs000 = d0 * HW_out + h0 * W_out + w0
++    offs001 = d0 * HW_out + h0 * W_out + w1
++    offs010 = d0 * HW_out + h1 * W_out + w0
++    offs011 = d0 * HW_out + h1 * W_out + w1
++    offs100 = d1 * HW_out + h0 * W_out + w0
++    offs101 = d1 * HW_out + h0 * W_out + w1
++    offs110 = d1 * HW_out + h1 * W_out + w0
++    offs111 = d1 * HW_out + h1 * W_out + w1
++
++    ptr_in_base = x_ptr + base_in
++    # load 8 values for each pooled position (vectorized)
++    x000 = tl.load(ptr_in_base + offs000, mask=mask_p, other=float('-inf'))
++    x001 = tl.load(ptr_in_base + offs001, mask=mask_p, other=float('-inf'))
++    x010 = tl.load(ptr_in_base + offs010, mask=mask_p, other=float('-inf'))
++    x011 = tl.load(ptr_in_base + offs011, mask=mask_p, other=float('-inf'))
++    x100 = tl.load(ptr_in_base + offs100, mask=mask_p, other=float('-inf'))
++    x101 = tl.load(ptr_in_base + offs101, mask=mask_p, other=float('-inf'))
++    x110 = tl.load(ptr_in_base + offs110, mask=mask_p, other=float('-inf'))
++    x111 = tl.load(ptr_in_base + offs111, mask=mask_p, other=float('-inf'))
++
++    # perform first LeakyReLU
++    neg = neg_slope
++    y000 = tl.where(x000 > 0.0, x000, x000 * neg)
++    y001 = tl.where(x001 > 0.0, x001, x001 * neg)
++    y010 = tl.where(x010 > 0.0, x010, x010 * neg)
++    y011 = tl.where(x011 > 0.0, x011, x011 * neg)
++    y100 = tl.where(x100 > 0.0, x100, x100 * neg)
++    y101 = tl.where(x101 > 0.0, x101, x101 * neg)
++    y110 = tl.where(x110 > 0.0, x110, x110 * neg)
++    y111 = tl.where(x111 > 0.0, x111, x111 * neg)
++
++    # load per-channel multiplier (scalar)
++    channel = nc % C
++    m = tl.load(mul_ptr + channel)
++
++    # multiply
++    z000 = y000 * m
++    z001 = y001 * m
++    z010 = y010 * m
++    z011 = y011 * m
++    z100 = y100 * m
++    z101 = y101 * m
++    z110 = y110 * m
++    z111 = y111 * m
++
+     # second LeakyReLU
+-    y3 = tl.where(y2 > 0.0, y2, y2 * neg_slope)
++    r000 = tl.where(z000 > 0.0, z000, z000 * neg)
++    r001 = tl.where(z001 > 0.0, z001, z001 * neg)
++    r010 = tl.where(z010 > 0.0, z010, z010 * neg)
++    r011 = tl.where(z011 > 0.0, z011, z011 * neg)
++    r100 = tl.where(z100 > 0.0, z100, z100 * neg)
++    r101 = tl.where(z101 > 0.0, z101, z101 * neg)
++    r110 = tl.where(z110 > 0.0, z110, z110 * neg)
++    r111 = tl.where(z111 > 0.0, z111, z111 * neg)
+ 
+-    # store result
+-    tl.store(out_ptr + offsets, y3, mask=mask)
++    # compute max across 8 values
++    m1 = tl.maximum(r000, r001)
++    m2 = tl.maximum(r010, r011)
++    m3 = tl.maximum(r100, r101)
++    m4 = tl.maximum(r110, r111)
++    m12 = tl.maximum(m1, m2)
++    m34 = tl.maximum(m3, m4)
++    m1234 = tl.maximum(m12, m34)
++
++    # store results to output (flattened per (n,c) slice)
++    ptr_out_base = out_ptr + base_out
++    out_offsets = offs_p  # relative positions inside (n,c) pooled slice
++    tl.store(ptr_out_base + out_offsets, m1234, mask=mask_p)
+ 
+ 
+-def triton_fused_leakyrelu_mul(x: torch.Tensor, mul: torch.Tensor, neg_slope: float = 0.2) -> torch.Tensor:
++def triton_fused_leakyrelu_mul_pool(x: torch.Tensor, mul: torch.Tensor, neg_slope: float = 0.2) -> torch.Tensor:
+     """
+-    Apply: out = LeakyReLU( LeakyReLU(x) * mul )
+-    x and mul must be CUDA tensors with the same shape and dtype=torch.float32.
++    Fuse: LeakyReLU -> multiply (per-channel) -> LeakyReLU -> MaxPool3d(kernel_size=2)
++    Inputs:
++      x: CUDA tensor (N, C, D_out, H_out, W_out), float32
++      mul: per-channel multiplier tensor, shape (C,) or (C,1,1,1)
++    Returns:
++      out: CUDA tensor (N, C, Dp, Hp, Wp) where Dp = D_out//2, Hp = H_out//2, Wp = W_out//2
+     """
+     assert x.is_cuda and mul.is_cuda, "Tensors must be on CUDA."
+-    assert x.dtype == torch.float32 and mul.dtype == torch.float32, "Only float32 supported."
++    assert x.dtype == torch.float32 and mul.dtype == torch.float32
+ 
+     x_contig = x.contiguous()
+-    mul_contig = mul.contiguous()
++    N, C, D_out, H_out, W_out = x_contig.shape
++    # pooling kernel_size=2 assumed; require even spatial dimensions
++    assert D_out % 2 == 0 and H_out % 2 == 0 and W_out % 2 == 0, "Spatial dimensions must be divisible by 2."
+ 
+-    out = torch.empty_like(x_contig)
++    Dp = D_out // 2
++    Hp = H_out // 2
++    Wp = W_out // 2
+ 
+-    n_elements = x_contig.numel()
+-    if n_elements == 0:
++    # prepare multiplier as 1D tensor of length C
++    mul_1d = mul.contiguous().view(-1)
++    assert mul_1d.numel() == C
++
++    out = torch.empty((N, C, Dp, Hp, Wp), device=x.device, dtype=x.dtype)
++
++    if Dp * Hp * Wp == 0:
+         return out
+ 
+-    grid = lambda meta: ((n_elements + meta["BLOCK_SIZE"] - 1) // meta["BLOCK_SIZE"],)
+-    _fused_leakyrelu_mul_kernel[grid](x_contig, mul_contig, out, n_elements, float(neg_slope))
++    grid = lambda meta: (( (Dp * Hp * Wp + meta["BLOCK_SIZE"] - 1) // meta["BLOCK_SIZE"], N * C))
++
++    _fused_leakyrelu_mul_pool_kernel[grid](
++        x_contig, mul_1d, out, N, C,
++        D_out, H_out, W_out,
++        Dp, Hp, Wp,
++        float(neg_slope)
++    )
+     return out
+ 
+ 
+ class ModelNew(nn.Module):
+     """
+-    Optimized model using a Triton kernel to fuse:
+-      LeakyReLU -> multiply by parameter -> LeakyReLU
+-    The ConvTranspose3d and MaxPool3d are left as native PyTorch ops.
++    Optimized model that:
++      - Keeps ConvTranspose3d as native PyTorch op (heavy compute, reuse cuDNN)
++      - Fuses: LeakyReLU -> per-channel multiply -> LeakyReLU -> MaxPool3d(kernel=2) into a single Triton kernel
++        to reduce memory traffic and avoid materializing the intermediate full conv output after the elementwise ops.
+     """
+     def __init__(self, in_channels, out_channels, kernel_size, stride, padding, output_padding, multiplier_shape):
+         super(ModelNew, self).__init__()
+         self.conv_transpose = nn.ConvTranspose3d(in_channels, out_channels, kernel_size,
+                                                  stride=stride, padding=padding, output_padding=output_padding)
+-        # keep multiplier as provided shape (expected to be (out_channels,1,1,1))
++        # keep multiplier as provided shape (expected to be (out_channels,1,1,1) or (out_channels,))
+         self.multiplier = nn.Parameter(torch.randn(multiplier_shape, dtype=torch.float32))
+         self.neg_slope = 0.2
+-        self.max_pool = nn.MaxPool3d(kernel_size=2)
+ 
+     def forward(self, x):
+         # conv transpose (native)
+         x = self.conv_transpose(x)
+-
+-        # prepare multiplier expanded to x.shape
+-        # multiplier param expected to be (C,1,1,1) or (C,) etc. Normalize it to (1,C,1,1,1) then expand.
+-        C = x.shape[1]
+-        # Ensure multiplier has channel-first shape (C,1,1,1)
+-        mul = self.multiplier
+-        if mul.ndim == 1:
+-            mul = mul.view(C, 1, 1, 1)
+-        # reshape to (1, C, 1, 1, 1) then expand to x.shape and make contiguous
+-        mul_expanded = mul.view(1, C, 1, 1, 1).expand(x.shape).contiguous()
+-
+-        # fused Triton kernel: LeakyReLU -> *multiplier -> LeakyReLU
+-        x = triton_fused_leakyrelu_mul(x, mul_expanded, neg_slope=self.neg_slope)
+-
+-        # max pool (native)
+-        x = self.max_pool(x)
++        # fused Triton op: includes both LeakyReLUs, per-channel multiply, and 2x2x2 max pool
++        mul_1d = self.multiplier.contiguous().view(-1)
++        x = triton_fused_leakyrelu_mul_pool(x, mul_1d, neg_slope=self.neg_slope)
+         return x

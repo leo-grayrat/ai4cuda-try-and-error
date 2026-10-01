@@ -1,0 +1,342 @@
+@@ -3,171 +3,245 @@
+ import triton
+ import triton.language as tl
+ 
+-# Autotune configurations for different block sizes
++# Autotune configs tuned for Ampere / A6000
+ AUTOTUNE_CONFIGS = [
+-    triton.Config(
+-        {"BLOCK_M": 64, "BLOCK_N": 64, "BLOCK_K": 32},
+-        num_warps=4,
+-        num_stages=2,
+-    ),
+-    triton.Config(
+-        {"BLOCK_M": 128, "BLOCK_N": 128, "BLOCK_K": 32},
+-        num_warps=4,
+-        num_stages=2,
+-    ),
+-    triton.Config(
+-        {"BLOCK_M": 256, "BLOCK_N": 64, "BLOCK_K": 32},
+-        num_warps=8,
+-        num_stages=2,
+-    ),
+-    triton.Config(
+-        {"BLOCK_M": 128, "BLOCK_N": 64, "BLOCK_K": 32},
+-        num_warps=4,
+-        num_stages=2,
+-    ),
++    triton.Config({"BLOCK_M": 512, "BLOCK_N": 256, "BLOCK_K": 512}, num_warps=16, num_stages=4),
++    triton.Config({"BLOCK_M": 512, "BLOCK_N": 256, "BLOCK_K": 256}, num_warps=16, num_stages=4),
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 256, "BLOCK_K": 256}, num_warps=16, num_stages=3),
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 128, "BLOCK_K": 256}, num_warps=16, num_stages=3),
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 256, "BLOCK_K": 128}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK_M": 128, "BLOCK_N": 128, "BLOCK_K": 64}, num_warps=8, num_stages=3),
+ ]
+ 
+ 
+ @triton.autotune(configs=AUTOTUNE_CONFIGS, key=["M", "N", "K"])
+ @triton.jit
+-def matmul_bias_kernel(
+-    A_ptr,            # A matrix ptr (M x K), row-major
+-    B_ptr,            # B matrix ptr (K x N), row-major
+-    C_ptr,            # output ptr (M x N), row-major
+-    bias_ptr,         # bias ptr (N,) or nullptr-like tensor
+-    M, N, K,          # dimensions
+-    stride_am, stride_ak,  # A strides (in elements)
+-    stride_bk, stride_bn,  # B strides (in elements)
+-    stride_cm, stride_cn,  # C strides (in elements)
+-    BLOCK_M: tl.constexpr,
+-    BLOCK_N: tl.constexpr,
+-    BLOCK_K: tl.constexpr,
++def matmul_bias_fused_kernel(
++    A_ptr,            # A: (M, K) row-major
++    B_ptr,            # B: (K, N) row-major (this is weight.t().contiguous())
++    C_ptr,            # output: (M, N) row-major
++    bias_ptr,         # bias: (N,) or dummy
++    M, N, K,
++    stride_am, stride_ak,
++    stride_bk, stride_bn,
++    stride_cm, stride_cn,
++    scale_plus_one,   # constexpr not required; passed as runtime float
++    has_bias,
++    BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr
+ ):
+-    # program ids for the 2D grid
+     pid_m = tl.program_id(0)
+     pid_n = tl.program_id(1)
+ 
+-    # offsets for this block
+     offs_m = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
+     offs_n = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
+     k_offs = tl.arange(0, BLOCK_K)
+ 
+-    # initialize accumulator
++    # accumulator in fp32
+     acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
+ 
+-    # loop over K dimension in chunks
+     for k in range(0, K, BLOCK_K):
+-        # compute actual k offsets for this chunk
+         k_iter = k + k_offs
+ 
+-        # compute pointers for A: shape (BLOCK_M, BLOCK_K)
+         a_ptrs = A_ptr + (offs_m[:, None] * stride_am + k_iter[None, :] * stride_ak)
+         mask_a = (offs_m[:, None] < M) & (k_iter[None, :] < K)
+         a = tl.load(a_ptrs, mask=mask_a, other=0.0)
+ 
+-        # compute pointers for B: we expect B to be (K, N)
+         b_ptrs = B_ptr + (k_iter[:, None] * stride_bk + offs_n[None, :] * stride_bn)
+         mask_b = (k_iter[:, None] < K) & (offs_n[None, :] < N)
+         b = tl.load(b_ptrs, mask=mask_b, other=0.0)
+ 
+-        # a: (BLOCK_M, BLOCK_K), b: (BLOCK_K, BLOCK_N)
+         acc += tl.dot(a, b)
+ 
+-    # add bias if provided
+-    n_mask = offs_n < N
+-    if bias_ptr is not None:
+-        b_ptr = bias_ptr + offs_n
+-        bias = tl.load(b_ptr, mask=n_mask, other=0.0)
+-        acc = acc + bias[None, :]
++    if has_bias != 0:
++        n_mask = offs_n < N
++        bias_vals = tl.load(bias_ptr + offs_n, mask=n_mask, other=0.0)
++        acc = acc + bias_vals[None, :]
+ 
+-    # store results
++    # fuse scaling + residual (we return acc * (scale + 1.0))
++    acc = acc * scale_plus_one
++
+     c_ptrs = C_ptr + (offs_m[:, None] * stride_cm + offs_n[None, :] * stride_cn)
+     mask_c = (offs_m[:, None] < M) & (offs_n[None, :] < N)
+     tl.store(c_ptrs, acc, mask=mask_c)
+ 
+ 
+-def triton_linear(input: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor = None):
++def triton_linear_from_t(a: torch.Tensor, b_t: torch.Tensor, bias: torch.Tensor = None, scale: float = 1.0):
+     """
+-    Computes output = input @ weight.T + bias using a Triton GEMM kernel.
+-    Expects:
+-      - input: (M, K) float32 CUDA tensor, row-major (contiguous)
+-      - weight: (N, K) float32 CUDA tensor (we will pass weight.T to kernel as (K, N))
+-      - bias: (N,) or None
+-    Returns:
+-      - out: (M, N) float32 CUDA tensor
++    Compute out = a @ b_t.T + bias, but fuse out *= (scale + 1.0) inside kernel and return fp32 tensor.
++    a: (M, K)
++    b_t: (K, N) contiguous (weight.t().contiguous())
+     """
+-    assert input.is_cuda and weight.is_cuda, "Tensors must be on CUDA."
+-    assert input.dtype == torch.float32 and weight.dtype == torch.float32
++    assert a.is_cuda and b_t.is_cuda
++    assert a.dtype in (torch.float32, torch.float16)
++    assert b_t.dtype in (torch.float32, torch.float16)
+ 
+-    # Ensure contiguous layout
+-    a = input.contiguous()
+-    # We want B as (K, N) row-major, so transpose weight
+-    b = weight.t().contiguous()  # now shape (K, N)
+-    M, K = a.shape
+-    Kb, N = b.shape
+-    assert K == Kb, "K dimension mismatch"
++    A = a.contiguous()
++    B = b_t  # assumed contiguous (K, N)
++    M, K = A.shape
++    Kb, N = B.shape
++    assert K == Kb
+ 
+-    # prepare output
+-    out = torch.empty((M, N), device=a.device, dtype=a.dtype)
++    out = torch.empty((M, N), device=A.device, dtype=torch.float32)
+ 
+-    # bias tensor
+     if bias is None:
+-        # create a dummy zero tensor on device (will be optimized away by mask)
+-        bias_t = torch.zeros((N,), device=a.device, dtype=a.dtype)
++        bias_t = torch.empty((0,), device=A.device, dtype=torch.float32)
++        has_bias = 0
+     else:
+-        bias_t = bias.contiguous()
++        bias_t = bias.contiguous().to(torch.float32)
++        has_bias = 1
+ 
+-    # strides in elements
+-    stride_am = a.stride(0)
+-    stride_ak = a.stride(1)
+-    stride_bk = b.stride(0)  # stride over K (row stride)
+-    stride_bn = b.stride(1)  # stride over N (col stride)
++    scale_plus_one = float(scale) + 1.0
++
++    stride_am = A.stride(0)
++    stride_ak = A.stride(1)
++    stride_bk = B.stride(0)
++    stride_bn = B.stride(1)
+     stride_cm = out.stride(0)
+     stride_cn = out.stride(1)
+ 
+-    # grid
+     def grid(meta):
+         bm = meta["BLOCK_M"]
+         bn = meta["BLOCK_N"]
+-        return ( (M + bm - 1) // bm, (N + bn - 1) // bn )
++        return ((M + bm - 1) // bm, (N + bn - 1) // bn)
+ 
+-    matmul_bias_kernel[grid](
+-        a, b, out, bias_t,
++    matmul_bias_fused_kernel[grid](
++        A, B, out, bias_t,
+         M, N, K,
+         stride_am, stride_ak,
+         stride_bk, stride_bn,
+         stride_cm, stride_cn,
++        float(scale_plus_one),
++        int(has_bias),
+     )
+     return out
+ 
+ 
++class TritonLinearDetachedResidual(torch.autograd.Function):
++    """
++    Custom autograd Function:
++      forward: computes out = (input @ weight.T + bias) * (scale + 1.0) using Triton kernel for speed.
++      backward: implements detached-residual semantics: only the scaled path contributes to gradients,
++                i.e., grad_acc = grad_output * scale. Gradients for input, weight, bias are computed via torch.mm
++                (leveraging cuBLAS) using fp32 accumulations.
++    """
++
++    @staticmethod
++    def forward(ctx, input, weight, weight_t, bias, scaling_factor, use_fp16=False, weight_t_half=None):
++        """
++        input: (M, K) float32
++        weight: (N, K) float32 (nn.Linear weight)
++        weight_t: (K, N) contiguous transposed float32
++        bias: (N,) or None
++        scaling_factor: float scalar
++        use_fp16: whether to use the mixed-precision fast path (requires weight_t_half)
++        weight_t_half: optional precomputed half (K, N)
++        """
++        device = weight.device
++        # Move input/bias to device if needed
++        if (not input.is_cuda) and device.type == "cuda":
++            input = input.cuda(device)
++        if bias is not None and (not bias.is_cuda) and device.type == "cuda":
++            bias = bias.cuda(device)
++
++        # Choose precision path
++        if use_fp16 and (weight_t_half is not None):
++            a = input.half()
++            b_t = weight_t_half
++        else:
++            a = input
++            b_t = weight_t
++
++        # Compute fused forward: out = acc * (scale + 1.0)
++        out = triton_linear_from_t(a, b_t, bias=bias, scale=scaling_factor)
++
++        # Save necessary tensors for backward (we need original input & weight & bias & scaling)
++        ctx.save_for_backward(input, weight, bias if bias is not None else torch.empty(0, device=input.device))
++        ctx.scaling_factor = float(scaling_factor)
++        return out
++
++    @staticmethod
++    def backward(ctx, grad_output):
++        # Retrieve saved tensors
++        saved = ctx.saved_tensors
++        input = saved[0]
++        weight = saved[1]
++        bias_saved = saved[2]
++        has_bias = bias_saved.numel() != 0
++        s = ctx.scaling_factor
++
++        # Only the scaled path contributes to gradients
++        grad_acc = grad_output * s  # shape (M, N), float32
++
++        grad_input = grad_weight = grad_bias = None
++
++        # grad_input = grad_acc @ weight  (weight: N x K)
++        if ctx.needs_input_grad[0]:
++            grad_input = grad_acc.mm(weight)
++
++        # grad_weight = grad_acc.T @ input  -> (N x M) @ (M x K) => (N x K)
++        if ctx.needs_input_grad[1]:
++            grad_weight = grad_acc.t().mm(input)
++
++        if ctx.needs_input_grad[3] and has_bias:
++            grad_bias = grad_acc.sum(0)
++
++        # For non-tensor args like scaling_factor and use_fp16 and weight_t/weight_t_half, return None
++        return grad_input, grad_weight, None, grad_bias, None, None, None
++
++
+ class ModelNew(nn.Module):
+     """
+-    Optimized Model using a Triton GEMM kernel for the linear layer.
+-    Behavior matches original Model:
+-      out = matmul(x) ; original_x = out.detach() ; out = out * scaling_factor + original_x
++    Optimized Model that uses a Triton GEMM for the linear compute and fuses the scaling+residual
++    inside the forward kernel. Backward implements detached-residual semantics explicitly.
++
++    Behavior: out = matmul(x) ; original_x = matmul(x).detach() ; out = matmul(x) * scaling_factor + original_x
++    (equivalently returned value is matmul(x) * (scaling_factor + 1.0) but backward accounts only for the scaled path)
+     """
+ 
+-    def __init__(self, in_features, out_features, scaling_factor):
++    def __init__(self, in_features, out_features, scaling_factor, use_fp16=True):
+         super(ModelNew, self).__init__()
+-        # keep an nn.Linear to manage parameters and initialization semantics
+         self.matmul = nn.Linear(in_features, out_features)
+         self.scaling_factor = float(scaling_factor)
++        self.use_fp16 = bool(use_fp16)
++
++        # caches for transposed weight buffers to avoid re-transpose every forward
++        self._cached_weight_ptr = None
++        self._weight_t = None         # float32 transposed (K, N)
++        self._weight_t_half = None    # half transposed (K, N) if use_fp16
++
++    def _ensure_weight_t_cached(self):
++        w = self.matmul.weight
++        ptr = w.data_ptr()
++        if (self._cached_weight_ptr != ptr) or (self._weight_t is None):
++            wt = w.t().contiguous()  # (K, N)
++            self._weight_t = wt
++            # Keep a half version for the mixed precision path if desired
++            try:
++                self._weight_t_half = wt.half() if self.use_fp16 else None
++            except Exception:
++                self._weight_t_half = None
++            self._cached_weight_ptr = ptr
+ 
+     def forward(self, x):
+-        """
+-        x: (batch_size, in_features) float32 CUDA tensor (or will be moved to CUDA if needed)
+-        """
+-        # Move to same device as weights
++        # Ensure weights/bias are on correct device
+         device = self.matmul.weight.device
+-        if not x.is_cuda and device.type == "cuda":
++        if (not x.is_cuda) and device.type == "cuda":
+             x = x.cuda(device)
++        if (self.matmul.bias is not None) and (not self.matmul.bias.is_cuda) and device.type == "cuda":
++            self.matmul.bias = self.matmul.bias.cuda(device)
+ 
+-        # Compute linear using Triton GEMM (weight shape: out_features x in_features)
+-        out = triton_linear(x, self.matmul.weight, self.matmul.bias)
++        # Ensure cached transposed weight buffers are up to date
++        self._ensure_weight_t_cached()
+ 
+-        # original_x was detached in the original model
+-        original_x = out.detach()
+-        out = out * self.scaling_factor
+-        out = out + original_x
++        # Call the custom autograd Function which runs Triton GEMM (using pre-transposed buffers).
++        # We pass both the original weight (for backward) and the transposed buffer (for the kernel).
++        out = TritonLinearDetachedResidual.apply(
++            x,
++            self.matmul.weight,
++            self._weight_t,
++            self.matmul.bias,
++            self.scaling_factor,
++            self.use_fp16,
++            self._weight_t_half,
++        )
+         return out

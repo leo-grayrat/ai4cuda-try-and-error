@@ -1,0 +1,132 @@
+@@ -7,13 +7,15 @@
+ # Each "row" is a channel-vector for a single spatial position: shape (C,)
+ # We flatten input (N, C, D, H, W) -> (M, C) where M = N * D * H * W
+ @triton.jit
+-def _softmax_sigmoid_kernel(x_ptr, out_ptr, M, C, BLOCK: tl.constexpr, ROWS: tl.constexpr):
++def _softmax_sigmoid_kernel(x_ptr, out_ptr, M, N, C, D, H, W, stride_n, stride_c, stride_d, stride_h, stride_w, BLOCK: tl.constexpr, ROWS: tl.constexpr):
+     """
+-    x_ptr, out_ptr: pointers to tensors of shape (M, C) in row-major layout
++    Read input in original (N, C, D, H, W) layout by using the provided strides (in elements).
++    x_ptr, out_ptr: pointers to tensors (base pointers)
+     M: number of rows (positions = N * D * H * W)
+-    C: number of channels (expected <= BLOCK)
+-    BLOCK: constexpr channel block size (e.g., 64)
+-    ROWS: constexpr number of rows handled per program (e.g., 4)
++    N, C, D, H, W: tensor dimensions
++    stride_*: tensor strides in number of elements for each dimension
++    BLOCK: channel block size (constexpr)
++    ROWS: number of rows handled per program (constexpr)
+     """
+     # starting row index for this program
+     row_block_start = tl.program_id(0) * ROWS
+@@ -22,19 +24,32 @@
+     # channel indices handled in this block: shape (BLOCK,)
+     cols = tl.arange(0, BLOCK)
+ 
+-    # compute 2D offsets: shape (ROWS, BLOCK)
+-    offs = row_idx[:, None] * C + cols[None, :]
++    # masks for valid row and channel indices
++    mask_rows = row_idx[:, None] < M       # (ROWS, 1)
++    mask_cols = cols[None, :] < C          # (1, BLOCK)
++    mask = mask_rows & mask_cols           # (ROWS, BLOCK)
+ 
+-    # mask for valid row indices and valid channel indices
+-    mask_rows = row_idx[:, None] < M       # shape (ROWS, 1) -> broadcast
+-    mask_cols = cols[None, :] < C          # shape (1, BLOCK) -> broadcast
+-    mask = mask_rows & mask_cols           # shape (ROWS, BLOCK)
++    # Map row_idx -> (n, d, h, w)
++    S = D * H * W
++    # integer division and remainders (elementwise)
++    n = row_idx // S
++    rem = row_idx - n * S
++    dhw = H * W
++    d = rem // dhw
++    rem2 = rem - d * dhw
++    h = rem2 // W
++    w = rem2 - h * W
++
++    # compute base offsets per (row, col) using strides (in elements)
++    # base = n*stride_n + d*stride_d + h*stride_h + w*stride_w + cols*stride_c
++    base = n[:, None] * stride_n + d[:, None] * stride_d + h[:, None] * stride_h + w[:, None] * stride_w + cols[None, :] * stride_c
+ 
+     # load values (use very negative number for masked positions)
+     neg_inf = tl.constexpr(-1e9)
+-    vals = tl.load(x_ptr + offs, mask=mask, other=neg_inf)  # shape (ROWS, BLOCK)
++    vals = tl.load(x_ptr + base, mask=mask, other=neg_inf)  # shape (ROWS, BLOCK)
+ 
+     # compute per-row max for numerical stability: shape (ROWS,)
++    # do reductions in fp32 for stability
+     m = tl.max(vals, axis=1)
+ 
+     # subtract max, exponentiate
+@@ -47,23 +62,24 @@
+     # compute per-row sum of exponentials: shape (ROWS,)
+     denom = tl.sum(exp_vals, axis=1)
+ 
+-    # guard against zero denom (shouldn't happen for valid rows, but be safe)
++    # guard against zero denom
+     denom = denom + (denom == 0.0) * 1e-6
+ 
+-    # softmax per-row
++    # softmax per-row (keeps in fp32)
+     soft = exp_vals / denom[:, None]
+ 
+     # sigmoid(soft) = 1 / (1 + exp(-soft))
+     out_vals = 1.0 / (1.0 + tl.exp(-soft))
+ 
+-    # store result back (masked)
+-    tl.store(out_ptr + offs, out_vals, mask=mask)
++    # store result back (masked). out has same layout/strides as x since we allocate with empty_like(x)
++    tl.store(out_ptr + base, out_vals, mask=mask)
+ 
+ 
+ def triton_softmax_sigmoid(x: torch.Tensor):
+     """
+     Fused softmax over channel dimension (dim=1) followed by sigmoid,
+-    implemented with a Triton kernel that processes multiple rows per program.
++    implemented with a Triton kernel that reads the original (N,C,D,H,W) layout
++    directly using tensor strides to avoid a large permute+contiguous copy.
+ 
+     x: tensor of shape (N, C, D, H, W), dtype float32, on CUDA
+     returns tensor of same shape
+@@ -75,30 +91,26 @@
+     S = D * H * W
+     M = N * S  # number of rows (spatial positions across batch)
+ 
+-    # Move channels to the innermost dimension with a single permute+contiguous to avoid an extra full copy
+-    # Resulting layout is (N, S, C) where S = D*H*W, then view to (M, C)
+-    x_perm = x.permute(0, 2, 3, 4, 1).contiguous()
+-    x_flat = x_perm.view(M, C)
+-    out_flat = torch.empty_like(x_flat)
++    # Allocate output with same layout as input to reuse the same stride pattern
++    out = torch.empty_like(x)
+ 
+-    # Kernel launch parameters
+-    # Choose BLOCK equal to C (64 in this model) to process full channel row per program
+-    BLOCK = 64
+-    # Choose ROWS to process multiple rows per program; 8 increases utilization on Ampere
+-    ROWS = 8
++    # Extract strides in elements (torch returns strides in element steps)
++    stride_n, stride_c, stride_d, stride_h, stride_w = x.stride()
+ 
+-    # Ensure channel dimension fits block
++    # Kernel launch parameters (tuned)
++    BLOCK = 64   # keep warp-aligned; C==64 here
++    ROWS = 32    # more rows per program to amortize overhead on Ampere
++
++    # Ensure channel dimension fits block (masking handles C < BLOCK)
+     assert C <= BLOCK, f"Channel dimension C={C} exceeds BLOCK={BLOCK}"
+ 
+     # grid: one program handles ROWS rows
+     grid = ((M + ROWS - 1) // ROWS,)
+ 
+     _softmax_sigmoid_kernel[grid](
+-        x_flat, out_flat, M, C, BLOCK=BLOCK, ROWS=ROWS
++        x, out, M, N, C, D, H, W, stride_n, stride_c, stride_d, stride_h, stride_w, BLOCK=BLOCK, ROWS=ROWS
+     )
+ 
+-    # reshape back to (N, C, D, H, W)
+-    out = out_flat.view(N, S, C).transpose(1, 2).contiguous().view(N, C, D, H, W)
+     return out
+ 
+ 

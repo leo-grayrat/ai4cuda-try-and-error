@@ -1,0 +1,98 @@
+@@ -34,44 +34,70 @@
+     c_idx = tl.arange(0, BLOCK_C)               # (BLOCK_C,)
+ 
+     rows = row_start + r_idx                     # (BLOCK_M,)
+-    offs = rows[:, None] * C + c_idx[None, :]    # (BLOCK_M, BLOCK_C)
+ 
++    # mask for valid rows
+     mask_m = rows < N                             # (BLOCK_M,)
+-    mask_c = c_idx < C                            # (BLOCK_C,)
+-    mask2d = mask_m[:, None] & mask_c[None, :]    # (BLOCK_M, BLOCK_C)
+ 
+-    # Load input tile
+-    x_vals = tl.load(x_ptr + offs, mask=mask2d, other=0.0)  # (BLOCK_M, BLOCK_C)
++    # Accumulators for mean and variance (keep in fp32)
++    sum_acc = tl.zeros((BLOCK_M,), dtype=tl.float32)
++    sumsq_acc = tl.zeros((BLOCK_M,), dtype=tl.float32)
+ 
+-    # Create float mask for reductions (1.0 for valid channels, 0.0 otherwise)
+-    m_f = tl.where(mask_c, 1.0, 0.0)               # (BLOCK_C,)
++    # Number of channel blocks to cover full C
++    num_cblocks = (C + BLOCK_C - 1) // BLOCK_C
+ 
+-    # Compute per-row mean: sum over channel dim
+-    sum_val = tl.sum(x_vals * m_f[None, :], axis=1)    # (BLOCK_M,)
+-    # We divide by C (not by visible channels) to match LayerNorm semantics (normalize over full channel dimension).
+-    mean = sum_val / C
++    # First pass: loop over channel blocks to accumulate sum and sumsq
++    for i in range(num_cblocks):
++        c_start = i * BLOCK_C
++        c = c_start + c_idx                        # (BLOCK_C,)
++        mask_c = c < C                             # (BLOCK_C,)
+ 
+-    # Variance
+-    diff = x_vals - mean[:, None]
+-    var = tl.sum((diff * diff) * m_f[None, :], axis=1) / C
+-    invstd = 1.0 / tl.sqrt(var + eps)  # (BLOCK_M,)
++        offs = rows[:, None] * C + c[None, :]      # (BLOCK_M, BLOCK_C)
++        mask2d = mask_m[:, None] & mask_c[None, :] # (BLOCK_M, BLOCK_C)
+ 
+-    # Normalize
+-    normalized = diff * invstd[:, None]  # (BLOCK_M, BLOCK_C)
++        # Load tile
++        x_tile = tl.load(x_ptr + offs, mask=mask2d, other=0.0)  # (BLOCK_M, BLOCK_C)
+ 
+-    # Load affine parameters (already folded with scale)
+-    w = tl.load(weight_ptr + c_idx, mask=mask_c, other=1.0)  # (BLOCK_C,)
+-    b = tl.load(bias_ptr + c_idx, mask=mask_c, other=0.0)    # (BLOCK_C,)
++        # float mask for this tile
++        m_f = tl.where(mask_c, 1.0, 0.0)               # (BLOCK_C,)
+ 
+-    # Apply affine
+-    affine = normalized * w[None, :] + b[None, :]
++        # Accumulate sums in fp32
++        sum_acc += tl.sum(x_tile * m_f[None, :], axis=1)
++        sumsq_acc += tl.sum((x_tile * x_tile) * m_f[None, :], axis=1)
+ 
+-    # GELU approximation: x * sigmoid(1.702 * x)
+-    tmp = 1.702 * affine
+-    sig = 1.0 / (1.0 + tl.exp(-tmp))
+-    y = affine * sig
++    # Compute mean and variance for each row (divide by full C to match LayerNorm semantics)
++    mean = sum_acc / C                                # (BLOCK_M,)
++    var = sumsq_acc / C - mean * mean
++    var = tl.where(var > 0.0, var, 0.0)
++    invstd = 1.0 / tl.sqrt(var + eps)                 # (BLOCK_M,)
+ 
+-    tl.store(out_ptr + offs, y, mask=mask2d)
++    # Second pass: normalize, apply affine, GELU, and write outputs
++    for i in range(num_cblocks):
++        c_start = i * BLOCK_C
++        c = c_start + c_idx
++        mask_c = c < C
++
++        offs = rows[:, None] * C + c[None, :]
++        mask2d = mask_m[:, None] & mask_c[None, :]
++
++        x_tile = tl.load(x_ptr + offs, mask=mask2d, other=0.0)  # (BLOCK_M, BLOCK_C)
++
++        # Normalize using computed mean/invstd (broadcast rows)
++        normalized = (x_tile - mean[:, None]) * invstd[:, None]  # (BLOCK_M, BLOCK_C)
++
++        # Load affine parameters for this channel tile
++        w = tl.load(weight_ptr + c_start + c_idx, mask=mask_c, other=1.0)  # (BLOCK_C,)
++        b = tl.load(bias_ptr + c_start + c_idx, mask=mask_c, other=0.0)    # (BLOCK_C,)
++
++        # Apply affine
++        affine = normalized * w[None, :] + b[None, :]
++
++        # GELU approximation: x * sigmoid(1.702 * x)
++        tmp = 1.702 * affine
++        sig = 1.0 / (1.0 + tl.exp(-tmp))
++        y = affine * sig
++
++        # Store result
++        tl.store(out_ptr + offs, y, mask=mask2d)
+ 
+ 
+ def triton_fused_ln_gelu_scale(x: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor, eps: float, scale: float):
