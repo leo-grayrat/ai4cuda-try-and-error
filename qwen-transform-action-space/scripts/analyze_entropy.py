@@ -70,79 +70,6 @@ def load_annotations() -> tuple[list[dict], dict[str, dict]]:
     return recs, by_id
 
 
-def joint_counts(pairs) -> tuple[Counter, Counter]:
-    """Return (marginal of first element, conditional structure) for H(Y|X)."""
-    joint = Counter(pairs)
-    mx = Counter()
-    my = Counter()
-    for x, y in pairs:
-        mx[x] += 1
-        my[y] += 1
-    return joint, mx, my
-
-
-def cond_entropy(pairs) -> float:
-    """H(Y|X) from (x, y) pairs."""
-    joint, mx, _ = joint_counts(pairs)
-    n = sum(mx.values())
-    h = 0.0
-    for (x, y), c in joint.items():
-        pxy = c / n
-        px = mx[x] / n
-        h -= pxy * math.log2(pxy / px)
-    return h
-
-
-def quartile(v: float, cuts: list[float]) -> str:
-    for i, c in enumerate(cuts):
-        if v <= c:
-            return f"q{i}"
-    return f"q{len(cuts)}"
-
-
-def informativeness(recs: list[dict], by_id: dict[str, dict]) -> dict:
-    """Does the semantic label explain realised speedup better than the diff's
-    coarse structure? Guards against the trivial-entropy false positive: low
-    entropy alone is uninteresting because hunk-count is also low-entropy."""
-    sp = [by_id[r["edge_id"]]["speedup_vs_parent"] for r in recs]
-    lsp = sorted(math.log2(s) for s in sp)
-    cuts = [lsp[len(lsp) // 4], lsp[len(lsp) // 2], lsp[3 * len(lsp) // 4]]
-
-    s_of = {r["edge_id"]: quartile(math.log2(by_id[r["edge_id"]]["speedup_vs_parent"]), cuts)
-            for r in recs}
-    S = Counter(s_of.values())
-    h_s = entropy(S)
-
-    prim = [(r["primary"], s_of[r["edge_id"]]) for r in recs]
-    anyl: list[tuple[str, str]] = []
-    for r in recs:
-        for lab in {r["primary"], *r.get("secondary", [])}:
-            anyl.append((lab, s_of[r["edge_id"]]))
-
-    coarse = [
-        (
-            f"{by_id[r['edge_id']]['hunks']}|"
-            f"{min(int(by_id[r['edge_id']]['changed_total'] // 50), 6)}",
-            s_of[r["edge_id"]],
-        )
-        for r in recs
-    ]
-    hunks_only = [(str(by_id[r["edge_id"]]["hunks"]), s_of[r["edge_id"]]) for r in recs]
-
-    return {
-        "speedup_quartile_cuts_log2": [round(c, 3) for c in cuts],
-        "H_speedup_bits": round(h_s, 4),
-        "H_speedup_given_primary_bits": round(cond_entropy(prim), 4),
-        "H_speedup_given_anylabel_bits": round(cond_entropy(anyl), 4),
-        "H_speedup_given_coarse_structure_bits": round(cond_entropy(coarse), 4),
-        "H_speedup_given_hunkcount_bits": round(cond_entropy(hunks_only), 4),
-        "info_gain_primary_bits": round(h_s - cond_entropy(prim), 4),
-        "info_gain_anylabel_bits": round(h_s - cond_entropy(anyl), 4),
-        "info_gain_coarse_bits": round(h_s - cond_entropy(coarse), 4),
-        "info_gain_hunkcount_bits": round(h_s - cond_entropy(hunks_only), 4),
-    }
-
-
 def analyse(recs: list[dict], by_id: dict[str, dict]) -> dict:
     n = len(recs)
     primary = Counter(r["primary"] for r in recs)
@@ -231,7 +158,17 @@ def analyse(recs: list[dict], by_id: dict[str, dict]) -> dict:
         "edges_with_autotuner_change": autotuner,
         "edges_with_suspicious_parent_speedup": suspicious,
         "within_label_diversity": diversity,
-        "informativeness": informativeness(recs, by_id),
+        "caveat_within_label_diversity": (
+            "distinct_diffs equals occurrences by identity whenever every edge diff "
+            "is unique; see data/informativeness_calibration.json identity_audit. The "
+            "distinct_tasks column must be read against the label-permutation null in "
+            "that file, not as raw evidence of cross-task reuse."
+        ),
+        # Outcome-informativeness is deliberately NOT computed here. It is owned by
+        # calibrate_informativeness.py, which estimates mutual information with a
+        # correct bias term and calibrates every descriptor against its own null.
+        # An earlier version of this file duplicated the quartile binning here and
+        # produced a headline conclusion that did not survive review.
     }
 
 
@@ -244,40 +181,41 @@ def figures(recs: list[dict], by_id: dict[str, dict], stats: dict) -> None:
 
     FIG.mkdir(parents=True, exist_ok=True)
 
-    # Fig 1: entropy comparison
-    fig, ax = plt.subplots(figsize=(7, 4.2))
+    # Fig 1: description-length comparison, with the identity explicitly marked
+    fig, ax = plt.subplots(figsize=(7.4, 4.4))
     names = [
         "transformation\nlabel (primary)",
         "transformation\nlabel (any)",
         "diff hunk count",
         "changed-line\nbucket",
-        "diff fingerprint",
+        "coarse structure\n(hunks x lines)",
+        "diff fingerprint\n(IDENTITY)",
     ]
+    coarse_of = Counter(
+        f"{by_id[r['edge_id']]['hunks']}|{min(by_id[r['edge_id']]['changed_total'] // 50, 6)}"
+        for r in recs
+    )
     vals = [
         stats["entropy_primary_bits"],
         stats["entropy_all_labels_bits"],
         stats["entropy_hunkcount_bits"],
         stats["entropy_changedline_bucket_bits"],
+        entropy(coarse_of),
         stats["entropy_diff_fingerprint_bits"],
     ]
-    maxima = [
-        stats["entropy_primary_max_bits"],
-        stats["entropy_all_labels_max_bits"],
-        stats["entropy_hunkcount_bits"],
-        stats["entropy_changedline_bucket_bits"],
-        stats["entropy_diff_fingerprint_bits"],
-    ]
-    colors = ["#2f6f4f", "#4a8f6a", "#8a8a8a", "#b0b0b0", "#b8863b"]
+    colors = ["#2f6f4f", "#4a8f6a", "#9a9a9a", "#b0b0b0", "#7f7f7f", "#c9564a"]
     ax.bar(names, vals, color=colors)
-    ax.plot(range(len(names)), maxima, "k_", markersize=18)
+    ax.patches[len(names) - 1].set_hatch("//")
     ax.set_ylabel("Shannon entropy (bits)")
     ax.set_title(
-        f"Descriptive entropy vs diff-structure entropy\n"
-        f"n={stats['n_edges']} edges, {stats['n_tasks']} tasks"
+        "Description length per edge\n"
+        f"n={stats['n_edges']} edges, {stats['n_tasks']} tasks; "
+        "the rightmost bar is identically log2(n) and is NOT evidence"
     )
-    ax.tick_params(axis="x", labelsize=8)
+    ax.tick_params(axis="x", labelsize=7.5)
     for i, v in enumerate(vals):
-        ax.text(i, v + 0.06, f"{v:.2f}", ha="center", fontsize=9)
+        ax.text(i, v + 0.08, f"{v:.2f}", ha="center", fontsize=8.5)
+    ax.set_ylim(0, max(vals) * 1.18)
     fig.tight_layout()
     fig.savefig(FIG / "fig1_entropy_comparison.png", dpi=160)
     plt.close(fig)

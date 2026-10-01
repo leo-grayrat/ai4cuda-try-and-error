@@ -34,9 +34,9 @@
       "IncreaseWorkPerThread": 1
     },
     "label_counts_any": {
-      "Fuse": 25,
-      "EliminateMaterialization": 32,
       "ChangeLaunchConfig": 34,
+      "EliminateMaterialization": 32,
+      "Fuse": 25,
       "PrecisionChange": 22,
       "Other": 5,
       "WarpReduce": 6,
@@ -61,11 +61,11 @@
     "edges_with_autotuner_change": 53,
     "edges_with_suspicious_parent_speedup": 9,
     "within_label_diversity": {
-      "Fuse": {
-        "occurrences": 25,
-        "distinct_diffs": 25,
-        "distinct_tasks": 22,
-        "distinct_region_sets": 23
+      "ChangeLaunchConfig": {
+        "occurrences": 34,
+        "distinct_diffs": 34,
+        "distinct_tasks": 30,
+        "distinct_region_sets": 33
       },
       "EliminateMaterialization": {
         "occurrences": 32,
@@ -73,11 +73,11 @@
         "distinct_tasks": 29,
         "distinct_region_sets": 29
       },
-      "ChangeLaunchConfig": {
-        "occurrences": 34,
-        "distinct_diffs": 34,
-        "distinct_tasks": 30,
-        "distinct_region_sets": 33
+      "Fuse": {
+        "occurrences": 25,
+        "distinct_diffs": 25,
+        "distinct_tasks": 22,
+        "distinct_region_sets": 23
       },
       "PrecisionChange": {
         "occurrences": 22,
@@ -128,22 +128,7 @@
         "distinct_region_sets": 6
       }
     },
-    "informativeness": {
-      "speedup_quartile_cuts_log2": [
-        0.523,
-        1.379,
-        2.837
-      ],
-      "H_speedup_bits": 1.9993,
-      "H_speedup_given_primary_bits": 1.3023,
-      "H_speedup_given_anylabel_bits": 1.7834,
-      "H_speedup_given_coarse_structure_bits": 1.0619,
-      "H_speedup_given_hunkcount_bits": 1.6324,
-      "info_gain_primary_bits": 0.697,
-      "info_gain_anylabel_bits": 0.2159,
-      "info_gain_coarse_bits": 0.9373,
-      "info_gain_hunkcount_bits": 0.3668
-    }
+    "caveat_within_label_diversity": "distinct_diffs equals occurrences by identity whenever every edge diff is unique; see data/informativeness_calibration.json identity_audit. The distinct_tasks column must be read against the label-permutation null in that file, not as raw evidence of cross-task reuse."
   },
   "annotations": [
     {
