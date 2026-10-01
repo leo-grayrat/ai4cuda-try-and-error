@@ -351,8 +351,41 @@
       "entry_title": "Kevin: Multi-Turn RL for Generating CUDA Kernels.",
       "live_title": "Kevin: Multi-Turn RL for Generating CUDA Kernels",
       "missing_surnames": []
+    },
+    {
+      "ref": 33,
+      "kind": "arXiv",
+      "id": "2402.01030",
+      "verdict": "PASS",
+      "title_ok": true,
+      "authors_ok": true,
+      "entry_title": "Executable Code Actions Elicit Better LLM Agents (CodeAct).",
+      "live_title": "Executable Code Actions Elicit Better LLM Agents",
+      "missing_surnames": []
+    },
+    {
+      "ref": 34,
+      "kind": "arXiv",
+      "id": "2510.23564",
+      "verdict": "PASS",
+      "title_ok": true,
+      "authors_ok": true,
+      "entry_title": "ReCode: Unify Plan and Action for Universal Granularity Control.",
+      "live_title": "ReCode: Unify Plan and Action for Universal Granularity Control",
+      "missing_surnames": []
+    },
+    {
+      "ref": 35,
+      "kind": "arXiv",
+      "id": "2604.09459",
+      "verdict": "PASS",
+      "title_ok": true,
+      "authors_ok": true,
+      "entry_title": "From Reasoning to Agentic: Credit Assignment in Reinforcement Learning for Large Language ",
+      "live_title": "From Reasoning to Agentic: Credit Assignment in Reinforcement Learning for Large Language ",
+      "missing_surnames": []
     }
   ],
-  "pass": 32,
-  "total": 32
+  "pass": 35,
+  "total": 35
 }

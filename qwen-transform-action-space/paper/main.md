@@ -23,8 +23,8 @@ test the prerequisite empirically on AdaExplore optimization trees (2,510 succes
 entropy (2.67 bits) is well below that of a faithful description of the same diffs (4.26 bits of coarse structure,
 5.78 bits of diff identity). The informative test is not compression, which any coarse summary enjoys: under
 symmetric permutation calibration the semantic label is significantly informative about realised speedup
-(mutual information 0.70 bits, p = 0.0005), whereas neither coarse diff structure (p = 0.752) nor hunk count alone
-(p = 0.436) beats its own null. We report that this result replaced an opposite conclusion in our first draft,
+(plug-in mutual information 0.697 bits, 0.624 after bias correction, p = 0.0005), whereas neither coarse diff
+structure (p = 0.752) nor hunk count alone (p = 0.436) beats its own null. We report that this result replaced an opposite conclusion in our first draft,
 produced by an under-corrected Miller–Madow term, and that our own 69-assertion reconciliation harness could not
 detect it. Cross-task recurrence, by contrast, is at chance under our sampling design and does not support the
 transferability argument. The contribution is therefore a calibrated measurement of one premise, a set of
@@ -91,6 +91,17 @@ passes and eliminate one global-memory round trip — while the other two thousa
 would have been written nearly identically anyway. The training interface, though, is a per-token policy update.
 Nothing in the pipeline tells the learner "the decision at step 1,537 is the one that paid". Value functions and
 GAE estimate credit *statistically* over token sequences.
+
+This gap is not unnoticed in the literature; it is now its own research area. A recent survey synthesises a 69-paper
+corpus of credit-assignment methods for LLM reinforcement learning organised precisely by *granularity* — trajectory,
+segment, step, token — and reports that sparse outcome rewards "say little about which token, reasoning step, tool
+call, memory operation, or agent caused an outcome" [35]. Current practice therefore already intervenes below the
+trajectory: process rewards, span-level advantage reweighting, turn-level verifiable supervision, counterfactual
+token credit. Our claim is not that credit is unaddressed. It is a different claim: almost all of that work changes
+the **credit target** while leaving the **action unit** at the token, so the learner still treats a single program
+decision as hundreds of separate actions whose joint realization it must discover statistically. Reweighting the
+token-level credit and re-typing the action unit are orthogonal remedies, and the second is the one that would remove
+the need for the first.
 
 The standard response is better credit assignment: find the important spans, reweight them, sharpen the critic.
 Our previous work attempted exactly this with regex-based source locators and oracle-labelled spans, and it failed
@@ -687,16 +698,29 @@ What is actually distinguishable, stated at its real strength:
 * **Against format-level work [6].** AdaEdit shows the emitted representation changes latency and cost by over 30%
   at matched accuracy. That supports the general shape of "the coordinate system is not neutral", but it is a claim
   about *cost*; ours has to be about *inductive bias*, which is stronger and testable only by intervention.
-* **Against turn-level decomposition [32].** Kevin attributes reward per agent turn for CUDA kernels and reports
-  correctness 56%→82%. The field has already moved up from tokens one level. A transformation vocabulary must earn
-  its keep over *that*, which is why Section 4.2 now includes turn-level decomposition as a comparison point rather
-  than treating token-level generation as the only baseline.
+* **Against turn-level decomposition [32,35].** Kevin attributes reward per agent turn for CUDA kernels and reports
+  correctness 56%→82%; the wider credit-assignment literature increasingly works at segment and step granularity
+  [35]. The field has already moved up from tokens one level. A transformation vocabulary must earn its keep
+  over *that*, which is why Section 4.2 now includes turn-level decomposition as a comparison point rather than
+  treating token-level generation as the only baseline.
+* **Against plan/action unification [33,34].** Two agent-side results make a representation claim here, and
+  they cut against us. CodeAct replaces text/JSON tool calls with executable Python as a *unified action space* and
+  reports up to 20% higher success across 17 models [33] — direct evidence that the action representation is not
+  neutral, which is the shape of our thesis minus its kernel specificity. ReCode goes further and dissolves the
+  boundary between planning and acting altogether, treating high-level plans as placeholder functions recursively
+  expanded into primitive actions with dynamic granularity control [34]; that is, in another domain, close to the
+  Structured-action condition of Section 4. Neither is about GPU kernels, neither freezes a typed transformation
+  vocabulary, neither reports whether such a vocabulary covers real successful optimizations, and — crucially —
+  neither runs a Free-plan control of the kind Section 4.1 insists on. The honest reading is that our Section 4.3
+  branch `Free-plan ≈ Structured-action ⇒ no paper` is a live risk that adjacent fields have not resolved either,
+  and our novelty narrows to: the descriptive measurement in Section 3, the falsification discipline, and the
+  kernel-specific confound controls that only this domain forces (autotune isolation, backend substitution).
 
-A sharper formulation of the real difference, which does not depend on our vocabulary being correct: edit- and
-turn-level methods take their unit from the *interface* (what a diff or a tool call happens to be), whereas a
-transformation takes its unit from the *program's performance model* (what the hardware will actually do
- differently). That is a clean distinction, and it is also the reason the distinction is dangerous — a performance
-model is exactly what an LLM is worst at being assumed to have.
+A sharper formulation of the real difference, which does not depend on our vocabulary being correct: edit-, turn- and
+plan/action-unification methods take their unit from the *interface* (what a diff, a tool call, or a recursive function
+expansion happens to be), whereas a transformation takes its unit from the *program's performance model* (what the
+hardware will actually do differently). That is a clean distinction, and it is also the reason the distinction is
+dangerous — a performance model is exactly what an LLM is worst at being assumed to have.
 
 ### 5.2 Hierarchical RL has a name for this, and a warning
 
@@ -806,6 +830,17 @@ rewards from coalescing, occupancy, arithmetic intensity and synchronization, at
 CUDA-Agent recipe on AWS Trainium, with a negative GRPO result) [18]; Kevin (multi-turn RL, turn-level reward
 attribution) [32]. Our critique targets the documented learning interface, not an asserted token-level action space
 (Section 1.1).
+
+**Credit assignment below the trajectory.** A 69-paper survey corpus organised by credit granularity — trajectory,
+segment, step, token — with an identification analysis showing that text-only histories can leave even the *sign* of
+credit unidentified [35]. This is the cluster our Section 1.2 must be read against: the field reweights credit at finer
+granularity while keeping the action unit at the token.
+
+**Action representation in LLM agents.** CodeAct consolidates an agent's actions into executable Python as a unified
+action space and reports up to 20% higher success rates [33]; ReCode unifies planning and acting recursively, with
+plans as placeholder functions expanded to primitive actions under dynamic granularity control [34]; Voyager persists
+acquired skills as reusable code [14]. These are the strongest general evidence that the coordinate system is not
+neutral, and the closest generic analogues to our structured-action condition (Section 5.1).
 
 **Transformation- and edit-level search over programs.** The cluster that constrains our novelty claim most:
 K-Search, which explicitly decouples algorithmic planning from program instantiation and reports 2.10x average,
@@ -961,8 +996,9 @@ experimentally open.
 On 55 annotated MCTS edges spanning 45 tasks, 10 of 12 frozen categories cover 90.9% of edges against an actively
 invited `Other`, at 2.67 bits versus 4.26 bits for a faithful coarse description of the same diffs. More importantly,
 the labels are not a decorative partition: under symmetric permutation calibration the semantic label is
-significantly informative about realised speedup (mutual information 0.70 bits, \(p = 0.0005\)) while coarse diff
-structure (\(p = 0.752\)) and hunk count alone (\(p = 0.436\)) do not beat their own nulls.
+significantly informative about realised speedup (plug-in mutual information 0.697 bits, 0.624 after bias
+correction, \(p = 0.0005\)) while coarse diff structure (\(p = 0.752\)) and hunk count alone (\(p = 0.436\)) do not
+beat their own nulls.
 
 **Two arguments we built for it do not.** The first was compression itself, presented in opposition to a diff-fingerprint
 entropy of 5.78 bits: with 55 pairwise-distinct fingerprints that quantity is identically \(\log_2 55\), and the claim
@@ -1043,6 +1079,9 @@ asked to question a method.
 30. G. He, E. Yoneki. **CuAsmRL: Optimizing GPU SASS Schedules via Deep Reinforcement Learning.** CGO 2025. arXiv:2501.08071. *RL agents apply mutation actions to SASS schedules; also used to reveal optimization moves automatically.*
 31. S. Anupam, A. Shypula, O. Bastani. **LLM Program Optimization via Retrieval Augmented Search (RAS / AEGIS).** ACL 2026 Findings. arXiv:2501.18916. *Decomposes slow→fast training pairs into reusable "atomic edits".*
 32. C. Baronio, P. Marsella, B. Pan, S. Guo, S. Alberti. **Kevin: Multi-Turn RL for Generating CUDA Kernels.** arXiv:2507.11948, 2025. *Turn-level reward attribution for kernel generation; correctness 56%→82%, mean speedup 0.53x→1.10x.*
+33. X. Wang, Y. Chen, L. Yuan, Y. Zhang, Y. Li, H. Peng, H. Ji. **Executable Code Actions Elicit Better LLM Agents (CodeAct).** ICML 2024. arXiv:2402.01030. *Consolidates agent actions into executable Python as a unified action space; up to 20% higher success rate over text/JSON action formats across 17 models.*
+34. Z. Yu, J. Zhang, H. Su, Y. Zhao, Y. Wu, M. Deng, J. Xiang, Y. Lin, L. Tang, Y. Luo, B. Liu, C. Wu. **ReCode: Unify Plan and Action for Universal Granularity Control.** arXiv:2510.23564, 2025. *High-level plans as placeholder functions recursively decomposed into primitive actions; dissolves the plan/action boundary.*
+35. C. Zhang. **From Reasoning to Agentic: Credit Assignment in Reinforcement Learning for Large Language Models.** arXiv:2604.09459, 2026. *69-paper corpus (56 core methods) organised by credit granularity; six-diagnostic identification framework.*
 
 ---
 

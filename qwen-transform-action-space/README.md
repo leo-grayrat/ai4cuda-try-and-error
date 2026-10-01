@@ -58,18 +58,26 @@ Stage 1 RESEARCH（quick）→ Stage 1.5 EXPERIMENT → Stage 2 WRITE → Stage 
 
 | 阶段 | 产物 | 结果 |
 |------|------|------|
-| Stage 1 | `stage1_research/` | RQ Brief + 28 源核查账；2 条 spec 文献检索不到 → 禁止引用 |
+| Stage 1 | `stage1_research/`（含 `KEYWORD_GROUP_AUDIT.md`） | RQ Brief + 逐源核查账 + **spec §5.1 七组关键词逐条对账**；2 条 spec 文献检索不到 → 禁止引用 |
 | Stage 1.5 | `STAGE1_5_REPORT.md`、`data/`、`figures/` | 2,510 候选边 / 55 标注；词表覆盖 90.9% |
 | Stage 2 | `paper/main.md` v1 | 8,825 词初稿 |
 | Stage 2.5 | `STAGE2_5_INTEGRITY.md` | 28/28 引用回源；69/69 数字；拦下 3 处不可验证断言 |
 | Stage 3 | `stage3_review/` | 五份盲审 + 编辑决定：**Major Revision**（overall 48–57） |
 | Stage 4 | `stage4_revision/REVISION_NOTES.md` | R-1..R-8 逐项处置；**头条统计结论反号** |
 | Stage 3′/4′ | `stage3prime_rereview/` | R-1..R-6 MET、R-7/R-8 PARTIAL；抓出 §5.2 残留矛盾 |
-| Stage 4.5 | `STAGE4_5_FINAL_INTEGRITY.md` | 从零复核 **32/32**，新发现并修 3 处引用字段错误 |
-| Stage 5 | `paper/latex/`、`paper/zh/full.md` | LaTeX 源 + bib（本机无 TeX 引擎，**PDF 有意未产出**，见 `paper/latex/BUILD.md`）；中文对照稿约 1.95 万字 |
+| Stage 4.5 | `STAGE4_5_FINAL_INTEGRITY.md`（含 v3 复跑） | 从零复核引用；新发现并修 3 处引用字段错误；v3 补入 [33]–[35] |
+| Stage 5 | `paper/latex/`、`paper/zh/full.md` | LaTeX 源 + 35 条 bib（本机无 TeX 引擎，**PDF 有意未产出**，见 `paper/latex/BUILD.md`）；中文对照稿约 2.04 万字 |
 
-终态关卡：`verify_references.py` 32/32 · `verify_paper_numbers.py` 117/117 ·
-`verify_zh_alignment.py` 定量 token 264/264 · `integrity_scan.py` PASS。
+终态关卡（v3，全部可重跑）：
+
+```
+python scripts/verify_references.py       # 35/35 引用从零回源（arXiv 33 + CrossRef 2）
+python scripts/verify_paper_numbers.py    # 117/117 数字与文本断言
+python scripts/verify_zh_alignment.py    # 定量 token en=276 / zh=276；引用标识符同序
+python scripts/integrity_scan.py paper/main.md   # CJK 0 · 引用闭环 35/35 · 章节 11/11
+```
+
+英文正文约 13,200 词（仍超预期目标，见下）。
 
 ### 本目录的重要事实
 
@@ -83,7 +91,7 @@ Stage 1 RESEARCH（quick）→ Stage 1.5 EXPERIMENT → Stage 2 WRITE → Stage 
 
 ### 已知未完成（不作表面修补）
 
-1. 正文约 12,500 词，超出 workshop 8–12 页目标；进一步删减会改变论证重心，属作者决策。
+1. 正文约 13,200 词，超出 workshop 8–12 页目标；进一步删减会改变论证重心，属作者决策。
 2. 人工独立标注与 κ 未执行（§7.1 四条可执行标准全部未完成）——本文最大真实弱点。
 3. 无任何干预实验：§4 是协议，L2/L3 主张未被检验。
 4. Stage 2 的 v1 稿件当时未单独提交，故 Stage 3′ 无逐行回归 diff（过程缺陷）。
