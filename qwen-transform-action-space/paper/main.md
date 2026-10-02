@@ -1091,15 +1091,15 @@ asked to question a method.
 17. W. Liu, J. Xu, Y. Li, L. Zheng, T. Li, Q. Liu, J. He. **Dr. Kernel: Reinforcement Learning Done Right for Triton Kernel Generations.** arXiv:2602.05885, 2026.
 18. J. Tang, J. Huan, H. Zhou, Y. Zhang, L. Wang. **NKI-Agent: Domain-Specific Fine-Tuning and Agentic Tool Use for Neuron Kernel Generation.** DL4C @ ICML 2026. arXiv:2607.04395.
 19. Z. Zhong, I. Segal, I. Bercovich, S. Saxena, K. Zhang, A. Raghunathan. **Hardening Agent Benchmarks with Adversarial Hacker-Fixer Loops.** arXiv:2606.08960, 2026.
-20. **The Correctness Illusion in LLM-Generated GPU Kernels.** arXiv:2606.20128, 2026.
-21. **A Contract-Grade Verifier for LLM-Generated GPU Kernels, and a Native Blackwell Backward for the Gated-Linear-Recurrence Family.** arXiv:2608.12700, 2026.
-22. **KernelBench-Verified: Do LLM-Generated Kernels Actually Beat PyTorch?** arXiv:2607.16241, 2026.
-23. **Are LLM-Generated GPU Kernels Production-Ready? A Trace-Driven Benchmark and Optimization Agent (Atrex-Bench).** arXiv:2607.14541, 2026.
-24. **Measuring the Checker: Mutation Analysis for GPU-Kernel Benchmark Oracles.** arXiv:2609.22220, 2026.
-25. **How Much of a Real Workload Can LLM-Generated GPU Kernels Actually Reach?** arXiv:2609.21058, 2026.
-26. **Rethinking Training-Inference Mismatch in LLM Reinforcement Learning: Where It Arises and How to Correct It.** arXiv:2609.32444, 2026.
+20. D. Sarkar. **The Correctness Illusion in LLM-Generated GPU Kernels.** arXiv:2606.20128, 2026.
+21. R. Shah, R. Shrestha. **A Contract-Grade Verifier for LLM-Generated GPU Kernels, and a Native Blackwell Backward for the Gated-Linear-Recurrence Family.** arXiv:2608.12700, 2026.
+22. Y. Zhang, P. Yu, J. Wang, J. Reed, A. Mirhoseini, W. Su. **KernelBench-Verified: Do LLM-Generated Kernels Actually Beat PyTorch?** arXiv:2607.16241, 2026.
+23. L. Yang, Y. Wang, S. Liang, L. Yang, D. Ying, C. You, R. Zhang, L. Wang, Y. Yu, G. Yang, L. Zhang. **Are LLM-Generated GPU Kernels Production-Ready? A Trace-Driven Benchmark and Optimization Agent (Atrex-Bench).** arXiv:2607.14541, 2026.
+24. M. Du, A. T. Luu, D. Huang, S. Ng. **Measuring the Checker: Mutation Analysis for GPU-Kernel Benchmark Oracles.** arXiv:2609.22220, 2026.
+25. G. Agarwal, A. Garg, I. Singhal. **How Much of a Real Workload Can LLM-Generated GPU Kernels Actually Reach?** arXiv:2609.21058, 2026.
+26. T. Yu, K. Zhao, S. Li, Y. Yang, P. Jenkins, W. Zhang, T. W. Killian. **Rethinking Training-Inference Mismatch in LLM Reinforcement Learning: Where It Arises and How to Correct It.** arXiv:2609.32444, 2026.
 27. M. Marek, M. Ryabinin. **Score Centering Stabilizes Off-policy Reinforcement Learning.** arXiv:2609.20807, 2026.
-28. **FlashRT: Agent Harness for Guiding Agents to Deploy Real-Time Multimodal Applications.** arXiv:2607.18171, 2026.
+28. K. Agarwal, Z. Chen, Y. Qin, Z. Gu, A. Rudra, B. Chen. **FlashRT: Agent Harness for Guiding Agents to Deploy Real-Time Multimodal Applications.** arXiv:2607.18171, 2026.
 29. S. Cao, Z. Mao, J. E. Gonzalez, I. Stoica. **K-Search: LLM Kernel Generation via Co-Evolving Intrinsic World Model.** arXiv:2602.19128, 2026. *Abstract states: "explicitly decouples high-level algorithmic planning from low-level program instantiation"; targets kernels "requiring coordinated, multi-step structural transformations"; average $2.10\times$ over state-of-the-art evolutionary search, up to $14.3\times$ on complex MoE kernels.*
 30. G. He, E. Yoneki. **CuAsmRL: Optimizing GPU SASS Schedules via Deep Reinforcement Learning.** CGO 2025. arXiv:2501.08071. *RL agents apply mutation actions to SASS schedules; also used to reveal optimization moves automatically.*
 31. S. Anupam, A. Shypula, O. Bastani. **LLM Program Optimization via Retrieval Augmented Search (RAS / AEGIS).** ACL 2026 Findings. arXiv:2501.18916. *Decomposes slow→fast training pairs into reusable "atomic edits".*

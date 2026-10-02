@@ -112,8 +112,13 @@ PATH，而 MiKTeX 实际装在用户目录下（`AppData\Local\Programs\MiKTeX\m
 正文里的 `[n]` 在构建时会被 `scripts/make_latex.py` 改写成 `\cite{}`，手敲的 `## References`
 列表从构建副本中剔除，由 **latexmk + BibTeX + unsrtnat（数字模式）** 生成带编号、可跳转的
 文献表；`references.bib` 本身由 `scripts/make_bib.py` 从已经过 `verify_references.py` 回源的
-列表派生，不手敲。构建时会报告**没有作者段的条目**（当前剩 8 条：20、21、22、23、24、25、26、28，
-arXiv API 限流后待补），因为空作者会在文献表里退化为只有标题、很容易被忽略。
+列表派生，不手敲。构建时会报告**没有作者段的条目**，因为空作者会在文献表里退化为只有标题、
+很容易被忽略——曾经 36 条里有 16 条如此，已全部补齐（`scripts/fetch_authors.py` 取元数据，
+再用 `verify_references.py` 逐条比对作者姓氏，现在 36/36 无缺失）。
+
+取作者时有一个坑值得记：arXiv 逐条请求会被限流，改用一次 `id_list` 批量查询；而 abs 页的
+`citation_author` 元标签居然出过一个并不存在的作者（把一个人名拆成 `Max`、`Fan` 两项），
+与页面上可见的作者栏不符。所以**元数据不能直接当事实用**，要拿可见作者栏交叉校对后再写入。
 
 ### 已知未完成（不作表面修补）
 

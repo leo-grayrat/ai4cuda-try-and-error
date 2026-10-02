@@ -17,12 +17,12 @@ A.~Ouyang, S.~Guo, S.~Arora, A.~L. Zhang, W.~Hu, C.~Ré, and A.~Mirhoseini.
 \newblock {KernelBench: Can LLMs Write Efficient GPU Kernels?}, 2025.
 \newblock URL \url{https://arxiv.org/abs/2502.10517}.
 
-\bibitem[Du et~al.(2026)Du, Zhuo, Dong, He, Sun, Zheng, Karunaratne, Fox,
-  Dettmers, Chen, Yang, and Welleck]{adaexplore3}
+\bibitem[Du et~al.(2026{\natexlab{a}})Du, Zhuo, Dong, He, Sun, Zheng,
+  Karunaratne, Fox, Dettmers, Chen, Yang, and Welleck]{adaexplore3}
 W.~Du, J.~Zhuo, Y.~Dong, A.~W. He, W.~Sun, Z.~Zheng, M.~Karunaratne, I.~Fox,
   T.~Dettmers, T.~Chen, Y.~Yang, and S.~Welleck.
 \newblock {AdaExplore: Failure-Driven Adaptation and Diversity-Preserving
-  Search for Efficient Kernel Generation}, 2026.
+  Search for Efficient Kernel Generation}, 2026{\natexlab{a}}.
 \newblock URL \url{https://arxiv.org/abs/2604.16625}.
 
 \bibitem[Zhang(2026)]{from35}
@@ -188,32 +188,43 @@ B.~Liu and Y.~Jing.
   Option-Critic}, 2026.
 \newblock URL \url{https://arxiv.org/abs/2609.05508}.
 
-\bibitem[fla(2026)]{flashrt28}
-{FlashRT: Agent Harness for Guiding Agents to Deploy Real-Time Multimodal
-  Applications}, 2026.
+\bibitem[Agarwal et~al.(2026{\natexlab{a}})Agarwal, Chen, Qin, Gu, Rudra, and
+  Chen]{flashrt28}
+K.~Agarwal, Z.~Chen, Y.~Qin, Z.~Gu, A.~Rudra, and B.~Chen.
+\newblock {FlashRT: Agent Harness for Guiding Agents to Deploy Real-Time
+  Multimodal Applications}, 2026{\natexlab{a}}.
 \newblock URL \url{https://arxiv.org/abs/2607.18171}.
 
-\bibitem[the(2026)]{the20}
-{The Correctness Illusion in LLM-Generated GPU Kernels}, 2026.
+\bibitem[Sarkar(2026)]{the20}
+D.~Sarkar.
+\newblock {The Correctness Illusion in LLM-Generated GPU Kernels}, 2026.
 \newblock URL \url{https://arxiv.org/abs/2606.20128}.
 
-\bibitem[mea(2026)]{measuring24}
-{Measuring the Checker: Mutation Analysis for GPU-Kernel Benchmark Oracles},
-  2026.
+\bibitem[Du et~al.(2026{\natexlab{b}})Du, Luu, Huang, and Ng]{measuring24}
+M.~Du, A.~T. Luu, D.~Huang, and S.~Ng.
+\newblock {Measuring the Checker: Mutation Analysis for GPU-Kernel Benchmark
+  Oracles}, 2026{\natexlab{b}}.
 \newblock URL \url{https://arxiv.org/abs/2609.22220}.
 
-\bibitem[ker(2026)]{kernelbenchverified22}
-{KernelBench-Verified: Do LLM-Generated Kernels Actually Beat PyTorch?}, 2026.
+\bibitem[Zhang et~al.(2026)Zhang, Yu, Wang, Reed, Mirhoseini, and
+  Su]{kernelbenchverified22}
+Y.~Zhang, P.~Yu, J.~Wang, J.~Reed, A.~Mirhoseini, and W.~Su.
+\newblock {KernelBench-Verified: Do LLM-Generated Kernels Actually Beat
+  PyTorch?}, 2026.
 \newblock URL \url{https://arxiv.org/abs/2607.16241}.
 
-\bibitem[are(2026)]{are23}
-{Are LLM-Generated GPU Kernels Production-Ready? A Trace-Driven Benchmark and
-  Optimization Agent (Atrex-Bench)}, 2026.
+\bibitem[Yang et~al.(2026)Yang, Wang, Liang, Yang, Ying, You, Zhang, Wang, Yu,
+  Yang, and Zhang]{are23}
+L.~Yang, Y.~Wang, S.~Liang, L.~Yang, D.~Ying, C.~You, R.~Zhang, L.~Wang, Y.~Yu,
+  G.~Yang, and L.~Zhang.
+\newblock {Are LLM-Generated GPU Kernels Production-Ready? A Trace-Driven
+  Benchmark and Optimization Agent (Atrex-Bench)}, 2026.
 \newblock URL \url{https://arxiv.org/abs/2607.14541}.
 
-\bibitem[how(2026)]{how25}
-{How Much of a Real Workload Can LLM-Generated GPU Kernels Actually Reach?},
-  2026.
+\bibitem[Agarwal et~al.(2026{\natexlab{b}})Agarwal, Garg, and Singhal]{how25}
+G.~Agarwal, A.~Garg, and I.~Singhal.
+\newblock {How Much of a Real Workload Can LLM-Generated GPU Kernels Actually
+  Reach?}, 2026{\natexlab{b}}.
 \newblock URL \url{https://arxiv.org/abs/2609.21058}.
 
 \bibitem[Zhong et~al.(2026)Zhong, Segal, Bercovich, Saxena, Zhang, and
@@ -223,9 +234,11 @@ Z.~Zhong, I.~Segal, I.~Bercovich, S.~Saxena, K.~Zhang, and A.~Raghunathan.
   2026.
 \newblock URL \url{https://arxiv.org/abs/2606.08960}.
 
-\bibitem[ret(2026)]{rethinking26}
-{Rethinking Training-Inference Mismatch in LLM Reinforcement Learning: Where It
-  Arises and How to Correct It}, 2026.
+\bibitem[Yu et~al.(2026)Yu, Zhao, Li, Yang, Jenkins, Zhang, and
+  Killian]{rethinking26}
+T.~Yu, K.~Zhao, S.~Li, Y.~Yang, P.~Jenkins, W.~Zhang, and T.~W. Killian.
+\newblock {Rethinking Training-Inference Mismatch in LLM Reinforcement
+  Learning: Where It Arises and How to Correct It}, 2026.
 \newblock URL \url{https://arxiv.org/abs/2609.32444}.
 
 \bibitem[Marek and Ryabinin(2026)]{score27}
@@ -252,9 +265,10 @@ Q.~I. Mahmud, N.~K. Ahmed, and A.~Jannesari.
 \newblock (method name: CudaPerf), 2026.
 \newblock URL \url{https://arxiv.org/abs/2607.20908}.
 
-\bibitem[a21(2026)]{a21}
-{A Contract-Grade Verifier for LLM-Generated GPU Kernels, and a Native
-  Blackwell Backward for the Gated-Linear-Recurrence Family}, 2026.
+\bibitem[Shah and Shrestha(2026)]{a21}
+R.~Shah and R.~Shrestha.
+\newblock {A Contract-Grade Verifier for LLM-Generated GPU Kernels, and a
+  Native Blackwell Backward for the Gated-Linear-Recurrence Family}, 2026.
 \newblock URL \url{https://arxiv.org/abs/2608.12700}.
 
 \end{thebibliography}

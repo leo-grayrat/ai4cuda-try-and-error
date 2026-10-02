@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (MiKTeX 26.2) (preloaded format=xelatex 2026.6.8)  3 OCT 2026 00:06
+This is XeTeX, Version 3.141592653-2.6-0.999998 (MiKTeX 26.2) (preloaded format=xelatex 2026.6.8)  3 OCT 2026 00:41
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1677,13 +1677,7 @@ LaTeX Font Info:    Font shape `TU/DejaVuSerif(0)/m/n' will be
 (Font)              scaled to size 14.4pt on input line 1.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(0)/b/n' will be
 (Font)              scaled to size 14.4pt on input line 1.
- [34] [35]
-Underfull \hbox (badness 2512) in paragraph at lines 227--230
-[]\TU/DejaVuSerif(0)/m/n/10.95 Rethinking Training-Inference Mismatch in LLM Re
-inforcement Learning:
- []
-
-[36]) [37] (main.aux)
+ [34] [35] [36]) [37] (main.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
@@ -1692,10 +1686,10 @@ L3 programming layer <2026-01-19>
 Here is how much of TeX's memory you used:
  21456 strings out of 402983
  393223 string characters out of 5448483
- 1024455 words of memory out of 5000000
+ 1025774 words of memory out of 5000000
  49852 multiletter control sequences out of 15000+600000
  638921 words of font info for 164 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  90i,10n,116p,1859b,601s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on main.xdv (37 pages, 995284 bytes).
+Output written on main.xdv (37 pages, 999340 bytes).
