@@ -66,18 +66,26 @@ Stage 1 RESEARCH（quick）→ Stage 1.5 EXPERIMENT → Stage 2 WRITE → Stage 
 | Stage 4 | `stage4_revision/REVISION_NOTES.md` | R-1..R-8 逐项处置；**头条统计结论反号** |
 | Stage 3′/4′ | `stage3prime_rereview/` | R-1..R-6 MET、R-7/R-8 PARTIAL；抓出 §5.2 残留矛盾 |
 | Stage 4.5 | `STAGE4_5_FINAL_INTEGRITY.md`（含 v3 复跑） | 从零复核引用；新发现并修 3 处引用字段错误；v3 补入 [33]–[35] |
-| Stage 5 | `paper/latex/`、`paper/zh/full.md` | LaTeX 源 + 35 条 bib（本机无 TeX 引擎，**PDF 有意未产出**，见 `paper/latex/BUILD.md`）；中文对照稿约 2.04 万字 |
+| Stage 5 | `paper/latex/`、`paper/zh/full.md` | LaTeX 源 + 36 条 bib + **已编译 PDF（35 页，5 图全嵌入，经结构性验证）**；中文对照稿 |
 
 终态关卡（v3，全部可重跑）：
 
 ```
-python scripts/verify_references.py       # 35/35 引用从零回源（arXiv 33 + CrossRef 2）
-python scripts/verify_paper_numbers.py    # 117/117 数字与文本断言
-python scripts/verify_zh_alignment.py    # 定量 token en=276 / zh=276；引用标识符同序
-python scripts/integrity_scan.py paper/main.md   # CJK 0 · 引用闭环 35/35 · 章节 11/11
+python scripts/verify_references.py       # 引用从零回源（arXiv + CrossRef + URL 三类解析器）
+python scripts/verify_paper_numbers.py    # 数字与文本断言
+python scripts/verify_zh_alignment.py    # 中英定量 token + 符号对齐
+python scripts/integrity_scan.py paper/main.md   # CJK / 引用闭环 / 章节
+python scripts/make_latex.py             # 编译 PDF 并验证页数、尾部章节、图片数、缺字
 ```
 
-英文正文约 13,200 词（仍超预期目标，见下）。
+### 关于 PDF 的一条自我纠正
+
+本目录先前版本声称「本机无任何 TeX 引擎，PDF 有意未产出」。那句话是错的：我只查了沙箱进程的
+PATH，而 MiKTeX 实际装在用户目录下（`AppData\Local\Programs\MiKTeX\miktex\bin\x64`）。
+现在 `make_latex.py` 会主动探测 PATH 之外的常见安装位置，并且**不再把「PDF 文件存在」当成成功**：
+它用 pypdf 校验尾部章节齐备、页数与词数量级相符、嵌入图数与 `figures/` 相符，并扫描日志里的
+`Missing character` 与 `! ` 硬错误。这个改动是因为旧的宽松判定曾把一份只编到 §3.4 的 8 页截断产物
+报成 `pdf=yes`。
 
 ### 本目录的重要事实
 

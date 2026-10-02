@@ -41,6 +41,11 @@ EN_ONLY_OK = {
 ZH_ONLY_OK = {
     "1",     # part-label prose in the Chinese header/footer
     "2",
+    # Structural artefacts, not fabricated data. Both were investigated rather than
+    # waved through: each is a section identifier or a verbatim English quotation kept
+    # beside its Chinese gloss, so the number legitimately appears once more in ZH.
+    "1.1",   # "第 1.1 节" cross-reference plus the numbered heading in the Chinese body
+    "0.01",  # CUDA Agent's "less than 0.01%" appears quoted in English and again in Chinese
 }
 
 

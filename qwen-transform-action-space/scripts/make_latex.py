@@ -1,24 +1,30 @@
 #!/usr/bin/env python3
-"""Build the LaTeX deliverable from paper/main.md.
+"""Build the LaTeX deliverable and, when an engine exists, the PDF.
 
 Steps:
-  1. regenerate references.bib (mechanically, from the verified reference list)
-  2. run pandoc on paper/main.md from inside paper/ so that relative image paths
-     resolve at read time (pandoc 2.12 has neither --graphics nor --cd)
-  3. copy the figure PNGs next to the generated .tex and rewrite the paths so the
-     project is self-contained and portable
-  4. emit a build note recording that no LaTeX engine is installed locally, so the
-     PDF is NOT produced here
+  1. regenerate references.bib mechanically from the verified reference list
+  2. build a LaTeX-only copy of the manuscript with its leading H1 removed
+     (pandoc's metadata title is kept; deleting the \\title block instead leaves
+     \\maketitle with nothing to typeset and the engine aborts)
+  3. copy the figure PNGs beside the .tex and rewrite paths so the project is portable
+  4. locate a TeX engine and compile the PDF
+  5. write BUILD.md recording which engine was used, or the concrete absence of one
 
-Integrity policy: a PDF is only ever compiled from LaTeX. This script deliberately
-does not generate a PDF by any HTML route; when no engine is present it stops at
-the .tex and states that plainly.
+Engine discovery deliberately does not trust the sandbox PATH: an interactive shell
+(or an IDE) can have a TeX distribution that this process cannot see on PATH, so the
+usual install roots are probed as well. Claiming "no TeX engine is installed" after
+checking only PATH is how the previous version of this script produced a false
+statement in the README and the run report.
+
+Integrity policy: a PDF is only ever compiled from LaTeX. No HTML-to-PDF route.
 
 Usage: python scripts/make_latex.py
+Exit 0 only if the LaTeX build succeeds; PDF status is reported separately.
 """
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -30,110 +36,241 @@ PAPER = ROOT / "paper"
 LATEX = PAPER / "latex"
 FIGSRC = ROOT / "figures"
 
-ENGINES = ["latexmk", "tectonic", "xelatex", "pdflatex", "lualatex"]
+ENGINE_CANDIDATES = [
+    ("xelatex", "-pdfxe"),   # unicode-safe: the manuscript uses τ, ℓ, θ, →, ×, é
+    ("lualatex", "-pdf"),
+    ("latexmk", "-pdfxe"),
+    ("pdflatex", "-pdf"),
+]
+
+EXTRA_ROOTS = [
+    r"C:\texlive",
+    r"C:\Users\34788\AppData\Local\Programs\MiKTeX\miktex\bin\x64",
+    r"C:\Program Files\MiKTeX\miktex\bin\x64",
+    r"C:\Program Files\texlive",
+    str(Path.home() / "AppData" / "Local" / "Programs" / "MiKTeX" / "miktex" / "bin" / "x64"),
+]
 
 
-def find_engine() -> str | None:
-    for exe in ENGINES:
-        if shutil.which(exe):
-            return exe
-    return None
+def find_engine() -> tuple[str | None, str, str]:
+    """Return (engine, latexmk flag, resolved path)."""
+    for name, flag in ENGINE_CANDIDATES:
+        p = shutil.which(name)
+        if p:
+            return name, flag, p
+    for root in EXTRA_ROOTS:
+        rp = Path(root)
+        if not rp.is_dir():
+            continue
+        for name, flag in ENGINE_CANDIDATES:
+            hit = next(iter(sorted(rp.rglob(f"{name}.exe"))), None)
+            if hit:
+                return name, flag, str(hit)
+    return None, "", ""
 
 
 def main() -> int:
+    # this process writes to a cp936 console on Windows; diagnostics contain Unicode
+    # codepoint names, which would crash the print itself and hide the real report
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
     LATEX.mkdir(parents=True, exist_ok=True)
 
-    # 1. bibliography, derived from the verified reference list
+    # 1. bibliography
     r = subprocess.run([sys.executable, str(ROOT / "scripts" / "make_bib.py")],
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
     print(r.stdout.strip() or r.stderr.strip())
 
-    # 2. pandoc, run with cwd=paper so ../figures resolves
+    # 2. build-only markdown without the duplicate leading H1
+    src = (PAPER / "main.md").read_text(encoding="utf-8")
+    body = re.sub(r"\A\s*#\s.+?\n", "", src, count=1)
+    (LATEX / "main.src.md").write_text(body, encoding="utf-8")
+
     cmd = [
-        "pandoc", "main.md", "-o", "latex/main.tex",
+        "pandoc", "main.src.md", "-o", "main.tex",
+        # tex_math_single_backslash is what makes \\( ... \\) parse as math. Without it
+        # every inline formula becomes literal text, so `_` inside \(\log_2 55\) aborts
+        # the run under -halt-on-error and yields a silently truncated PDF.
+        "--from", "markdown+tex_math_single_backslash+pipe_tables+yaml_metadata_block",
         "--standalone", "--wrap=none",
         "--variable", "geometry:margin=1in",
         "--variable", "fontsize=11pt",
+        "--variable", "colorlinks=true",
         "--metadata",
         "title=Is Token-Level the Wrong Coordinate System? Program Transformation "
         "as the Action Space for LLM-Driven Kernel Optimization",
-        "--metadata", "author=Automated research pipeline output (Qwen session)",
+        # a literal \\and inside the author field is not a title-page construct in the
+        # article class and typeset as the characters "\and"
+        "--metadata",
+        "author=Automated research pipeline output (Qwen session). "
+        "Analysis and prose are machine-generated and unreviewed.",
+        "--metadata", "date=2 October 2026 (Stage 4 v2, post-review)",
     ]
-    r = subprocess.run(cmd, cwd=PAPER, capture_output=True, text=True)
+    r = subprocess.run(cmd, cwd=LATEX, capture_output=True, text=True,
+                       encoding="utf-8", errors="replace")
     if r.returncode != 0:
         print("pandoc FAILED:\n" + r.stderr, file=sys.stderr)
         return 1
-    tex_path = LATEX / "main.tex"
-    tex = tex_path.read_text(encoding="utf-8")
 
-    # 3. make the project self-contained
+    # 3. self-contained figures
     (LATEX / "figures").mkdir(exist_ok=True)
     copied = []
     for png in sorted(FIGSRC.glob("*.png")):
         shutil.copy2(png, LATEX / "figures" / png.name)
         copied.append(png.name)
-    n_paths = len(re.findall(r"\.\./figures/", tex))
-    tex = tex.replace("../figures/", "figures/")
 
-    # ensure graphicx + a graphicspath so \\includegraphics resolves robustly
-    if "\\usepackage{graphicx}" not in tex:
-        tex = tex.replace("\\begin{document}",
-                          "\\usepackage{graphicx}\n\\graphicspath{{figures/}}\n\\begin{document}", 1)
-    elif "\\graphicspath" not in tex:
-        tex = tex.replace("\\usepackage{graphicx}",
-                          "\\usepackage{graphicx}\n\\graphicspath{{figures/}}", 1)
+    tex_path = LATEX / "main.tex"
+    tex = tex_path.read_text(encoding="utf-8").replace("../figures/", "figures/")
 
-    # the markdown body already carries its own H1; drop pandoc's duplicate title
-    # block so the document does not open with the title twice
-    tex = re.sub(
-        r"\\title\{.*?\}\n\\author\{.*?\}\n\\date\{.*?\}\n",
-        "",
-        tex,
-        flags=re.S,
+    # Font coverage, not content rewriting: the manuscript legitimately uses Unicode in
+    # code spans and prose (τ, ℓ, θ, φ, →, ×, ₁, ⁵). Latin Modern's text fonts lack them,
+    # which surfaced as "Missing character" glyph losses. DejaVu Serif / DejaVu Sans Mono
+    # are installed here and cover them, so the Markdown source stays readable.
+    FONT_PREAMBLE = (
+        "% font coverage for Unicode used in code spans and prose\n"
+        "\\usepackage{fontspec}\n"
+        "\\setmainfont{DejaVu Serif}\n"
+        "\\setsansfont{DejaVu Sans}\n"
+        "\\setmonofont{DejaVu Sans Mono}\n"
+        "% U+2113 SCRIPT SMALL L is absent from the DejaVu coverage; map it to the\n"
+        "% math letter instead of altering the Markdown source\n"
+        "\\usepackage{newunicodechar}\n"
+        "\\newunicodechar{\u2113}{\\ensuremath{\\ell}}\n"
     )
+    if "\\setmainfont" not in tex:
+        if "\\usepackage{fontspec}" in tex:
+            tex = tex.replace("\\usepackage{fontspec}", "", 1)
+        tex = tex.replace(
+            "\\begin{document}", FONT_PREAMBLE + "\\begin{document}", 1
+        )
+
+    if "\\usepackage{graphicx}" not in tex:
+        tex = tex.replace(
+            "\\begin{document}",
+            "\\usepackage{graphicx}\n\\graphicspath{{figures/}}\n\\begin{document}",
+            1,
+        )
+    elif "\\graphicspath" not in tex:
+        tex = tex.replace(
+            "\\usepackage{graphicx}",
+            "\\usepackage{graphicx}\n\\graphicspath{{figures/}}",
+            1,
+        )
     tex_path.write_text(tex, encoding="utf-8")
 
-    # 4. build note
-    engine = find_engine()
+    # 4. compile
+    engine, flag, engine_path = find_engine()
+    pdf = LATEX / "main.pdf"
+    compile_tail = ""
+    compiled = False
+    if engine:
+        # no -halt-on-error: an aborted run still leaves a partial PDF, which is how a
+        # truncated 8-page build was previously reported as success
+        if engine == "latexmk":
+            build = [engine_path, flag, "-interaction=nonstopmode", "main.tex"]
+        else:
+            build = [engine_path, "-interaction=nonstopmode", "main.tex"]
+        env = dict(os.environ)
+        env["PATH"] = str(Path(engine_path).parent) + os.pathsep + env.get("PATH", "")
+        # run the engine twice so cross-references settle. xelatex and MiKTeX emit UTF-8;
+        # text=True alone makes Windows decode the pipe with the locale codec (cp936 here)
+        # and the reader thread dies on any non-ASCII byte in engine output
+        for _ in range(2):
+            out = subprocess.run(build, cwd=LATEX, capture_output=True, text=True,
+                                 encoding="utf-8", errors="replace", env=env)
+            compile_tail = (out.stdout or "") + (out.stderr or "")
+
+        # structural verification: a PDF exists proves nothing about completeness.
+        # Assert the tail sections, the page count, the embedded figure count, and that
+        # no glyph silently dropped out of the fonts.
+        pdf_ok = pdf.exists()
+        problems: list[str] = []
+        pages = 0
+        imgs = 0
+        log_txt = ""
+        if pdf_ok:
+            try:
+                import pypdf
+
+                reader = pypdf.PdfReader(pdf)
+                pages = len(reader.pages)
+                body = "".join((pg.extract_text() or "") for pg in reader.pages)
+                for probe in ("References", "Appendix", "Conclusion", "Related Work"):
+                    if probe not in body:
+                        problems.append(f"section missing from PDF: {probe}")
+                expect_pages = max(6, int(len(src.split()) / 450))
+                if pages < expect_pages * 0.8:
+                    problems.append(
+                        f"PDF looks truncated: {pages} pages vs ~{expect_pages} expected"
+                    )
+                imgs = sum(
+                    len((pg.get("/Resources") or {}).get("/XObject", {}).keys())
+                    if isinstance((pg.get("/Resources") or {}).get("/XObject", {}), dict)
+                    else 0
+                    for pg in reader.pages
+                )
+            except Exception as e:  # noqa: BLE001
+                problems.append(f"could not inspect PDF: {type(e).__name__}: {e}")
+            log_path = LATEX / "main.log"
+            if log_path.exists():
+                log_txt = log_path.read_text(encoding="utf-8", errors="replace")
+            missing = sorted(set(re.findall(r"There is no (.) in font", log_txt)))
+            if missing:
+                problems.append(f"glyphs still missing from fonts: {missing}")
+            hard = re.findall(r"^! .*$", log_txt, re.M)
+            if hard:
+                problems.append(f"LaTeX errors: {hard[:2]}")
+        else:
+            problems.append("no PDF emitted")
+
+        compiled = pdf_ok and not problems
+        print(f"engine={engine} pages={pages} xobjects~{imgs} pdf_verified={compiled}")
+        for p in problems:
+            print("  PROBLEM:", p)
+        if not compiled:
+            print(compile_tail[-1200:])
+    else:
+        print("engine=NONE (PATH and common install roots probed)")
+
+    # 5. build note
     note = LATEX / "BUILD.md"
     note.write_text(
         f"""# LaTeX build
 
-Generated by `scripts/make_latex.py`. Sources:
+Generated by `scripts/make_latex.py`. Single source of truth is `paper/main.md`;
+edit that and re-run this script rather than editing `main.tex`.
 
 | file | origin |
 |------|--------|
-| `main.tex` | pandoc from `paper/main.md` (single source of truth) |
-| `references.bib` | generated from the manuscript's verified reference list by `scripts/make_bib.py`; entries were re-resolved against arXiv/CrossRef by `scripts/verify_references.py` |
-| `figures/*.png` | copies of `../figures/` ({len(copied)} files: {', '.join(copied)}) |
-
-Do not edit `main.tex` by hand for content changes -- edit `paper/main.md` and re-run
-`python scripts/make_latex.py`, otherwise the Markdown deliverable and the LaTeX
-deliverable diverge.
+| `main.src.md` | `paper/main.md` with its leading H1 removed (pandoc supplies the title) |
+| `main.tex` | pandoc `--standalone` |
+| `references.bib` | generated from the verified reference list by `scripts/make_bib.py` |
+| `figures/*.png` | copies of `../../figures/` ({len(copied)} files) |
 
 ## Compilation status
 
-Local LaTeX engine detected: **{engine or 'NONE'}**
+Engine found: **{engine_path or 'NONE'}**
+PDF produced: **{'yes — main.pdf' if compiled else 'no'}**
 
-{"Run: " + engine + " -pdf main.tex" if engine else '''No TeX engine is installed on this machine
-(`latexmk`, `tectonic`, `xelatex`, `pdflatex`, `lualatex` all absent), so **no PDF was
-produced**. This is stated rather than worked around: the pipeline compiles PDFs only
-from LaTeX, and substituting an HTML-to-PDF route would produce a document that does not
-correspond to the .tex source. To obtain the PDF, install any TeX engine and run:
+{"Built with " + engine + "; run twice so references settle." if compiled else '''This machine exposes no TeX engine to this process
+after probing PATH and the usual install roots. No PDF was produced, and no
+HTML-to-PDF substitute was used: the pipeline compiles PDFs from LaTeX only, so a
+document that does not correspond to the .tex source would be worse than none.'''}
+
+Reproduce:
 
 ```
-cd paper/latex
-tectonic main.tex            # or: latexmk -pdf main.tex
+python scripts/make_latex.py
 ```
-
-The `\\( ... \\)` inline math in the manuscript is converted by pandoc to proper TeX
-math, so `main.tex` needs no manual preamble edits to compile.'''}
 """,
         encoding="utf-8",
     )
-    print(f"wrote {tex_path} ({len(tex)} chars), {len(copied)} figures copied")
-    print(f"engine: {engine or 'NONE -> PDF intentionally not built'}")
-    return 0
+    print(f"wrote {tex_path} ({len(tex)} chars), {len(copied)} figures, pdf={'yes' if compiled else 'no'}")
+    return 0 if compiled or not engine else 1
 
 
 if __name__ == "__main__":

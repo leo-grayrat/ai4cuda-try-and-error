@@ -1,21 +1,15 @@
 #!/usr/bin/env python3
-"""Propagate two English-manuscript edits into the Chinese translation parts.
+"""Bring the Chinese translation back onto the English manuscript's conventions.
 
-Both edits were made to paper/main.md after the translation passes finished, so the
-Chinese parts lag behind:
+The English source switched inline math from \\( ... \\) to $ ... $ (see
+scripts/normalise_math.py, which was needed because pandoc 2.12 does not treat the
+backslash form as math inside pipe-table cells). Translated passages keep whatever
+convention was current when they were written, so the two languages drifted apart.
 
-1. notation: the action triple and the mapping were unified in English to the Unicode
-   forms `a = (τ, ℓ, θ)` and `φ : ΔP → a`; the parts still carry the earlier ASCII
-   spellings in some places.
-2. statistics: the abstract and Section 8 changed "mutual information 0.70 bits" to
-   the explicit plug-in value with its bias-corrected counterpart, because 0.70 was a
-   rounding that no longer matched the Section 3.6 table.
-
-verify_zh_alignment.py catches (2) by multiset comparison but not (1), since notation
-carries no digits. This script fixes both and then re-runs the gate.
-
-Written as a file rather than an inline command: backticks are the PowerShell escape
-character, and an inline attempt silently corrupted the very strings being replaced.
+This script:
+  - converts \\( ... \\) to $ ... $ in both Chinese parts
+  - fixes the known typo 占踞 -> 占据
+  - rebuilds paper/zh/full.md
 
 Usage: python scripts/sync_zh_notation.py
 """
@@ -23,85 +17,37 @@ Usage: python scripts/sync_zh_notation.py
 from __future__ import annotations
 
 import re
-import subprocess
 import sys
 from pathlib import Path
 
+HERE = Path(__file__).resolve().parent
 ROOT = Path(__file__).resolve().parents[1]
-PARTS = [ROOT / "paper" / "zh" / "part1.md", ROOT / "paper" / "zh" / "part2.md"]
 
-BACKTICK = "`"
-
-REPLACEMENTS = [
-    # notation
-    (f"{BACKTICK}a = (tau, l, theta){BACKTICK}", f"{BACKTICK}a = (τ, ℓ, θ){BACKTICK}"),
-    (f"{BACKTICK}a = (tau, l, theta){BACKTICK}", f"{BACKTICK}a = (τ, ℓ, θ){BACKTICK}"),
-    (f"{BACKTICK}phi : Delta P -> a{BACKTICK}", f"{BACKTICK}φ : ΔP → a{BACKTICK}"),
-    # LaTeX-mapped variant an interpreter introduced in Section 5.3, which the numeric
-    # alignment gate cannot see because it carries no digits
-    (
-        f"{BACKTICK}phi : \\Delta P \\to a{BACKTICK}",
-        f"{BACKTICK}φ : ΔP → a{BACKTICK}",
-    ),
-    (f"{BACKTICK}a \\to \\Delta P{BACKTICK}", f"{BACKTICK}a → ΔP{BACKTICK}"),
-    # Standalone romanised "phi" left in the Chinese parts. In a Chinese document the
-    # bare token "phi" is never legitimate prose, so a word-boundary mapping is safe
-    # and catches every context (bare, backticked, inside a longer clause).
-    ("`phi`", f"{BACKTICK}φ{BACKTICK}"),
-    (" phi ", " φ "),
-    # statistics: keep the Chinese wording aligned with the English plug-in/BC pair
-    (
-        "（互信息 0.70 比特，p = 0.0005）",
-        "（plug-in 互信息 0.697 比特，偏差校正后为 0.624，p = 0.0005）",
-    ),
-    (
-        "（互信息 0.70 比特，\\(p = 0.0005\\)）",
-        "（plug-in 互信息 0.697 比特，偏差校正后 0.624，\\(p = 0.0005\\)）",
-    ),
-    (
-        "互信息 0.70 比特",
-        "plug-in 互信息 0.697 比特（偏差校正后 0.624）",
-    ),
-]
+try:
+    from make_zh_full import main as rebuild_full
+except ImportError:  # pragma: no cover
+    sys.path.insert(0, str(HERE))
+    from make_zh_full import main as rebuild_full
 
 
 def main() -> int:
-    changed = 0
-    for path in PARTS:
-        text = path.read_text(encoding="utf-8")
-        original = text
-        for old, new in REPLACEMENTS:
-            text = text.replace(old, new)
-        if text != original:
-            path.write_text(text, encoding="utf-8")
-            changed += 1
-            print(f"updated {path.name}")
-        else:
-            print(f"unchanged {path.name}")
-
-    leftovers = 0
-    for path in PARTS + [ROOT / "paper" / "main.md"]:
-        text = path.read_text(encoding="utf-8")
-        ascii_triples = text.count("a = (tau, l, theta)")
-        stale_stat = len(re.findall(r"0\.70 (?:比特|bits)", text))
-        leftovers += ascii_triples + stale_stat
-        print(f"  {path.parent.name}/{path.name}: ascii-triple={ascii_triples} 0.70={stale_stat}")
-
-    if leftovers:
-        print("FATAL: desync remains", file=sys.stderr)
-        return 1
-
-    print("\nre-assembling full.md and re-running gates")
-    for script in ("make_zh_full.py", "verify_zh_alignment.py", "make_latex.py", "make_bib.py"):
-        r = subprocess.run([sys.executable, str(ROOT / "scripts" / script)],
-                           capture_output=True, text=True)
-        tail = [l for l in (r.stdout or "").splitlines() if l.strip()][-2:]
-        print(f"[{script}] rc={r.returncode} " + " | ".join(tail))
-        if r.returncode != 0:
-            print(r.stderr[-400:], file=sys.stderr)
+    for name in ("part1.md", "part2.md"):
+        p = ROOT / "paper" / "zh" / name
+        if not p.exists():
+            print(f"MISSING {p}", file=sys.stderr)
             return 1
+        text = p.read_text(encoding="utf-8")
+        before = text.count("\\(")
+        text = text.replace("\\(", "$").replace("\\)", "$")
+        text = text.replace("占踞", "占据")
+        p.write_text(text, encoding="utf-8")
+        print(f"{name}: converted {before} math span(s); "
+              f"remaining backslash-paren = {text.count(chr(92) + '(')}")
+
+    rebuild_full()
     return 0
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     raise SystemExit(main())
