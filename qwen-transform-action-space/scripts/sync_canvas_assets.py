@@ -102,6 +102,11 @@ def main() -> int:
         ok_all &= check("no hardcoded colours", not hexes, str(hexes))
         missing = [img for img in sibling_names(text) if not (path.parent / img).exists()]
         ok_all &= check("all canvasImage targets resolve as siblings", not missing, str(missing))
+        # The report canvas is a reader-facing deliverable for a Chinese-language
+        # conversation, so it must be written in Chinese. The paper itself stays
+        # English per spec section 2; only this report follows the dialogue language.
+        cjk = len(re.findall(r"[\u4e00-\u9fff]", text))
+        ok_all &= check("report copy is Chinese", cjk > 200, f"only {cjk} CJK chars")
 
     print("\nCANVAS SYNC + VALIDATION: " + ("PASS" if ok_all else "FAIL"))
     return 0 if ok_all else 1
