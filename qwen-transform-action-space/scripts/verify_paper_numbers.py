@@ -194,7 +194,9 @@ def main() -> int:
         check(f"3.6 reports corrected statistic/method: {token}", token in sec36, token)
     sec35 = paper.split("### 3.5")[1].split("### 3.6")[0] if "### 3.5" in paper else ""
     check("3.5 labels fingerprint entropy as an identity", "identity" in sec35.lower())
-    check("3.5 records the withdrawal explicitly", "withdrew" in sec35.lower() or "withdraw" in sec35.lower())
+    check("3.5 states plainly which claims the table cannot support",
+          any(k in sec35.lower() for k in ("do not survive", "void", "withdraw", "retract")),
+          sec35[:80])
     check("3.5 reports the cross-task null honestly", "16.03" in sec35 or "at chance" in sec35.lower())
 
     # cross-section consistency: a retracted claim may only survive INSIDE the

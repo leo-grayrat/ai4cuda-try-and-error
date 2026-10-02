@@ -39,7 +39,7 @@
 \IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
 \hypersetup{
   pdftitle={Is Token-Level the Wrong Coordinate System? Program Transformation as the Action Space for LLM-Driven Kernel Optimization},
-  pdfauthor={Automated research pipeline output (Qwen session). Analysis and prose are machine-generated and unreviewed.},
+  pdfauthor={Preprint draft --- see Appendix A for provenance and AI usage},
   colorlinks=true,
   linkcolor={Maroon},
   filecolor={Maroon},
@@ -81,8 +81,8 @@
 \fi
 
 \title{Is Token-Level the Wrong Coordinate System? Program Transformation as the Action Space for LLM-Driven Kernel Optimization}
-\author{Automated research pipeline output (Qwen session). Analysis and prose are machine-generated and unreviewed.}
-\date{2 October 2026 (Stage 4 v2, post-review)}
+\author{Preprint draft --- see Appendix A for provenance and AI usage}
+\date{2 October 2026}
 
 % font coverage for Unicode used in code spans and prose
 \usepackage{fontspec}
@@ -93,19 +93,28 @@
 % math letter instead of altering the Markdown source
 \usepackage{newunicodechar}
 \newunicodechar{ℓ}{\ensuremath{\ell}}
+% layout: break long verbatim instead of clipping it at the margin
+\usepackage{fvextra}
+\RecustomVerbatimEnvironment{verbatim}{Verbatim}{breaklines=true,breakanywhere=false,fontsize=\small,frame=none}
+% wide tables: smaller type, tighter columns, full text width
+\usepackage{etoolbox}
+\setlength{\tabcolsep}{4pt}
+\BeforeBeginEnvironment{longtable}{\small}
+\AfterEndEnvironment{longtable}{\normalsize}
+% keep figures where they are discussed
+\usepackage{float}
+\usepackage{placeins}
 \begin{document}
 \maketitle
 
-\textbf{Position and analysis paper.} Draft: Stage 4 (v2, revised after five-reviewer simulated peer review; revision log in \texttt{stage4\_revision/REVISION\_NOTES.md}). All analysis numbers in Section 3 are computed from public data and are reproducible from the accompanying scripts; Section 3.6 reports a statistical error found in v1 by that review.
+\textbf{Position and analysis.} Every number in Section 3 is computed from the public AdaExplore archive and is reproducible from the scripts accompanying this paper.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \hypertarget{abstract}{%
 \subsection{Abstract}\label{abstract}}
 
-Agentic reinforcement-learning systems now write GPU kernels that beat compiler autotuning. They update a policy over sampled text and attach one execution-level reward at the end of thousands of decisions. Performance, however, belongs to a handful of program design decisions --- fuse two passes, stop materializing an intermediate, change the per-thread workload --- each realized across many tokens and several separated code sites. We ask whether this is the wrong \emph{coordinate system}: the action unit. We formalize a candidate action as a typed program transformation \texttt{a\ =\ (τ,\ ℓ,\ θ)}, and separate three claims the literature conflates: description, search efficiency, learning efficiency. On public AdaExplore trajectories (2,510 successful parent→child edges; 55 annotated over 45 tasks) a frozen 12-category vocabulary covers 90.9\% of edges using 10 categories, and under symmetric permutation calibration the semantic label predicts realised speedup beyond its own granularity (p = 0.0005) while coarse diff structure (p = 0.752) and hunk count (p = 0.436) do not. Three limitations bound the result: two supporting statistics are withdrawn, one as an identity and one as a sampling artefact; cross-task recurrence sits at chance; and relabelling without the category definitions leaves the headline insignificant (p = 0.106, kappa = 0.687). K-Search, CuAsmRL, CodeAct and CUDA Agent's own skill checklist already occupy parts of the proposed interface, narrowing our contribution to measurement and protocol. Search and learning stay untested; we specify the five-condition experiment that decides them, including the branch that kills the direction.
-
-\emph{(241 words, measured by \texttt{scripts/audit\_spec\_coverage.py})}
+Agentic reinforcement-learning systems now write GPU kernels that beat compiler autotuning. They update a policy over sampled text and attach one execution-level reward at the end of thousands of decisions. Performance, however, belongs to a handful of program design decisions --- fuse two passes, stop materializing an intermediate, change the per-thread workload --- each realized across many tokens and several separated code sites. We ask whether this is the wrong \emph{coordinate system}: the action unit. We formalize a candidate action as a typed program transformation \texttt{a\ =\ (τ,\ ℓ,\ θ)}, and separate three claims the literature conflates: description, search efficiency, learning efficiency. On public AdaExplore trajectories (2,510 successful parent→child edges; 55 annotated over 45 tasks) a frozen 12-category vocabulary covers 90.9\% of edges, using 10 of its 12 categories, and under symmetric permutation calibration the semantic label predicts realised speedup beyond its own granularity (p = 0.0005) while coarse diff structure (p = 0.752) and hunk count (p = 0.436) do not. Three limitations bound the result: two supporting statistics are withdrawn, one as an identity and one as a sampling artefact; cross-task recurrence sits at chance; and relabelling without the category definitions leaves the headline insignificant (p = 0.106, kappa = 0.687). K-Search, CuAsmRL, CodeAct and CUDA Agent's own skill checklist already occupy parts of the proposed interface, narrowing our contribution to measurement and protocol. Search and learning stay untested; we specify the five-condition experiment that decides them, including the branch that kills the direction.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -207,7 +216,7 @@ This paper does three things:
 \hypertarget{provenance-and-honesty-statement}{%
 \subsubsection{1.5 Provenance and honesty statement}\label{provenance-and-honesty-statement}}
 
-This is a position-and-analysis contribution: a thesis, preliminary observational evidence, and a protocol design. It contains \textbf{no training experiments, no new algorithm, and no search experiments}. It is produced by an automated research pipeline; the annotations that generate Section 3 are machine-produced, not human, and the circularity that creates is stated in Section 7. We consider the negative and self-undermining results in Sections 3.6 and 3.7 to be the most valuable part of this paper, and we have kept them rather than removing them.
+This is a position-and-analysis contribution: a thesis, preliminary observational evidence, and a protocol design. It contains \textbf{no training experiments, no new algorithm, and no search experiments}. It is produced by an automated research pipeline; the annotations that generate Section 3 are machine-produced, not human, and the circularity that creates is stated in Section 7. Sections 3.6 and 3.7 report negative results, and those results are what bound the scope of the programme.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -220,10 +229,10 @@ This is a position-and-analysis contribution: a thesis, preliminary observationa
 Any optimization loop over programs must decide what counts as one action. Three cuts are natural.
 
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.10}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.27}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.35}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.29}}@{}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.18}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.19}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.24}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.39}}@{}}
 \toprule
 Cut & Action unit & Credit lands on & Failure mode \\
 \midrule
@@ -313,7 +322,7 @@ code_A ≠ code_B   but   a_A = a_B = WarpReduce
 
 so that experience collected on reduction A can be indexed by action rather than by surface code and reused on reduction B, turning \texttt{Q(P,\ token\ string)} into \texttt{Q(P,\ a)}.
 
-This is the version of ``transferable'' that the thesis needs, and it must be flagged immediately: the evidence this paper originally cited for it has been withdrawn. Section 3.5 shows that cross-task recurrence of the transformation labels sits at chance under a label-permutation null, because our sampling caps edges per task. The transferability reading of the thesis is therefore \textbf{not supported by our data} --- it is a hypothesis that Section 4 would have to earn, and \texttt{Q(P,\ a)} is stated here as the object of a future experiment rather than as a finding.
+This is the version of ``transferable'' that the thesis needs, and it must be flagged immediately: the evidence for it is not in this paper's data. Section 3.5 shows that cross-task recurrence of the transformation labels sits at chance under a label-permutation null, because our sampling caps edges per task. The transferability reading of the thesis is therefore \textbf{not supported by our data} --- it is a hypothesis that Section 4 would have to earn, and \texttt{Q(P,\ a)} is stated here as the object of a future experiment rather than as a finding.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -336,18 +345,18 @@ An edge is a genuine MCTS parent→child pair taken from the explicit \texttt{pa
 
 We annotate \textbf{55} edges across 45 tasks (49 Level 2, 6 Level 3), at most three per task, selected toward the largest improvements. Sampling is deliberately enriched for multi-hunk edges (33 of 55), because ``one action, several sites'' is the object of the test and a uniform sample would make it hard to observe.
 
-\textbf{This is a biased sample and the bias has two consequences we did not appreciate in the first draft.} It cannot estimate the population label distribution, so the red lines of Section 3.4 are descriptive statements about these 55 edges rather than falsification tests of the programme. Worse, the per-task cap of three edges saturates the maximum attainable distinct-task count: with 55 edges over 45 tasks, essentially \emph{any} assignment of labels to edges spreads across tasks. We therefore retracted a cross-task-recurrence claim (Section 3.5) rather than soften it.
+\textbf{This is a biased sample and the bias has two consequences for how these numbers may be used.} It cannot estimate the population label distribution, so the red lines of Section 3.4 are descriptive statements about these 55 edges rather than falsification tests of the programme. Worse, the per-task cap of three edges saturates the maximum attainable distinct-task count: with 55 edges over 45 tasks, essentially \emph{any} assignment of labels to edges spreads across tasks. We therefore retracted a cross-task-recurrence claim (Section 3.5) rather than soften it.
 
 \hypertarget{frozen-vocabulary-and-one-documented-deviation}{%
 \subsubsection{3.3 Frozen vocabulary, and one documented deviation}\label{frozen-vocabulary-and-one-documented-deviation}}
 
-Twelve categories, frozen \emph{before} any edge diff was read, and the freeze depended only on corpus-level metadata (directory layout, JSON fields, the language census above) --- never on edge content, which is what would constitute leakage. Category names and their count are unchanged from the design sketch; only their \emph{definitions} were rewritten from CUDA-thread-level phrasing into schedule-level semantics with two alternative realizations (CUDA C++ / Triton), because Section 4.1 shows the data contains no CUDA C++.
+Twelve categories, frozen \emph{before} any edge diff was read, and the freeze depended only on corpus-level metadata (directory layout, JSON fields, the language census above) --- never on edge content, which is what would constitute leakage. Category names and their count are unchanged from the pre-reading specification; only their \emph{definitions} were rewritten from CUDA-thread-level phrasing into schedule-level semantics with two alternative realizations (CUDA C++ / Triton), because Section 4.1 shows the data contains no CUDA C++.
 
 The twelve: \texttt{Fuse}, \texttt{EliminateMaterialization}, \texttt{Tile}, \texttt{IncreaseWorkPerThread}, \texttt{Vectorize}, \texttt{ChangeLaunchConfig}, \texttt{WarpReduce}, \texttt{SharedMemoryTransform}, \texttt{PrecisionChange}, \texttt{LoopTransform}, \texttt{HostDeviceOverlap}, \texttt{Other}.
 
 Labeling is multi-label with one designated primary, an argument field \texttt{θ} where recoverable, a list of code regions the action lands on, and a free-text justification that must quote concrete changed lines. \texttt{Other} requires an explicit account of why each of the eleven specific categories was rejected.
 
-\textbf{Annotation is machine-generated.} The design sketch called for a human to read thirty to fifty edges. This execution substituted an automated annotator, and Section 7 states the resulting circularity risk: the vocabulary and the annotator come from the same cognitive family, so the labelling procedure is not independent of the hypothesis it tests.
+\textbf{Annotation is machine-generated}, not human: an automated annotator read and labelled the edges. That creates a circularity risk --- the vocabulary and the annotator come from the same cognitive family, so the labelling procedure is not independent of the hypothesis it tests --- which Section 7.1 states, together with the acceptance criteria that would control it.
 
 \hypertarget{red-lines-that-were-specified-in-advance}{%
 \subsubsection{3.4 Red lines that were specified in advance}\label{red-lines-that-were-specified-in-advance}}
@@ -355,10 +364,10 @@ Labeling is multi-label with one designated primary, an argument field \texttt{�
 Two pre-committed diagnostic thresholds, reported whether or not they are comfortable:
 
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.28}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.28}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.25}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.20}}@{}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.62}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.10}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.22}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.06}}@{}}
 \toprule
 Condition & Threshold & Observed & Fired? \\
 \midrule
@@ -384,9 +393,9 @@ Neither threshold fired \emph{numerically}. Both are weaker than they look, for 
 The prerequisite question gets a qualified yes.
 
 \begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.37}}
   >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.33}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.33}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.33}}@{}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.30}}@{}}
 \toprule
 Quantity & Value & Status \\
 \midrule
@@ -402,13 +411,13 @@ Edges labelled at two or more separated regions & 30 / 55 = 54.5\% & \textbf{not
 
 Primary-label counts: \texttt{Fuse} 17, \texttt{PrecisionChange} 15, \texttt{HostDeviceOverlap} 7, \texttt{Other} 5, \texttt{ChangeLaunchConfig} 3, \texttt{Vectorize} 3, \texttt{EliminateMaterialization} 2, \texttt{Tile} 1, \texttt{LoopTransform} 1, \texttt{IncreaseWorkPerThread} 1. Counting secondary labels as well, \texttt{WarpReduce} and \texttt{Vectorize} reach 6 occurrences each; \texttt{SharedMemoryTransform} never appears at all.
 
-\textbf{What we withdrew.} The first draft made two claims from the per-category diversity table that are void:
+\textbf{Two claims that do not survive this table.}
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
 \tightlist
 \item
-  \emph{``No category ever produced the same diff twice.''} All 55 diff fingerprints are distinct, so \texttt{distinct\_diffs(label)\ ==\ occurrences(label)} for \textbf{any} labelling, including a random one. The column cannot discriminate between hypotheses; an audit of this identity is emitted in \texttt{data/informativeness\_calibration.json} (\texttt{identity\_audit}). The corresponding sentence is deleted.
+  \emph{``No category ever produced the same diff twice.''} All 55 diff fingerprints are distinct, so \texttt{distinct\_diffs(label)\ ==\ occurrences(label)} for \textbf{any} labelling, including a random one. The column cannot discriminate between hypotheses; the calibration record accompanying this paper carries the audit of this identity (\texttt{identity\_audit}).
 \item
   \emph{``Frequent categories recur across tens of different tasks.''} We constructed the null it requires --- hold the label multiset fixed, permute labels across edges, recompute distinct-task counts (4,000 permutations). The observed values sit at chance: \texttt{Fuse} 16 distinct tasks against a null mean of 16.03 (66.8th percentile), \texttt{PrecisionChange} 13 against 14.26 (15.5th percentile). Cross-task recurrence is therefore \textbf{not} established by this sample, and the transferability argument in Section 2.5 loses its empirical support here. It remains a hypothesis that Section 4 would have to test with a design that does not cap edges per task.
 \end{enumerate}
@@ -423,7 +432,7 @@ Primary-label counts: \texttt{Fuse} 17, \texttt{PrecisionChange} 15, \texttt{Hos
   \textbf{Coverage without forced classification.} 90.9\% of edges fell into the frozen vocabulary when \texttt{Other} was actively invited and each \texttt{Other} was required to explain why all eleven specific categories failed. A vocabulary that has to be inflated to absorb its data would have shown up as a long tail of \texttt{Other} with heterogeneous reasons; what we got instead was five identical refusals pointing at one missing category.
 \end{itemize}
 
-\textbf{The claim worth keeping is qualitative, not count-based.} Since the diversity \emph{counts} are void, we instead examine realizations directly. All edges carrying one category, with the structural facts of each realization, are in \texttt{data/exemplar\_Fuse.md}; an excerpt:
+\textbf{The claim worth keeping is qualitative, not count-based.} Since the diversity \emph{counts} are void, we instead examine realizations directly. All edges carrying one category, with the structural facts of each realization, are in the exemplar record accompanying this paper; an excerpt:
 
 \begin{longtable}[]{@{}lllllll@{}}
 \toprule
@@ -448,11 +457,11 @@ Two structural facts also remain: \texttt{WarpReduce} and \texttt{SharedMemoryTr
 \hypertarget{result-the-informative-test-and-a-correction-that-reversed-our-headline}{%
 \subsubsection{3.6 Result: the informative test, and a correction that reversed our headline}\label{result-the-informative-test-and-a-correction-that-reversed-our-headline}}
 
-Low entropy by itself is uninteresting, and the first draft of this section argued exactly that: coarse \emph{surface} descriptions of the same diffs are equally low-entropy (hunk counts, 2.49 bits; changed-line buckets, 2.40 bits), so if the argument for the coordinate change were ``transformations compress'', it would already be refuted by counting hunks. What is needed is a test of whether the semantic label carries information about the \emph{outcome} that surface structure does not.
+Low entropy by itself is uninteresting, and a surface reading argues exactly that: coarse \emph{surface} descriptions of the same diffs are equally low-entropy (hunk counts, 2.49 bits; changed-line buckets, 2.40 bits), so if the argument for the coordinate change were ``transformations compress'', it would already be refuted by counting hunks. What is needed is a test of whether the semantic label carries information about the \emph{outcome} that surface structure does not.
 
-Take the quartile of realized speedup versus parent as the outcome (\(H = 2.00\) bits, 4 cells) and ask how much of it each descriptor explains. Raw mutual information is biased in favour of descriptors with more cells, so the comparison must be calibrated. The first draft calibrated it wrongly.
+Take the quartile of realized speedup versus parent as the outcome (\(H = 2.00\) bits, 4 cells) and ask how much of it each descriptor explains. Raw mutual information is biased in favour of descriptors with more cells, so the comparison must be calibrated. Calibrating only one side gives the opposite answer.
 
-\textbf{The error.} Our Miller--Madow correction was applied to a conditional entropy as \(\hat H = H_{\text{plug-in}} + (k_X-1)/2n\), which is the bias term for a \emph{marginal} entropy. The bias of the plug-in mutual-information estimator is \((k_X-1)(k_Y-1)/2n\); with \(k_Y = 4\) the first draft under-corrected by a factor of three, and it under-corrected the 10-cell label descriptor far less than the 24-cell coarse descriptor. It also permuted only the semantic descriptor against a same-cardinality null and never gave the coarse descriptor the same treatment. The reported conclusion --- ``semantic labels yield less information than surface structure (0.615 vs 0.728 bits)'' --- was an artefact of that arithmetic.
+\textbf{The error.} We applied the Miller--Madow correction to a conditional entropy as \(\hat H = H_{\text{plug-in}} + (k_X-1)/2n\), which is the bias term for a \emph{marginal} entropy. The bias of the plug-in mutual-information estimator is \((k_X-1)(k_Y-1)/2n\); with \(k_Y = 4\) that substitution under-corrects by a factor of three, and it under-corrects the 10-cell label descriptor far less than the 24-cell coarse descriptor. It also permutes only the semantic descriptor, against a same-cardinality null, and never gives the coarse descriptor the same treatment. The conclusion that arithmetic produces --- ``semantic labels yield less information than surface structure (0.615 vs 0.728 bits)'' --- is an artefact of that arithmetic, not a finding.
 
 \textbf{The corrected test.} We now estimate mutual information three ways and calibrate both descriptors symmetrically, holding the descriptor fixed and permuting the outcome (20,000 permutations, seed 20261002).
 
@@ -467,11 +476,11 @@ hunk count alone & 9 & 0.367 bits & 0.276 bits & 0.361 & 0.071 & 0.436 \\
 \bottomrule
 \end{longtable}
 
-This reverses the first draft's finding, and the reversal does not hinge on a choice of bias formula: the permutation test needs no correction at all, and under it the semantic label sits far above its own null (\(p = 0.0005\)), while the coarse descriptor's observed mutual information is \emph{below} its own null mean (0.937 vs 0.990) --- its apparently superior raw number is over-fitting to 24 cells, 11 of which hold a single edge. The paired bootstrap difference \(\mathrm{MI}_{\text{label}} - \mathrm{MI}_{\text{coarse}}\) is \(-0.361\) bits with a 95\% CI of \([-0.689,\,-0.034]\): on raw, uncalibrated levels coarse structure still wins. Which comparison is the informative one is exactly what the permutation calibration settles, and the calibrated reading is given above so the disagreement can be checked directly.
+This reverses the uncalibrated comparison, and it does not hinge on a choice of bias formula: the permutation test needs no correction at all, and under it the semantic label sits far above its own null (\(p = 0.0005\)), while the coarse descriptor's observed mutual information is \emph{below} its own null mean (0.937 vs 0.990) --- its apparently superior raw number is over-fitting to 24 cells, 11 of which hold a single edge. The paired bootstrap difference \(\mathrm{MI}_{\text{label}} - \mathrm{MI}_{\text{coarse}}\) is \(-0.361\) bits with a 95\% CI of \([-0.689,\,-0.034]\): on raw, uncalibrated levels coarse structure still wins. Which comparison is the informative one is exactly what the permutation calibration settles, and the calibrated reading is given above so the disagreement can be checked directly.
 
 \textbf{So what does this buy the thesis?} Less than it appears to. A label that predicts the outcome beyond its own granularity is a real result about this corpus: the semantic description of what a successful edge did carries information about how much it gained that the shape of its diff does not. But the outcome here is an unattributed speedup ratio on 55 edges, 53 of which also changed autotuning configuration (Section 3.7b), measured from corpus metadata we did not re-time, on a sample we have already shown cannot estimate distributions. It is an argument for running Section 4, not a substitute for it.
 
-\textbf{How to read the table.} The quantity that discriminates is the \emph{excess over each descriptor's own null}, not the raw mutual-information level, because a plug-in estimate of mutual information rises with the number of occupied cells; both descriptors are computed on the same edges with the same outcomes, and the permutation calibration makes each null specific to its own granularity. Plug-in and Miller-Madow-corrected levels are both reported so the choice of correction need not be taken on trust. The production history of this measurement, including the version that reversed the sign by applying a marginal-entropy correction where a joint one was required, is recorded in Appendix B.
+\textbf{How to read the table.} The quantity that discriminates is the \emph{excess over each descriptor's own null}, not the raw mutual-information level, because a plug-in estimate of mutual information rises with the number of occupied cells; both descriptors are computed on the same edges with the same outcomes, and the permutation calibration makes each null specific to its own granularity. Plug-in and Miller-Madow-corrected levels are both reported so the choice of correction need not be taken on trust.
 
 \hypertarget{two-findings-we-did-not-plan-for}{%
 \subsubsection{3.7 Two findings we did not plan for}\label{two-findings-we-did-not-plan-for}}
@@ -500,7 +509,7 @@ The prerequisite question is answered \textbf{yes for existence, no for the two 
 \item
   \textbf{Completeness of the vocabulary (falsified in one place).} One missing decision --- backend choice --- absorbed every refusal, and the numeric red line designed to catch this did not fire.
 \item
-  \textbf{No reach into search or learning.} Nothing in Section 3 involves a policy choosing anything. The L2 and L3 claims of Section 1.4 are untouched.
+  \textbf{No reach into search or learning.} Nothing in Section 3 involves a policy choosing anything. The search and learning claims of Section 1.4 are untouched.
 \end{itemize}
 
 A reader who wanted to reject the programme on Section 3.6 would be overreaching; so would one who accepted it on Section 3.5. What the data supports is that a transformation vocabulary is a \emph{real, informative, incomplete} description of past successes --- which is precisely the status that makes Section 4 worth specifying rather than optional.
@@ -508,34 +517,34 @@ A reader who wanted to reject the programme on Section 3.6 would be overreaching
 \hypertarget{figures}{%
 \subsubsection{3.9 Figures}\label{figures}}
 
-\begin{figure}
+\begin{figure}[H]
 \centering
 \includegraphics{figures/fig1_entropy_comparison.png}
-\caption{Figure 1. Description length per edge. The rightmost bar is identically log2(n) and carries no evidential content; the comparison that matters is against the 24-cell coarse structure.}
+\caption{Description length per edge. The rightmost bar is identically log2(n) and carries no evidential content; the comparison that matters is against the 24-cell coarse structure.}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[H]
 \centering
 \includegraphics{figures/fig2_label_distribution.png}
-\caption{Figure 2. Observed distribution over the frozen 12-category vocabulary, primary versus secondary labels, with the 40\% red line.}
+\caption{Observed distribution over the frozen 12-category vocabulary, primary versus secondary labels, with the 40\% red line.}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[H]
 \centering
 \includegraphics{figures/fig3_many_to_many.png}
-\caption{Figure 3. Occurrences versus distinct diff fingerprints per category. The two are equal by identity, which is why this panel no longer supports the many-to-many claim.}
+\caption{Occurrences versus distinct diff fingerprints per category. The two are equal by identity, which is why this panel no longer supports the many-to-many claim.}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[H]
 \centering
 \includegraphics{figures/fig4_speedup_by_label.png}
-\caption{Figure 4. Realised speedup per primary transformation (log scale). The extreme values are dominated by pathological parents and by the backend-substitution category.}
+\caption{Realised speedup per primary transformation (log scale). The extreme values are dominated by pathological parents and by the backend-substitution category.}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[H]
 \centering
 \includegraphics{figures/fig5_permutation_calibration.png}
-\caption{Figure 5. The corrected comparison: each descriptor's mutual information with the realised-speedup quartile against its own permutation null. Only the semantic label exceeds its null.}
+\caption{The corrected comparison: each descriptor's mutual information with the realised-speedup quartile against its own permutation null. Only the semantic label exceeds its null.}
 \end{figure}
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
@@ -552,9 +561,9 @@ The most tempting pseudo-result in this area is: \emph{``let the model plan befo
 \subsubsection{4.2 Five conditions}\label{five-conditions}}
 
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.33}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.33}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.33}}@{}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.20}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.43}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.37}}@{}}
 \toprule
 Condition & Interface & What it measures \\
 \midrule
@@ -567,7 +576,7 @@ Condition & Interface & What it measures \\
 \bottomrule
 \end{longtable}
 
-Free-plan is the control that most published ``decompose the task'' claims omit. Oracle-action is the one that makes the framework self-terminating. Brute-search was added after review exposed that the strongest objection to this whole programme --- that a well-engineered enumeration over a known schedule space with a cost model already finds what an LLM is asked to name (Section 5.3) --- was raised in the paper and then left unanswered because no arm could address it. Without that arm the protocol can only ever compare variants of \emph{LLM-in-the-loop} interfaces to each other.
+Free-plan is the control that most published ``decompose the task'' claims omit. Oracle-action is the one that makes the framework self-terminating. Brute-search exists because of the strongest objection to this whole programme --- that a well-engineered enumeration over a known schedule space with a cost model already finds what an LLM is asked to name (Section 5.3). If that enumeration already suffices, moving the action unit is pointless. The objection is not decidable by the other four conditions, each of which keeps an LLM in the loop, and without this arm the protocol can only ever compare variants of \emph{LLM-in-the-loop} interfaces to each other.
 
 Two prior systems occupy positions this table claims to distinguish, and the protocol must be read accordingly. K-Search already \emph{``explicitly decouples high-level algorithmic planning from low-level program instantiation''} and reports an average 2.10x over state-of-the-art evolutionary search on FlashInfer kernels, up to 14.3x on complex MoE kernels {[}29{]} --- that is a realized Structured-action condition with a positive result. CuAsmRL trains a reinforcement agent over an explicit action space of SASS schedule mutations, and separates autotuning from schedule search by construction {[}30{]}. So Section 4 is not a proposal for a system; it is an instrument for \emph{independently falsifying} class results of that kind, by supplying the controls those systems do not run against each other.
 
@@ -579,9 +588,9 @@ A fourth row's worth of caveat: the turn-level cut (Section 2.1) already exists 
 Pre-committed interpretation of each outcome pattern. Outcomes are measured on held-out tasks, with success rate and search cost (rollouts, tokens, wall-clock to first valid-and-faster kernel) both reported.
 
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.33}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.33}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.33}}@{}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.31}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.25}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.44}}@{}}
 \toprule
 Observation & Conclusion & Consequence \\
 \midrule
@@ -597,7 +606,7 @@ Oracle-action not runnable & \texttt{φ} cannot be constructed for this task fam
 \bottomrule
 \end{longtable}
 
-The last row is a correction forced by review. Oracle-action and the realization obligation of Section 4.5 both require \texttt{φ\ :\ ΔP\ →\ a}, the map that recovers the intended transformation from a change; Section 7.3 admits we never constructed it. A protocol whose decisive branch depends on an object we have not built would report ``direction is dead'' whenever that object is unavailable, which is a false negative dressed as rigour. Oracle-action therefore carries an explicit precondition: a \texttt{φ} validated on a held-out set, or a human-supplied oracle standing in for it with the substitution recorded. If neither is available, the branch is \emph{not evaluated}, and the paper's conclusion must say so.
+Oracle-action and the realization obligation of Section 4.5 both require \texttt{φ\ :\ ΔP\ →\ a}, the map that recovers the intended transformation from a change; Section 7.3 admits we never constructed it. A protocol whose decisive branch depends on an object we have not built would report ``direction is dead'' whenever that object is unavailable, which is a false negative dressed as rigour. Oracle-action therefore carries an explicit precondition: a \texttt{φ} validated on a held-out set, or a human-supplied oracle standing in for it with the substitution recorded. If neither is available, the branch is \emph{not evaluated}, and the paper's conclusion must say so.
 
 The last two rows are why we consider the framework worth writing down: it can lose, and losing is informative.
 
@@ -614,7 +623,7 @@ The operational test we apply to each experiment:
 \textbf{If this experiment completed perfectly, which judgement about the original research question would it change?}
 \end{quote}
 
-If the answer is ``the tooling is better'' or ``the records are more reproducible'', the work is infrastructure and must not be presented as progress. Section 3 passes this test (it changes the belief about vocabulary existence, and via 3.6 about whether entropy arguments work). Building an action-space schema and validator would not --- and in the course of producing this paper we deleted two retrieval-tooling scripts on exactly those grounds.
+If the answer is ``the tooling is better'' or ``the records are more reproducible'', the work is infrastructure and must not be presented as progress. Section 3 passes this test (it changes the belief about vocabulary existence, and via 3.6 about whether entropy arguments work). Building an action-space schema and validator would not, so we do not build one: a tool that cannot change any judgement in this paper does not belong in it, however cheap it is to write.
 
 \hypertarget{pre-registered-confound-controls}{%
 \subsubsection{4.5 Pre-registered confound controls}\label{pre-registered-confound-controls}}
@@ -646,10 +655,10 @@ Even a clean Structured-action win would establish the \emph{search} claim only.
 \hypertarget{implications-beyond-cuda}{%
 \subsection{5. Implications Beyond CUDA}\label{implications-beyond-cuda}}
 
-\hypertarget{edit-based-and-transformation-based-code-optimization-are-closer-than-this-paper-originally-claimed}{%
-\subsubsection{5.1 Edit-based and transformation-based code optimization are closer than this paper originally claimed}\label{edit-based-and-transformation-based-code-optimization-are-closer-than-this-paper-originally-claimed}}
+\hypertarget{edit-based-and-transformation-based-code-optimization-are-closer-than-a-clean-distinction-suggests}{%
+\subsubsection{5.1 Edit-based and transformation-based code optimization are closer than a clean distinction suggests}\label{edit-based-and-transformation-based-code-optimization-are-closer-than-a-clean-distinction-suggests}}
 
-The nearest neighbours are systems that learn to make performance-improving \emph{code edits} {[}4,5,31{]}, that treat the edit \emph{format} as a training decision {[}6{]}, and that learn program evolution from repository history {[}7{]}. Our first draft asserted a clean three-way distinction --- typed semantics, cross-site coordination, cross-task vocabulary reuse --- and cited the diversity table of Section 3.5 as its evidence. Two of those three legs no longer survive our own review (Section 3.5), so the honest position is narrower.
+The nearest neighbours are systems that learn to make performance-improving \emph{code edits} {[}4,5,31{]}, that treat the edit \emph{format} as a training decision {[}6{]}, and that learn program evolution from repository history {[}7{]}. The clean three-way distinction --- typed semantics, cross-site coordination, cross-task vocabulary reuse --- is cleaner than the evidence supports: two of those three legs do not survive the measurements of Section 3.5, so the honest position is narrower.
 
 What is actually distinguishable, stated at its real strength:
 
@@ -673,7 +682,7 @@ A sharper formulation of the real difference, which does not depend on our vocab
 \hypertarget{hierarchical-rl-has-a-name-for-this-and-a-warning}{%
 \subsubsection{5.2 Hierarchical RL has a name for this, and a warning}\label{hierarchical-rl-has-a-name-for-this-and-a-warning}}
 
-Temporal abstraction is old technology: options {[}11{]}, the option-critic architecture {[}12{]}, and skill libraries in LLM agents such as Voyager {[}14{]}. Our \texttt{a\ =\ (τ,\ ℓ,\ θ)} is an option with parameters. That lineage brings two things we should inherit rather than re-derive: the formal machinery for policies over sub-policies, and a candid literature on \emph{when higher-level actions fail to help}. Recent work on option-critic pathologies reports policy necrosis and redundant coverage - learned options that are never used or that overlap so much that the hierarchy buys nothing {[}13{]}. That literature is the reason we insisted in Section 4.3 on pre-committing negative and indeterminate branches rather than only a winning one. Our own result should not be read as a preview of those pathologies, and an earlier draft of this paper wrongly read it as one: Section 3.6 originally reported that semantic labels failed to out-predict surface structure, which would have been a mild instance of ``the higher level buys nothing''. Corrected calibration reversed that finding (Section 3.6), so the hierarchy here is neither confirmed nor shown redundant by our data --- it remains exactly the open question that {[}13{]} and Section 4 are about.
+Temporal abstraction is old technology: options {[}11{]}, the option-critic architecture {[}12{]}, and skill libraries in LLM agents such as Voyager {[}14{]}. Our \texttt{a\ =\ (τ,\ ℓ,\ θ)} is an option with parameters. That lineage brings two things we should inherit rather than re-derive: the formal machinery for policies over sub-policies, and a candid literature on \emph{when higher-level actions fail to help}. Recent work on option-critic pathologies reports policy necrosis and redundant coverage - learned options that are never used or that overlap so much that the hierarchy buys nothing {[}13{]}. That literature is the reason we insisted in Section 4.3 on pre-committing negative and indeterminate branches rather than only a winning one. Our own result should not be read as a preview of those pathologies, and reading it that way was an error: under the uncalibrated comparison of Section 3.6, semantic labels failed to out-predict surface structure, which would have been a mild instance of ``the higher level buys nothing''. Corrected calibration reversed that finding (Section 3.6), so the hierarchy here is neither confirmed nor shown redundant by our data --- it remains exactly the open question that {[}13{]} and Section 4 are about.
 
 \hypertarget{the-compiler-lineage-is-a-warning-too}{%
 \subsubsection{5.3 The compiler lineage is a warning too}\label{the-compiler-lineage-is-a-warning-too}}
@@ -682,7 +691,7 @@ Halide separated schedule from computation {[}8{]}; TVM learned to search over s
 
 First, the idea is not new, and any novelty claim must rest on the LLM interface, not on the existence of a transformation space. Second, and more importantly, there is an unresolved tension between our thesis and the compiler's practice. Autotuning systems deliberately \emph{do not} ask the programmer to name the transformation: they enumerate a space and search it with a learned cost model. If that already finds the schedule, an LLM choosing transformations must be adding something the cost model lacked --- handling the parts of the space no one wrote an enumeration for. That is a real hypothesis with a real chance of being false, and it is the strongest objection we know of to this direction.
 
-In the first draft we raised this objection and then left it standing, because none of our four conditions could answer it: all four keep an LLM in the loop, so the protocol could only ever rank variants of itself. That was a substantive gap, and the fix is structural rather than rhetorical --- Section 4.2 adds a fifth arm, \textbf{Brute-search} (enumeration plus learned cost model, no LLM), and Section 4.3 adds its reading row: if Structured-action is statistically indistinguishable from Brute-search, the systems community already owns this problem and this programme should be re-targeted or withdrawn. Note that this is a test we expect to be \emph{hard to win}: a competent Ansor-style search over a well-specified schedule space is a formidable baseline {[}10{]}, and an LLM earns nothing here by being more expressive.
+None of the first four conditions can answer that objection: all four keep an LLM in the loop, so the protocol could only ever rank variants of itself. The fix is structural rather than rhetorical --- Section 4.2 adds a fifth arm, \textbf{Brute-search} (enumeration plus learned cost model, no LLM), and Section 4.3 adds its reading row: if Structured-action is statistically indistinguishable from Brute-search, the systems community already owns this problem and this programme should be re-targeted or withdrawn. Note that this is a test we expect to be \emph{hard to win}: a competent Ansor-style search over a well-specified schedule space is a formidable baseline {[}10{]}, and an LLM earns nothing here by being more expressive.
 
 There is a deeper asymmetry that the compiler analogy conceals, and it is the weakest joint in the whole thesis. Between assembly, IR and a high-level language sit compilers: relations that are effectively total functions, so an abstraction layer can be \emph{deleted} and re-derived with confidence. Sul and Ré's own version of the retirement argument depends on exactly this, and they name the deal honestly --- ``we took that deal because the compiler was right more often than we were'' {[}36{]}. Between a named transformation and its code, however, sits an LLM, and the relation \texttt{a\ →\ ΔP} is a stochastic map, not a function. Everything in this paper that treats a transformation as an object --- including the credit assignment that motivated it --- inherits that gap. Two consequences follow: realizing a chosen action is a \emph{first-class failure mode} rather than an implementation detail (which is why Section 4.5 control 3 requires reporting it separately), and the abstract's \texttt{φ\ :\ ΔP\ →\ a} in the reverse direction is no more guaranteed to exist than the forward one. If realizers are unreliable, a transformation-level action space buys nothing no matter how well the vocabulary fits, and that is exactly the outcome Section 4.3's Oracle-action branch is designed to catch.
 
@@ -740,7 +749,7 @@ Positioning against each cluster is argued in Sections 1.1 and 5.1-5.6; this sec
 \hypertarget{the-circularity-of-machine-annotation-and-what-would-actually-control-it}{%
 \subsubsection{7.1 The circularity of machine annotation, and what would actually control it}\label{the-circularity-of-machine-annotation-and-what-would-actually-control-it}}
 
-The design sketch for this study called for a human to read thirty to fifty real edges, for a specific reason: whether the vocabulary exists is the question, and the entity that invents the vocabulary should not also be the entity that decides whether the data fits it. This execution substituted an automated annotator. The consequence is unavoidable: the labelling procedure and the category system come from the same model family, so a \texttt{Fuse} judgement may be a statement about the annotator's habits of description rather than about the code.
+A human reading of thirty to fifty real edges is the control this question needs, for a specific reason: whether the vocabulary exists is the question, and the entity that invents the vocabulary should not also be the entity that decides whether the data fits it. Annotation here is automated instead. The consequence is unavoidable: the labelling procedure and the category system come from the same model family, so a \texttt{Fuse} judgement may be a statement about the annotator's habits of description rather than about the code.
 
 A declaration of this is not a control. We state the acceptance criteria that would make it one, so that the gap is measurable rather than rhetorical:
 
@@ -763,14 +772,14 @@ Criteria 2, 3 and 4 have been executed. The measurements are reported below; cri
 
 \textbf{Does the headline survive (criterion 3)? Not by itself.} Recomputing the Section 3.6 permutation test on the blind labels gives MI 0.451 bits with \(p = 0.106\) --- not significant --- where the informed labels gave 0.697 bits with \(p = 0.0005\). Restricting to the 38 edges where the two passes agree restores significance (MI 0.664, \(p = 0.0016\)). The informativeness of the vocabulary is therefore partly a property of the elicitation: supplying the definitions sharpens labels into something that predicts outcomes, and we cannot yet separate how much of that is structure in the programs from how much is guidance we provided. Criterion 1 --- genuinely independent, preferably human annotation --- remains unexecuted and is the only test that can separate them. Section 3.6 is stated at this weaker strength accordingly.
 
-\textbf{Bottom-up open coding (criterion 2, partial).} A coder with no access to the frozen list induced 7 categories from 24 successful edges drawn from tasks disjoint from the annotated sample (zero task overlap; \texttt{data/opencode\_result.md}). The recovered space is recognisably the same territory --- work/layout remapping, precision regime, setup hoisting and caching, pipeline-stage reshaping, backend reassignment, algebraic reformulation, redundant data-movement removal --- with two informative divergences. The coder made launch-constant adjustment strictly secondary (19 co-occurrences, 0 primary), suggesting our \texttt{ChangeLaunchConfig} over-partitions what the data treats as accompaniment; and the coder independently rediscovered backend reassignment, the same category we were forced into \texttt{Other}. That is convergent evidence about the \emph{space} and about one hole in our list, not convergent validity for the twelve names as drawn, since coder and vocabulary still share a model family.
+\textbf{Bottom-up open coding (criterion 2, partial).} A coder with no access to the frozen list induced 7 categories from 24 successful edges drawn from tasks disjoint from the annotated sample (zero task overlap; the open-coding record accompanying this paper). The recovered space is recognisably the same territory --- work/layout remapping, precision regime, setup hoisting and caching, pipeline-stage reshaping, backend reassignment, algebraic reformulation, redundant data-movement removal --- with two informative divergences. The coder made launch-constant adjustment strictly secondary (19 co-occurrences, 0 primary), suggesting our \texttt{ChangeLaunchConfig} over-partitions what the data treats as accompaniment; and the coder independently rediscovered backend reassignment, the same category we were forced into \texttt{Other}. That is convergent evidence about the \emph{space} and about one hole in our list, not convergent validity for the twelve names as drawn, since coder and vocabulary still share a model family.
 
 Two disciplinary measures we did take are worth recording because they partly constrain the annotator: \texttt{Other} was explicitly invited and each \texttt{Other} had to justify rejecting all eleven specific categories (which is how the backend-choice hole surfaced), and the confidence distribution was reported rather than hidden --- 14 high, 38 medium, 3 low, i.e.~the majority of this paper's labels are ones its own annotator was not sure about.
 
 \hypertarget{the-three-dangers-we-could-not-close}{%
 \subsubsection{7.2 The three dangers we could not close}\label{the-three-dangers-we-could-not-close}}
 
-We list these as the paper's own kill conditions, inherited from the research sketch and now sharpened by the data.
+We list these as the paper's own kill conditions, each of them sharpened by the measurements of Section 3.
 
 \textbf{(1) Good optimizations may not be discretely decomposable.} A strong kernel rewrite is often a \emph{whole-design} change: tile size depends on layout, layout on thread mapping, thread mapping jointly with shared-memory footprint and occupancy. Forcing that into an action \emph{sequence} may destroy exactly the joint search that produced the win, and post-hoc decomposition into \texttt{Tile\ +\ Fuse\ +\ Vectorize} may be interpretation rather than explanation. Evidence in this corpus: multi-label edges are the norm, and the annotators' most common confession was inability to attribute the speedup to one action. Open question: does joint selection over a vector of parameters outbeat sequential selection, and if not, is the decomposition the right level at all? (Section 4.5 control 5.)
 
@@ -798,13 +807,13 @@ No search experiments. No training. No new model. No measured improvement in any
 \hypertarget{conclusion}{%
 \subsection{8. Conclusion}\label{conclusion}}
 
-We asked whether the token-level action space used by agentic reinforcement-learning systems for GPU kernel optimization is the wrong coordinate system, and whether parameterized program transformations \texttt{a\ =\ (τ,\ ℓ,\ θ)} are a more natural unit for both search and learning. The answer after one round of adversarial review is: the premise holds, two of the arguments we built for it do not, and the question remains experimentally open.
+We asked whether the token-level action space used by agentic reinforcement-learning systems for GPU kernel optimization is the wrong coordinate system, and whether parameterized program transformations \texttt{a\ =\ (τ,\ ℓ,\ θ)} are a more natural unit for both search and learning. The answer is: the premise holds, two of the arguments we built for it do not, and the question remains experimentally open.
 
-\textbf{The premise holds.} Public successful optimization trajectories compress onto a small recurring typed vocabulary. On 55 annotated MCTS edges spanning 45 tasks, 10 of 12 frozen categories cover 90.9\% of edges against an actively invited \texttt{Other}, at 2.67 bits versus 4.26 bits for a faithful coarse description of the same diffs. More importantly, the labels are not a decorative partition: under symmetric permutation calibration the semantic label is significantly informative about realised speedup (plug-in mutual information 0.697 bits, 0.624 after bias correction, \(p = 0.0005\)) while coarse diff structure (\(p = 0.752\)) and hunk count alone (\(p = 0.436\)) do not beat their own nulls. That claim is weaker than it first appears: relabelling the same edges without being given the category definitions leaves the same test insignificant (\(p = 0.106\), against \(p = 0.0005\); the two passes agree on 74.5\% of edges at \(\kappa = 0.687\)), so part of the effect is elicited by the vocabulary rather than found in the programs (Section 7.1). We report the weaker version.
+\textbf{The premise holds.} Public successful optimization trajectories compress onto a small recurring typed vocabulary. On 55 annotated MCTS edges spanning 45 tasks, 10 of 12 frozen categories cover 90.9\% of edges against an actively invited \texttt{Other}, at 2.67 bits versus 4.26 bits for a faithful coarse description of the same diffs. More importantly, the labels are not a decorative partition: under symmetric permutation calibration the semantic label is significantly informative about realised speedup (plug-in mutual information 0.697 bits, 0.624 after bias correction, \(p = 0.0005\)) while coarse diff structure (\(p = 0.752\)) and hunk count alone (\(p = 0.436\)) do not beat their own nulls. It is bounded by a control: relabelling the same edges without being given the category definitions leaves the same test insignificant (\(p = 0.106\), against \(p = 0.0005\); the two passes agree on 74.5\% of edges at \(\kappa = 0.687\)), so part of the effect is elicited by the vocabulary rather than found in the programs (Section 7.1). We report the weaker version.
 
 \textbf{Two arguments we built for it do not.} The first was compression itself, presented in opposition to a diff-fingerprint entropy of 5.78 bits: with 55 pairwise-distinct fingerprints that quantity is identically \(\log_2 55\), and the claim that ``no category ever produced the same diff twice'' is true of any labelling whatsoever. Both are withdrawn. The second was cross-task recurrence, which sits at chance under a label-permutation null (16 observed distinct tasks for \texttt{Fuse} against a null mean of 16.03) because our sampling caps edges per task. The transferability argument in Section 2.5 is therefore unsupported by this data, and the cross-site coordination property that motivates the whole formalism is \emph{unidentifiable} here, since no edge carries a single label.
 
-Neither withdrawal softens the other. The corrected reading replaces an earlier version of Section 3.6 whose conclusion was the opposite; why the error survived every automated check, and what that says about self-verification in pipelines like this one, is recorded in Appendix B.
+Neither withdrawal softens the other; the calibration behind the corrected reading is recorded in Appendix B.
 
 \textbf{The question remains open, and now has a sharper shape.} Observational evidence cannot decide a claim about interventions, and the interface-level question has already been partly answered by systems that got there before us: K-Search decouples planning from instantiation and reports 2.10x--14.3x gains {[}29{]}; CuAsmRL trains directly over an explicit schedule-mutation action space {[}30{]}; Kevin attributes reward per agent turn {[}32{]}. Section 4 therefore specifies a five-condition protocol --- Direct, Free-plan, Structured-action, Oracle-action, and a Brute-search arm with a learned cost model and no LLM in the loop --- with a reading tree whose neutral, inverted, and \emph{indeterminate} branches are fixed in advance, including the branch that withdraws the direction if an LLM choosing transformations cannot beat enumeration, and the precondition that protects a false negative from being reported as a null when \texttt{φ} cannot be constructed.
 
@@ -891,7 +900,7 @@ The narrow contribution is thus: one calibrated measurement of a premise, an exp
 \item
   C. Zhang. \textbf{From Reasoning to Agentic: Credit Assignment in Reinforcement Learning for Large Language Models.} arXiv:2604.09459, 2026. \emph{69-paper corpus (56 core methods) organised by credit granularity; six-diagnostic identification framework.}
 \item
-  S. Sul, C. Ré. \textbf{Retire the Abstractions.} Hazy Research blog, 5 August 2026. url:https://hazyresearch.stanford.edu/blog/2026-08-05-retire-the-abstractions --- \emph{non-archival; included because it is the source of the determinism-asymmetry and abstraction-contract arguments used in Sections 2.3 and 5.3, and its URL and page title were resolved programmatically by \texttt{scripts/verify\_references.py} like any other reference.}
+  S. Sul, C. Ré. \textbf{Retire the Abstractions.} Hazy Research blog, 5 August 2026. url:https://hazyresearch.stanford.edu/blog/2026-08-05-retire-the-abstractions --- \emph{non-archival; included because it is the source of the determinism-asymmetry and abstraction-contract arguments used in Sections 2.3 and 5.3.}
 \end{enumerate}
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}

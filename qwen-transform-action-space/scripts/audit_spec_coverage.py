@@ -38,18 +38,19 @@ end = t.index("\n---\n", start)
 abstract_full = t[start:end]
 claimed = re.search(r"\*\((\d+)\s+words[^)]*\)\*", abstract_full)
 
-# The word-count marker is metadata about the abstract, not prose in it; counting it
-# inflates the total by its own length and can push an in-range abstract out of range.
+# A manuscript should not advertise its own length: a "*(N words, measured by ...)*" line
+# is pipeline bookkeeping, not paper content. So absence is the correct state here, and
+# the audit owns the measurement; presence is reported as a defect.
 abstract = re.sub(r"\*\(\d+\s+words[^)]*\)\*", "", abstract_full)
 words = len(re.findall(r"[A-Za-z0-9'\u00c0-\u024f-]+", abstract))
-print(f"  abstract words: {words}  (spec range 200-250) -> {'OK' if 200 <= words <= 250 else 'OUT OF RANGE'}")
+in_range = 200 <= words <= 250
+print(f"  abstract words: {words}  (spec range 200-250) -> {'OK' if in_range else 'OUT OF RANGE'}")
 if claimed:
-    c = int(claimed.group(1))
-    ok = abs(c - words) <= 12  # marker counts prose words; allow small tokenizer drift
-    print(f"  stated marker: {c} words -> {'CONSISTENT' if ok else 'INCONSISTENT'} with measured {words}")
+    print(f"  stated marker: PRESENT ({claimed.group(0)}) — should be measured here, "
+          f"not printed in the paper")
 else:
-    ok = False
-    print("  stated marker: MISSING")
+    print("  stated marker: none in the manuscript (as intended)")
+ok = in_range
 heads = re.findall(r"^##\s+(.+)$", t, re.M)
 print(f"  top-level sections ({len(heads)}): {heads}")
 refs = re.findall(r"^(\d+)\.\s", t[t.find("\n## References"):], re.M)

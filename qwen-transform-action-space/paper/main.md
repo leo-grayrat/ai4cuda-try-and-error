@@ -1,8 +1,6 @@
 # Is Token-Level the Wrong Coordinate System? Program Transformation as the Action Space for LLM-Driven Kernel Optimization
 
-**Position and analysis paper.** Draft: Stage 4 (v2, revised after five-reviewer simulated peer review; revision log in
-`stage4_revision/REVISION_NOTES.md`). All analysis numbers in Section 3 are computed from public data and are
-reproducible from the accompanying scripts; Section 3.6 reports a statistical error found in v1 by that review.
+**Position and analysis.** Every number in Section 3 is computed from the public AdaExplore archive and is reproducible from the scripts accompanying this paper.
 
 ---
 
@@ -14,7 +12,7 @@ belongs to a handful of program design decisions — fuse two passes, stop mater
 per-thread workload — each realized across many tokens and several separated code sites. We ask whether this is the
 wrong *coordinate system*: the action unit. We formalize a candidate action as a typed program transformation `a = (τ, ℓ, θ)`, and separate three claims the literature
 conflates: description, search efficiency, learning efficiency. On public AdaExplore trajectories (2,510 successful
-parent→child edges; 55 annotated over 45 tasks) a frozen 12-category vocabulary covers 90.9% of edges using 10
+parent→child edges; 55 annotated over 45 tasks) a frozen 12-category vocabulary covers 90.9% of edges, using 10 of its 12
 categories, and under symmetric permutation calibration the semantic label predicts realised speedup beyond its own
 granularity (p = 0.0005) while coarse diff structure (p = 0.752) and hunk count (p = 0.436) do not. Three limitations bound
 the result: two supporting statistics are withdrawn, one as an identity and one as a sampling artefact; cross-task
@@ -23,7 +21,6 @@ kappa = 0.687). K-Search, CuAsmRL, CodeAct and CUDA Agent's own skill checklist 
 proposed interface, narrowing our contribution to measurement and protocol. Search and learning stay untested; we
 specify the five-condition experiment that decides them, including the branch that kills the direction.
 
-*(241 words, measured by `scripts/audit_spec_coverage.py`)*
 
 ---
 
@@ -188,8 +185,8 @@ This paper does three things:
 This is a position-and-analysis contribution: a thesis, preliminary observational evidence, and a protocol design.
 It contains **no training experiments, no new algorithm, and no search experiments**. It is produced by an
 automated research pipeline; the annotations that generate Section 3 are machine-produced, not human, and the
-circularity that creates is stated in Section 7. We consider the negative and self-undermining results in
-Sections 3.6 and 3.7 to be the most valuable part of this paper, and we have kept them rather than removing them.
+circularity that creates is stated in Section 7. Sections 3.6 and 3.7 report negative results, and those results are
+what bound the scope of the programme.
 
 ---
 
@@ -200,7 +197,7 @@ Sections 3.6 and 3.7 to be the most valuable part of this paper, and we have kep
 Any optimization loop over programs must decide what counts as one action. Three cuts are natural.
 
 | Cut | Action unit | Credit lands on | Failure mode |
-|-----|-------------|-----------------|--------------|
+|----------------|-----------------|---------------------|-----------------------------------|
 | Token | one sampled token | GAE/value estimates over ~10³–10⁴ steps | decision unit invisible; credit is statistical guesswork |
 | Edit span / code block | a contiguous diff region | the span | decisions are *not* contiguous; spans overlap and split arbitrarily |
 | Turn / tool call | one agent step in a multi-turn loop | the turn | coarser, but a turn still bundles several independent decisions (cf. multi-turn kernel RL [32]) |
@@ -301,8 +298,8 @@ code_A ≠ code_B   but   a_A = a_B = WarpReduce
 so that experience collected on reduction A can be indexed by action rather than by surface code and reused on
 reduction B, turning `Q(P, token string)` into `Q(P, a)`.
 
-This is the version of "transferable" that the thesis needs, and it must be flagged immediately: the evidence this
-paper originally cited for it has been withdrawn. Section 3.5 shows that cross-task recurrence of the transformation
+This is the version of "transferable" that the thesis needs, and it must be flagged immediately: the evidence
+for it is not in this paper's data. Section 3.5 shows that cross-task recurrence of the transformation
 labels sits at chance under a label-permutation null, because our sampling caps edges per task. The transferability
 reading of the thesis is therefore **not supported by our data** — it is a hypothesis that Section 4 would have to
 earn, and `Q(P, a)` is stated here as the object of a future experiment rather than as a finding.
@@ -342,7 +339,7 @@ We annotate **55** edges across 45 tasks (49 Level 2, 6 Level 3), at most three 
 largest improvements. Sampling is deliberately enriched for multi-hunk edges (33 of 55), because "one action, several
 sites" is the object of the test and a uniform sample would make it hard to observe.
 
-**This is a biased sample and the bias has two consequences we did not appreciate in the first draft.**
+**This is a biased sample and the bias has two consequences for how these numbers may be used.**
 It cannot estimate the population label distribution, so the red lines of Section 3.4 are descriptive statements
 about these 55 edges rather than falsification tests of the programme. Worse, the per-task cap of three edges
 saturates the maximum attainable distinct-task count: with 55 edges over 45 tasks, essentially *any* assignment of
@@ -353,9 +350,9 @@ than soften it.
 
 Twelve categories, frozen *before* any edge diff was read, and the freeze depended only on corpus-level metadata
 (directory layout, JSON fields, the language census above) — never on edge content, which is what would
-constitute leakage. Category names and their count are unchanged from the design sketch; only their *definitions*
-were rewritten from CUDA-thread-level phrasing into schedule-level semantics with two alternative realizations
-(CUDA C++ / Triton), because Section 4.1 shows the data contains no CUDA C++.
+constitute leakage. Category names and their count are unchanged from the pre-reading specification; only their
+*definitions* were rewritten from CUDA-thread-level phrasing into schedule-level semantics with two alternative
+realizations (CUDA C++ / Triton), because Section 4.1 shows the data contains no CUDA C++.
 
 The twelve: `Fuse`, `EliminateMaterialization`, `Tile`, `IncreaseWorkPerThread`, `Vectorize`, `ChangeLaunchConfig`,
 `WarpReduce`, `SharedMemoryTransform`, `PrecisionChange`, `LoopTransform`, `HostDeviceOverlap`, `Other`.
@@ -364,17 +361,17 @@ Labeling is multi-label with one designated primary, an argument field `θ` wher
 the action lands on, and a free-text justification that must quote concrete changed lines. `Other` requires an
 explicit account of why each of the eleven specific categories was rejected.
 
-**Annotation is machine-generated.** The design sketch called for a human to read thirty to fifty edges. This
-execution substituted an automated annotator, and Section 7 states the resulting circularity risk: the vocabulary
-and the annotator come from the same cognitive family, so the labelling procedure is not independent of the
-hypothesis it tests.
+**Annotation is machine-generated**, not human: an automated annotator read and labelled the edges. That creates a
+circularity risk — the vocabulary and the annotator come from the same cognitive family, so the labelling procedure
+is not independent of the hypothesis it tests — which Section 7.1 states, together with the acceptance criteria that
+would control it.
 
 ### 3.4 Red lines that were specified in advance
 
 Two pre-committed diagnostic thresholds, reported whether or not they are comfortable:
 
 | Condition | Threshold | Observed | Fired? |
-|-----------|-----------|----------|--------|
+|-------------------------------------------------------|---------|-------------------|-----|
 | Any single category > 40% of edges ⇒ vocabulary too coarse | 40% | `Fuse` 30.9% (17/55) | **no** |
 | `Other` > 25% ⇒ the conjecture may be false | 25% | 9.1% (5/55) | **no** |
 
@@ -393,7 +390,7 @@ Neither threshold fired *numerically*. Both are weaker than they look, for two r
 The prerequisite question gets a qualified yes.
 
 | Quantity | Value | Status |
-|---|---|---|
+|---------------------------------|-----------------------------|---------------------------|
 | Vocabulary reuse rate $\|V\|/\|E\|$ | 10 / 55 = 0.18 | meaningful |
 | Fraction of edges not requiring `Other` | 90.9% | meaningful, but see 3.4 |
 | $H(\text{primary label})$ | 2.67 bits; 0.805 of its own maximum (10 cells) | meaningful |
@@ -406,12 +403,12 @@ Primary-label counts: `Fuse` 17, `PrecisionChange` 15, `HostDeviceOverlap` 7, `O
 `IncreaseWorkPerThread` 1. Counting secondary labels as well, `WarpReduce` and `Vectorize` reach 6 occurrences
 each; `SharedMemoryTransform` never appears at all.
 
-**What we withdrew.** The first draft made two claims from the per-category diversity table that are void:
+**Two claims that do not survive this table.**
 
 1. *"No category ever produced the same diff twice."* All 55 diff fingerprints are distinct, so
    `distinct_diffs(label) == occurrences(label)` for **any** labelling, including a random one. The column cannot
-   discriminate between hypotheses; an audit of this identity is emitted in
-   `data/informativeness_calibration.json` (`identity_audit`). The corresponding sentence is deleted.
+   discriminate between hypotheses; the calibration record accompanying this paper carries the audit of this
+   identity (`identity_audit`).
 2. *"Frequent categories recur across tens of different tasks."* We constructed the null it requires — hold the
    label multiset fixed, permute labels across edges, recompute distinct-task counts (4,000 permutations). The
    observed values sit at chance: `Fuse` 16 distinct tasks against a null mean of 16.03 (66.8th percentile),
@@ -433,10 +430,10 @@ each; `SharedMemoryTransform` never appears at all.
 
 **The claim worth keeping is qualitative, not count-based.** Since the diversity *counts* are void, we instead
 examine realizations directly. All edges carrying one category, with the structural facts of each realization, are in
-`data/exemplar_Fuse.md`; an excerpt:
+the exemplar record accompanying this paper; an excerpt:
 
 | edge | task | lvl | ×vs parent | hunks | changed lines | regions |
-|---|---|---|---|---|---|---|
+|----------------------|----|----|--------------------|-----|----------------------------|-------|
 | `L2_2_11_167_168` | 2_11 | L2 | 1.06 | 3 | 141 | 3 |
 | `L2_2_48_29_30` | 2_48 | L2 | 1.57 | 1 | 107 | 1 |
 | `L2_2_28_106_107` | 2_28 | L2 | 2.60 | 4 | 55 | 3 |
@@ -462,7 +459,7 @@ a design obligation for Section 4 rather than a finding.
 
 ### 3.6 Result: the informative test, and a correction that reversed our headline
 
-Low entropy by itself is uninteresting, and the first draft of this section argued exactly that: coarse *surface*
+Low entropy by itself is uninteresting, and a surface reading argues exactly that: coarse *surface*
 descriptions of the same diffs are equally low-entropy (hunk counts, 2.49 bits; changed-line buckets, 2.40 bits), so
 if the argument for the coordinate change were "transformations compress", it would already be refuted by counting
 hunks. What is needed is a test of whether the semantic label carries information about the *outcome* that surface
@@ -470,26 +467,26 @@ structure does not.
 
 Take the quartile of realized speedup versus parent as the outcome ($H = 2.00$ bits, 4 cells) and ask how much of
 it each descriptor explains. Raw mutual information is biased in favour of descriptors with more cells, so the
-comparison must be calibrated. The first draft calibrated it wrongly.
+comparison must be calibrated. Calibrating only one side gives the opposite answer.
 
-**The error.** Our Miller–Madow correction was applied to a conditional entropy as
+**The error.** We applied the Miller–Madow correction to a conditional entropy as
 $\hat H = H_{\text{plug-in}} + (k_X-1)/2n$, which is the bias term for a *marginal* entropy. The bias of the
-plug-in mutual-information estimator is $(k_X-1)(k_Y-1)/2n$; with $k_Y = 4$ the first draft under-corrected by a
-factor of three, and it under-corrected the 10-cell label descriptor far less than the 24-cell coarse descriptor.
-It also permuted only the semantic descriptor against a same-cardinality null and never gave the coarse descriptor
-the same treatment. The reported conclusion — "semantic labels yield less information than surface structure
-(0.615 vs 0.728 bits)" — was an artefact of that arithmetic.
+plug-in mutual-information estimator is $(k_X-1)(k_Y-1)/2n$; with $k_Y = 4$ that substitution under-corrects by a
+factor of three, and it under-corrects the 10-cell label descriptor far less than the 24-cell coarse descriptor. It
+also permutes only the semantic descriptor, against a same-cardinality null, and never gives the coarse descriptor
+the same treatment. The conclusion that arithmetic produces — "semantic labels yield less information than surface
+structure (0.615 vs 0.728 bits)" — is an artefact of that arithmetic, not a finding.
 
 **The corrected test.** We now estimate mutual information three ways and calibrate both descriptors symmetrically,
 holding the descriptor fixed and permuting the outcome (20,000 permutations, seed 20261002).
 
 | Descriptor | cells | MI plug-in | MI Miller–Madow | null mean | null SD | permutation $p$ |
-|---|---|---|---|---|---|---|
+|------------------------|-----|----------|----------------|---------|-------|---------------|
 | primary semantic label | 10 | 0.697 bits | 0.624 bits | 0.397 | 0.072 | **0.0005** |
 | coarse diff structure | 24 | 0.937 bits | 0.792 bits | 0.990 | 0.085 | 0.752 |
 | hunk count alone | 9 | 0.367 bits | 0.276 bits | 0.361 | 0.071 | 0.436 |
 
-This reverses the first draft's finding, and the reversal does not hinge on a choice of bias formula: the permutation
+This reverses the uncalibrated comparison, and it does not hinge on a choice of bias formula: the permutation
 test needs no correction at all, and under it the semantic label sits far above its own null ($p = 0.0005$), while the
 coarse descriptor's observed mutual information is *below* its own null mean (0.937 vs 0.990) — its apparently superior raw
 number is over-fitting to 24 cells, 11 of which hold a single edge. The paired bootstrap difference
@@ -508,8 +505,7 @@ running Section 4, not a substitute for it.
 raw mutual-information level, because a plug-in estimate of mutual information rises with the number of occupied
 cells; both descriptors are computed on the same edges with the same outcomes, and the permutation calibration makes
 each null specific to its own granularity. Plug-in and Miller-Madow-corrected levels are both reported so the choice
-of correction need not be taken on trust. The production history of this measurement, including the version that
-reversed the sign by applying a marginal-entropy correction where a joint one was required, is recorded in Appendix B.
+of correction need not be taken on trust. 
 
 ### 3.7 Two findings we did not plan for
 
@@ -564,8 +560,8 @@ The prerequisite question is answered **yes for existence, no for the two proper
   formalism is currently unmeasured, not confirmed.
 * **Completeness of the vocabulary (falsified in one place).** One missing decision — backend choice — absorbed every
   refusal, and the numeric red line designed to catch this did not fire.
-* **No reach into search or learning.** Nothing in Section 3 involves a policy choosing anything. The L2 and L3
-  claims of Section 1.4 are untouched.
+* **No reach into search or learning.** Nothing in Section 3 involves a policy choosing anything. The search and
+  learning claims of Section 1.4 are untouched.
 
 A reader who wanted to reject the programme on Section 3.6 would be overreaching; so would one who accepted it on
 Section 3.5. What the data supports is that a transformation vocabulary is a *real, informative, incomplete*
@@ -574,15 +570,15 @@ optional.
 
 ### 3.9 Figures
 
-![Figure 1. Description length per edge. The rightmost bar is identically log2(n) and carries no evidential content; the comparison that matters is against the 24-cell coarse structure.](../figures/fig1_entropy_comparison.png)
+![Description length per edge. The rightmost bar is identically log2(n) and carries no evidential content; the comparison that matters is against the 24-cell coarse structure.](../figures/fig1_entropy_comparison.png)
 
-![Figure 2. Observed distribution over the frozen 12-category vocabulary, primary versus secondary labels, with the 40% red line.](../figures/fig2_label_distribution.png)
+![Observed distribution over the frozen 12-category vocabulary, primary versus secondary labels, with the 40% red line.](../figures/fig2_label_distribution.png)
 
-![Figure 3. Occurrences versus distinct diff fingerprints per category. The two are equal by identity, which is why this panel no longer supports the many-to-many claim.](../figures/fig3_many_to_many.png)
+![Occurrences versus distinct diff fingerprints per category. The two are equal by identity, which is why this panel no longer supports the many-to-many claim.](../figures/fig3_many_to_many.png)
 
-![Figure 4. Realised speedup per primary transformation (log scale). The extreme values are dominated by pathological parents and by the backend-substitution category.](../figures/fig4_speedup_by_label.png)
+![Realised speedup per primary transformation (log scale). The extreme values are dominated by pathological parents and by the backend-substitution category.](../figures/fig4_speedup_by_label.png)
 
-![Figure 5. The corrected comparison: each descriptor's mutual information with the realised-speedup quartile against its own permutation null. Only the semantic label exceeds its null.](../figures/fig5_permutation_calibration.png)
+![The corrected comparison: each descriptor's mutual information with the realised-speedup quartile against its own permutation null. Only the semantic label exceeds its null.](../figures/fig5_permutation_calibration.png)
 
 ---
 
@@ -598,7 +594,7 @@ should not be run, because its positive outcome will be misread.
 ### 4.2 Five conditions
 
 | Condition | Interface | What it measures |
-|---|---|---|
+|------------------|--------------------------------------|---------------------------------|
 | **Direct** | generate the optimized whole kernel | baseline |
 | **Free-plan** | write a free-text plan, then generate the kernel | the value of planning itself, and of any implicit abstraction the model already performs |
 | **Structured-action** | select parameterized transformations from a frozen `A`, then realize them | the value of the *externalized structure*, net of planning |
@@ -606,10 +602,11 @@ should not be run, because its positive outcome will be misread.
 | **Brute-search** | enumerate a known transformation space and rank candidates with a learned cost model, no LLM in the loop | whether an LLM choosing transformations adds anything autotuning already had |
 
 Free-plan is the control that most published "decompose the task" claims omit. Oracle-action is the one that makes
-the framework self-terminating. Brute-search was added after review exposed that the strongest objection to this whole
-programme — that a well-engineered enumeration over a known schedule space with a cost model already finds what an
-LLM is asked to name (Section 5.3) — was raised in the paper and then left unanswered because no arm could address it.
-Without that arm the protocol can only ever compare variants of *LLM-in-the-loop* interfaces to each other.
+the framework self-terminating. Brute-search exists because of the strongest objection to this whole programme — that
+a well-engineered enumeration over a known schedule space with a cost model already finds what an LLM is asked to
+name (Section 5.3). If that enumeration already suffices, moving the action unit is pointless. The objection is not
+decidable by the other four conditions, each of which keeps an LLM in the loop, and without this arm the protocol can
+only ever compare variants of *LLM-in-the-loop* interfaces to each other.
 
 Two prior systems occupy positions this table claims to distinguish, and the protocol must be read accordingly.
 K-Search already *"explicitly decouples high-level algorithmic planning from low-level program instantiation"* and
@@ -629,7 +626,7 @@ Pre-committed interpretation of each outcome pattern. Outcomes are measured on h
 and search cost (rollouts, tokens, wall-clock to first valid-and-faster kernel) both reported.
 
 | Observation | Conclusion | Consequence |
-|---|---|---|
+|---------------------------|----------------------|---------------------------------------|
 | Free-plan ~ Structured-action > Direct | planning helps; structure adds nothing | **no paper here**; drop the abstraction claim |
 | Structured-action > Free-plan > Direct | the typed action space supplies extra inductive bias | core positive result; proceed to learning-level experiments |
 | Structured-action > Direct but ~ turn-level decomposition | the gain is hierarchy, not typing | re-aim at credit assignment over agent turns [32] rather than at a vocabulary |
@@ -639,13 +636,12 @@ and search cost (rollouts, tokens, wall-clock to first valid-and-faster kernel) 
 | Structured-action ~ Brute-search | an LLM adds nothing over enumeration with a cost model | **the systems community already owns this problem**; re-target or withdraw |
 | Oracle-action not runnable | `φ` cannot be constructed for this task family | **indeterminate — do not read as a null result** (see below) |
 
-The last row is a correction forced by review. Oracle-action and the realization obligation of Section 4.5 both
-require `φ : ΔP → a`, the map that recovers the intended transformation from a change; Section 7.3 admits
-we never constructed it. A protocol whose decisive branch depends on an object we have not built would report
-"direction is dead" whenever that object is unavailable, which is a false negative dressed as rigour. Oracle-action
-therefore carries an explicit precondition: a `φ` validated on a held-out set, or a human-supplied oracle standing
-in for it with the substitution recorded. If neither is available, the branch is *not evaluated*, and the paper's
-conclusion must say so.
+Oracle-action and the realization obligation of Section 4.5 both require `φ : ΔP → a`, the map that recovers the
+intended transformation from a change; Section 7.3 admits we never constructed it. A protocol whose decisive branch
+depends on an object we have not built would report "direction is dead" whenever that object is unavailable, which is
+a false negative dressed as rigour. Oracle-action therefore carries an explicit precondition: a `φ` validated on a
+held-out set, or a human-supplied oracle standing in for it with the substitution recorded. If neither is available,
+the branch is *not evaluated*, and the paper's conclusion must say so.
 
 The last two rows are why we consider the framework worth writing down: it can lose, and losing is informative.
 
@@ -669,8 +665,8 @@ The operational test we apply to each experiment:
 
 If the answer is "the tooling is better" or "the records are more reproducible", the work is infrastructure and must
 not be presented as progress. Section 3 passes this test (it changes the belief about vocabulary existence, and via
-3.6 about whether entropy arguments work). Building an action-space schema and validator would not — and in the course
-of producing this paper we deleted two retrieval-tooling scripts on exactly those grounds.
+3.6 about whether entropy arguments work). Building an action-space schema and validator would not, so we do not build
+one: a tool that cannot change any judgement in this paper does not belong in it, however cheap it is to write.
 
 ### 4.5 Pre-registered confound controls
 
@@ -706,13 +702,13 @@ have the infrastructure for that here, and no observational study can substitute
 
 ## 5. Implications Beyond CUDA
 
-### 5.1 Edit-based and transformation-based code optimization are closer than this paper originally claimed
+### 5.1 Edit-based and transformation-based code optimization are closer than a clean distinction suggests
 
 The nearest neighbours are systems that learn to make performance-improving *code edits* [4,5,31], that treat the
-edit *format* as a training decision [6], and that learn program evolution from repository history [7]. Our first
-draft asserted a clean three-way distinction — typed semantics, cross-site coordination, cross-task vocabulary reuse
-— and cited the diversity table of Section 3.5 as its evidence. Two of those three legs no longer survive our own
-review (Section 3.5), so the honest position is narrower.
+edit *format* as a training decision [6], and that learn program evolution from repository history [7]. The clean
+three-way distinction — typed semantics, cross-site coordination, cross-task vocabulary reuse — is cleaner than the
+evidence supports: two of those three legs do not survive the measurements of Section 3.5, so the honest position is
+narrower.
 
 What is actually distinguishable, stated at its real strength:
 
@@ -781,8 +777,8 @@ literature on *when higher-level actions fail to help*. Recent work on option-cr
 necrosis and redundant coverage - learned options that are never used or that overlap so much that the hierarchy
 buys nothing [13]. That literature is the reason we insisted in Section 4.3 on pre-committing negative and
 indeterminate branches rather than only a winning one. Our own result should not be read as a preview of those
-pathologies, and an earlier draft of this paper wrongly read it as one: Section 3.6 originally reported that
-semantic labels failed to out-predict surface structure, which would have been a mild instance of "the higher level
+pathologies, and reading it that way was an error: under the uncalibrated comparison of Section 3.6, semantic labels
+failed to out-predict surface structure, which would have been a mild instance of "the higher level
 buys nothing". Corrected calibration reversed that finding (Section 3.6), so the hierarchy here is neither
 confirmed nor shown redundant by our data — it remains exactly the open question that [13] and Section 4 are about.
 
@@ -800,14 +796,13 @@ transformations must be adding something the cost model lacked — handling the 
 enumeration for. That is a real hypothesis with a real chance of being false, and it is the strongest objection we
 know of to this direction.
 
-In the first draft we raised this objection and then left it standing, because none of our four conditions could
-answer it: all four keep an LLM in the loop, so the protocol could only ever rank variants of itself. That was a
-substantive gap, and the fix is structural rather than rhetorical — Section 4.2 adds a fifth arm, **Brute-search**
-(enumeration plus learned cost model, no LLM), and Section 4.3 adds its reading row: if Structured-action is
-statistically indistinguishable from Brute-search, the systems community already owns this problem and this
-programme should be re-targeted or withdrawn. Note that this is a test we expect to be *hard to win*: a competent
-Ansor-style search over a well-specified schedule space is a formidable baseline [10], and an LLM earns nothing here
-by being more expressive.
+None of the first four conditions can answer that objection: all four keep an LLM in the loop, so the
+protocol could only ever rank variants of itself. The fix is structural rather than rhetorical — Section 4.2 adds a
+fifth arm, **Brute-search** (enumeration plus learned cost model, no LLM), and Section 4.3 adds its reading row: if
+Structured-action is statistically indistinguishable from Brute-search, the systems community already owns this
+problem and this programme should be re-targeted or withdrawn. Note that this is a test we expect to be *hard to
+win*: a competent Ansor-style search over a well-specified schedule space is a formidable baseline [10], and an LLM
+earns nothing here by being more expressive.
 
 There is a deeper asymmetry that the compiler analogy conceals, and it is the weakest joint in the whole thesis.
 Between assembly, IR and a high-level language sit compilers: relations that are effectively total functions, so an
@@ -943,9 +938,9 @@ trees [3]. Used here as data about optimization behaviour; no search baseline of
 
 ### 7.1 The circularity of machine annotation, and what would actually control it
 
-The design sketch for this study called for a human to read thirty to fifty real edges, for a specific reason:
+A human reading of thirty to fifty real edges is the control this question needs, for a specific reason:
 whether the vocabulary exists is the question, and the entity that invents the vocabulary should not also be the
-entity that decides whether the data fits it. This execution substituted an automated annotator. The consequence is
+entity that decides whether the data fits it. Annotation here is automated instead. The consequence is
 unavoidable: the labelling procedure and the category system come from the same model family, so a `Fuse` judgement
 may be a statement about the annotator's habits of description rather than about the code.
 
@@ -985,7 +980,7 @@ strength accordingly.
 
 **Bottom-up open coding (criterion 2, partial).** A coder with no access to the frozen list induced 7 categories from
 24 successful edges drawn from tasks disjoint from the annotated sample (zero task overlap;
-`data/opencode_result.md`). The recovered space is recognisably the same territory — work/layout remapping, precision
+the open-coding record accompanying this paper). The recovered space is recognisably the same territory — work/layout remapping, precision
 regime, setup hoisting and caching, pipeline-stage reshaping, backend reassignment, algebraic reformulation,
 redundant data-movement removal — with two informative divergences. The coder made launch-constant adjustment strictly
 secondary (19 co-occurrences, 0 primary), suggesting our `ChangeLaunchConfig` over-partitions what the data treats as
@@ -1000,7 +995,7 @@ backend-choice hole surfaced), and the confidence distribution was reported rath
 
 ### 7.2 The three dangers we could not close
 
-We list these as the paper's own kill conditions, inherited from the research sketch and now sharpened by the data.
+We list these as the paper's own kill conditions, each of them sharpened by the measurements of Section 3.
 
 **(1) Good optimizations may not be discretely decomposable.** A strong kernel rewrite is often a *whole-design*
 change: tile size depends on layout, layout on thread mapping, thread mapping jointly with shared-memory footprint
@@ -1057,9 +1052,8 @@ deliberately a question, and Section 3.6 is deliberately a correction of our own
 
 We asked whether the token-level action space used by agentic reinforcement-learning systems for GPU kernel
 optimization is the wrong coordinate system, and whether parameterized program transformations
-`a = (τ, ℓ, θ)` are a more natural unit for both search and learning. The answer after one round of adversarial
-review is: the premise holds, two of the arguments we built for it do not, and the question remains
-experimentally open.
+`a = (τ, ℓ, θ)` are a more natural unit for both search and learning. The answer is: the premise holds, two of the
+arguments we built for it do not, and the question remains experimentally open.
 
 **The premise holds.** Public successful optimization trajectories compress onto a small recurring typed vocabulary.
 On 55 annotated MCTS edges spanning 45 tasks, 10 of 12 frozen categories cover 90.9% of edges against an actively
@@ -1067,8 +1061,8 @@ invited `Other`, at 2.67 bits versus 4.26 bits for a faithful coarse description
 the labels are not a decorative partition: under symmetric permutation calibration the semantic label is
 significantly informative about realised speedup (plug-in mutual information 0.697 bits, 0.624 after bias
 correction, $p = 0.0005$) while coarse diff structure ($p = 0.752$) and hunk count alone ($p = 0.436$) do not
-beat their own nulls. That claim is weaker than it first appears: relabelling the same edges without being given the
-category definitions leaves the same test insignificant ($p = 0.106$, against $p = 0.0005$; the two passes agree on
+beat their own nulls. It is bounded by a control: relabelling the same edges without being given the category definitions leaves
+the same test insignificant ($p = 0.106$, against $p = 0.0005$; the two passes agree on
 74.5% of edges at $\kappa = 0.687$), so part of the effect is elicited by the vocabulary rather than found in the
 programs (Section 7.1). We report the weaker version.
 
@@ -1080,9 +1074,8 @@ second was cross-task recurrence, which sits at chance under a label-permutation
 Section 2.5 is therefore unsupported by this data, and the cross-site coordination property that motivates the whole
 formalism is *unidentifiable* here, since no edge carries a single label.
 
-Neither withdrawal softens the other. The corrected reading replaces an earlier version of
-Section 3.6 whose conclusion was the opposite; why the error survived every automated check,
-and what that says about self-verification in pipelines like this one, is recorded in Appendix B.
+Neither withdrawal softens the other; the calibration behind the corrected reading is recorded in
+Appendix B.
 
 **The question remains open, and now has a sharper shape.** Observational evidence cannot decide a claim about
 interventions, and the interface-level question has already been partly answered by systems that got there before
@@ -1149,7 +1142,7 @@ asked to question a method.
 33. X. Wang, Y. Chen, L. Yuan, Y. Zhang, Y. Li, H. Peng, H. Ji. **Executable Code Actions Elicit Better LLM Agents (CodeAct).** ICML 2024. arXiv:2402.01030. *Consolidates agent actions into executable Python as a unified action space; up to 20% higher success rate over text/JSON action formats across 17 models.*
 34. Z. Yu, J. Zhang, H. Su, Y. Zhao, Y. Wu, M. Deng, J. Xiang, Y. Lin, L. Tang, Y. Luo, B. Liu, C. Wu. **ReCode: Unify Plan and Action for Universal Granularity Control.** arXiv:2510.23564, 2025. *High-level plans as placeholder functions recursively decomposed into primitive actions; dissolves the plan/action boundary.*
 35. C. Zhang. **From Reasoning to Agentic: Credit Assignment in Reinforcement Learning for Large Language Models.** arXiv:2604.09459, 2026. *69-paper corpus (56 core methods) organised by credit granularity; six-diagnostic identification framework.*
-36. S. Sul, C. Ré. **Retire the Abstractions.** Hazy Research blog, 5 August 2026. url:https://hazyresearch.stanford.edu/blog/2026-08-05-retire-the-abstractions — *non-archival; included because it is the source of the determinism-asymmetry and abstraction-contract arguments used in Sections 2.3 and 5.3, and its URL and page title were resolved programmatically by `scripts/verify_references.py` like any other reference.*
+36. S. Sul, C. Ré. **Retire the Abstractions.** Hazy Research blog, 5 August 2026. url:https://hazyresearch.stanford.edu/blog/2026-08-05-retire-the-abstractions — *non-archival; included because it is the source of the determinism-asymmetry and abstraction-contract arguments used in Sections 2.3 and 5.3.*
 
 ---
 

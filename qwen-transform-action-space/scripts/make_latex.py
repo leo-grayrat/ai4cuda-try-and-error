@@ -104,11 +104,11 @@ def main() -> int:
         "title=Is Token-Level the Wrong Coordinate System? Program Transformation "
         "as the Action Space for LLM-Driven Kernel Optimization",
         # a literal \\and inside the author field is not a title-page construct in the
-        # article class and typeset as the characters "\and"
+        # article class and typeset as the characters "\and"; keep the title block short —
+        # the machine-generated disclosure lives in Appendix A (AI usage), not on the title
         "--metadata",
-        "author=Automated research pipeline output (Qwen session). "
-        "Analysis and prose are machine-generated and unreviewed.",
-        "--metadata", "date=2 October 2026 (Stage 4 v2, post-review)",
+        "author=Preprint draft — see Appendix A for provenance and AI usage",
+        "--metadata", "date=2 October 2026",
     ]
     r = subprocess.run(cmd, cwd=LATEX, capture_output=True, text=True,
                        encoding="utf-8", errors="replace")
@@ -160,6 +160,33 @@ def main() -> int:
             "\\usepackage{graphicx}\n\\graphicspath{{figures/}}",
             1,
         )
+
+    # Layout fixes that the rendered PDF demanded:
+    #  - code blocks ran past the right margin and were clipped, so verbatim breaks lines
+    #  - wide tables overprinted their neighbours: smaller type and tighter columns
+    #  - figures floated far from the text that cites them, leaving half-empty pages
+    LAYOUT = (
+        "% layout: break long verbatim instead of clipping it at the margin\n"
+        "\\usepackage{fvextra}\n"
+        "\\RecustomVerbatimEnvironment{verbatim}{Verbatim}{breaklines=true,"
+        "breakanywhere=false,fontsize=\\small,frame=none}\n"
+        "% wide tables: smaller type, tighter columns, full text width\n"
+        "\\usepackage{etoolbox}\n"
+        "\\setlength{\\tabcolsep}{4pt}\n"
+        "\\BeforeBeginEnvironment{longtable}{\\small}\n"
+        "\\AfterEndEnvironment{longtable}{\\normalsize}\n"
+        "% keep figures where they are discussed\n"
+        "\\usepackage{float}\n"
+        "\\usepackage{placeins}\n"
+    )
+    if "fvextra" not in tex:
+        tex = tex.replace("\\begin{document}", LAYOUT + "\\begin{document}", 1)
+    # pandoc emits floats as [ht]; force them in place.
+    # The replacement must be a raw string: in an ordinary string "\\begin" decodes to a
+    # backspace followed by "egin", which silently corrupted every figure environment and
+    # produced "\caption outside float" plus "Text line contains an invalid character".
+    tex = re.sub(r"\\begin\{figure\}(?:\[[^\]]*\])?", r"\\begin{figure}[H]", tex)
+
     tex_path.write_text(tex, encoding="utf-8")
 
     # 4. compile
