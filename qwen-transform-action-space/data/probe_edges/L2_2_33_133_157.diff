@@ -1,0 +1,224 @@
+@@ -3,77 +3,93 @@
+ import triton
+ import triton.language as tl
+ 
+-# Triton kernels implementing a tiled partial-reduce + fused finalize+apply approach.
+-# Tuned tile sizes for NVIDIA A6000 (Ampere): BLOCK_N x BLOCK_C
+-# These values were chosen to maximize occupancy and memory coalescing for the target sizes.
+-# (N=1024, C=8192 typical for this model).
+-_BLOCK_N = 128
+-_BLOCK_C = 256
++# Tuned tile sizes for NVIDIA A6000 (Ampere)
++_BLOCK_N = 128  # rows per tile
++_BLOCK_C = 256  # channels per tile (must divide into many blocks for high concurrency)
++
+ 
+ @triton.jit
+ def _partial_reduce_kernel(
+-    x_ptr,                  # input (N, C) (already scaled by per-channel scale)
+-    partial_sum_ptr,        # partial sums buffer (num_block_c * num_row_blocks * BLOCK_C) flattened
++    x_ptr,                  # input (N, C)
++    partial_sum_ptr,        # partial sums buffer (num_block_c, num_row_blocks, BLOCK_C) flattened
+     partial_sum2_ptr,       # partial sums of squares (same layout)
+     N,
+     C,
+     stride_row,
+     stride_col,
+-    num_row_blocks,         # number of row blocks (N / BLOCK_N ceiling)
++    num_row_blocks,         # number of row-blocks (N / BLOCK_N ceiling)
+     BLOCK_N: tl.constexpr,
+     BLOCK_C: tl.constexpr,
+ ):
+-    cb = tl.program_id(0)   # channel-block
+-    rb = tl.program_id(1)   # row-block
++    """
++    Compute per-tile partial sums and sums-of-squares.
++    Grid: (num_block_c, num_row_blocks).
++    Each program processes a BLOCK_N x BLOCK_C tile and writes compact partials.
++    """
++    cb = tl.program_id(0)   # channel-block index
++    rb = tl.program_id(1)   # row-block index
+ 
+     off_c = tl.arange(0, BLOCK_C)
+-    cols = cb * BLOCK_C + off_c
++    cols = cb * BLOCK_C + off_c                  # absolute channel indices
+     mask_c = cols < C
+ 
+-    off_n = rb * BLOCK_N + tl.arange(0, BLOCK_N)
++    off_n = rb * BLOCK_N + tl.arange(0, BLOCK_N) # absolute row indices for this tile
+     mask_n = off_n < N
+ 
+-    # ptrs shape [BLOCK_N, BLOCK_C]
+     ptrs = x_ptr + off_n[:, None] * stride_row + cols[None, :] * stride_col
+     load_mask = mask_n[:, None] & mask_c[None, :]
+ 
+     vals = tl.load(ptrs, mask=load_mask, other=0.0)   # [BLOCK_N, BLOCK_C]
++
++    # accumulate sums in fp32
+     sum_x = tl.sum(vals, axis=0)
+     sum_x2 = tl.sum(vals * vals, axis=0)
+ 
+-    # store partials into flattened buffer: index = (cb * num_row_blocks + rb) * BLOCK_C + off_c
++    # store partials with compact layout:
++    # index = (cb * num_row_blocks + rb) * BLOCK_C + off_c
+     base = (cb * num_row_blocks + rb) * BLOCK_C
+     tl.store(partial_sum_ptr + base + off_c, sum_x, mask=mask_c)
+     tl.store(partial_sum2_ptr + base + off_c, sum_x2, mask=mask_c)
+ 
+ 
+ @triton.jit
+-def _finalize_kernel(
++def _finalize_apply_kernel(
+     partial_sum_ptr,        # flattened partials buffer (num_block_c * num_row_blocks * BLOCK_C)
+     partial_sum2_ptr,
+-    mean_ptr,               # output mean (C,) -- note: mean of already-scaled GEMM outputs
+-    var_ptr,                # output var (C,)  -- var of already-scaled GEMM outputs
+-    fused_ptr,              # output fused multiplier (C,)
++    x_ptr,
++    out_ptr,
++    mean_ptr,               # output mean_unscaled (C,)
++    var_ptr,                # output var_unscaled (C,)
++    scale_ptr,
+     gamma_ptr,
+     beta_ptr,
+     N,
+     C,
++    stride_row,
++    stride_col,
+     num_row_blocks,
+     eps,
+     BLOCK_N: tl.constexpr,
+     BLOCK_C: tl.constexpr,
+ ):
+-    cb = tl.program_id(0)   # channel-block
++    """
++    For each channel-block (cb):
++      - reduce partials across row-blocks to compute mean_unscaled & var_unscaled
++      - compute fused multiplier (fused = s * gamma / sqrt(s*s*var_x + eps))
++      - apply normalization to all row-blocks for that channel-block (write outputs)
++    Grid: (num_block_c,)
++    """
++    cb = tl.program_id(0)
+ 
+     off_c = tl.arange(0, BLOCK_C)
+     cols = cb * BLOCK_C + off_c
+     mask_c = cols < C
+ 
+-    # accumulators for reduction across row-blocks
++    # Accumulators for reduction across row-blocks
+     sum_x = tl.zeros([BLOCK_C], dtype=tl.float32)
+     sum_x2 = tl.zeros([BLOCK_C], dtype=tl.float32)
+ 
+-    # reduce partials across row-blocks (contiguous loads are efficient)
++    # Reduce partials (contiguously laid out)
+     for rb in range(0, num_row_blocks):
+         base = (cb * num_row_blocks + rb) * BLOCK_C
+         s = tl.load(partial_sum_ptr + base + off_c, mask=mask_c, other=0.0)
+@@ -81,118 +97,76 @@
+         sum_x += s
+         sum_x2 += s2
+ 
+-    # finalize mean and var on already-scaled values
+-    mean_scaled = sum_x / N
+-    var_scaled = sum_x2 / N - mean_scaled * mean_scaled
++    # finalize unscaled mean and var
++    mean_unscaled = sum_x / N
++    var_unscaled = sum_x2 / N - mean_unscaled * mean_unscaled
+ 
+-    # store mean/var for this channel-block
+-    tl.store(mean_ptr + cols, mean_scaled, mask=mask_c)
+-    tl.store(var_ptr + cols, var_scaled, mask=mask_c)
++    # store per-channel mean & var (unscaled)
++    tl.store(mean_ptr + cols, mean_unscaled, mask=mask_c)
++    tl.store(var_ptr + cols, var_unscaled, mask=mask_c)
+ 
+-    # load per-channel BN params and compute fused = gamma / sqrt(var + eps)
++    # load per-channel params
++    s = tl.load(scale_ptr + cols, mask=mask_c, other=1.0)
+     gamma = tl.load(gamma_ptr + cols, mask=mask_c, other=1.0)
+     beta = tl.load(beta_ptr + cols, mask=mask_c, other=0.0)
+ 
++    # compute fused multiplier: fused = s * gamma / sqrt(s*s*var_x + eps)
++    var_scaled = var_unscaled * (s * s)
+     invstd = 1.0 / tl.sqrt(var_scaled + eps)
+-    fused = gamma * invstd
++    fused = s * gamma * invstd
+ 
+-    # store fused
+-    tl.store(fused_ptr + cols, fused, mask=mask_c)
++    # For numerical efficiency, keep mean_unscaled and fused in registers and apply to every row-block
++    for rb in range(0, num_row_blocks):
++        off_n = rb * BLOCK_N + tl.arange(0, BLOCK_N)
++        mask_n = off_n < N
+ 
++        ptrs = x_ptr + off_n[:, None] * stride_row + cols[None, :] * stride_col
++        load_mask = mask_n[:, None] & mask_c[None, :]
+ 
+-@triton.jit
+-def _apply_kernel(
+-    x_ptr,                  # input (N, C) (already scaled)
+-    out_ptr,
+-    mean_ptr,               # mean (C,)
+-    fused_ptr,              # fused multiplier (C,)
+-    beta_ptr,
+-    N,
+-    C,
+-    stride_row,
+-    stride_col,
+-    num_row_blocks,
+-    BLOCK_N: tl.constexpr,
+-    BLOCK_C: tl.constexpr,
+-):
+-    cb = tl.program_id(0)   # channel-block
+-    rb = tl.program_id(1)   # row-block
++        vals = tl.load(ptrs, mask=load_mask, other=0.0)   # raw GEMM outputs (unscaled)
+ 
+-    off_c = tl.arange(0, BLOCK_C)
+-    cols = cb * BLOCK_C + off_c
+-    mask_c = cols < C
++        # out = (vals - mean_unscaled) * fused + beta
++        out = (vals - mean_unscaled[None, :]) * fused[None, :] + beta[None, :]
+ 
+-    off_n = rb * BLOCK_N + tl.arange(0, BLOCK_N)
+-    mask_n = off_n < N
+-
+-    # load per-channel mean/fused/beta
+-    mean = tl.load(mean_ptr + cols, mask=mask_c, other=0.0)
+-    fused = tl.load(fused_ptr + cols, mask=mask_c, other=1.0)
+-    beta = tl.load(beta_ptr + cols, mask=mask_c, other=0.0)
+-
+-    ptrs = x_ptr + off_n[:, None] * stride_row + cols[None, :] * stride_col
+-    load_mask = mask_n[:, None] & mask_c[None, :]
+-
+-    vals = tl.load(ptrs, mask=load_mask, other=0.0)   # raw GEMM outputs (already scaled)
+-
+-    out = (vals - mean[None, :]) * fused[None, :] + beta[None, :]
+-
+-    out_ptrs = out_ptr + off_n[:, None] * stride_row + cols[None, :] * stride_col
+-    tl.store(out_ptrs, out, mask=load_mask)
++        out_ptrs = out_ptr + off_n[:, None] * stride_row + cols[None, :] * stride_col
++        tl.store(out_ptrs, out, mask=load_mask)
+ 
+ 
+ class ModelNew(nn.Module):
+     """
+-    Optimized Model using Triton kernels for fused scale + BatchNorm.
+-
+-    Strategy:
+-      - Keep nn.Linear for GEMM to leverage cuBLAS/Tensor Cores for the heavy matmul.
+-      - Fold per-channel 'scale' into the Linear weight/bias before GEMM (removes an N*C elementwise op).
+-      - For the fused BatchNorm: use a 2D tiling approach:
+-          a) partial reduce across tiles (grid: num_block_c x num_row_blocks)
+-          b) finalize per channel-block (grid: num_block_c)
+-          c) apply normalization per tile (grid: num_block_c x num_row_blocks)
++    Optimized Model using Triton kernels with a 2-stage tiled pipeline:
++      1) _partial_reduce_kernel computes per-tile partial sums (no atomics).
++      2) _finalize_apply_kernel reduces partials per channel-block, computes fused multipliers,
++         and applies normalization for that channel-block (single kernel, reusing mean/fused in registers).
++    Training path uses the Triton kernels for scale+BatchNorm; eval path folds fused multipliers
++    into the Linear weight/bias to run a single cuBLAS GEMM via torch.nn.functional.linear.
+     """
+     def __init__(self, in_features, out_features, scale_shape, eps=1e-5, momentum=0.1):
+         super(ModelNew, self).__init__()
+-        # Keep the 
+...[TRUNCATED]

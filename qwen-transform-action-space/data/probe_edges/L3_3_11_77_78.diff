@@ -1,0 +1,44 @@
+@@ -4,6 +4,10 @@
+ # Enable cudnn benchmarking to pick fast convolution algorithms for the current input sizes.
+ # This helps cuDNN select fused conv+relu implementations on Ampere GPUs when using channels_last.
+ torch.backends.cudnn.benchmark = True
++# Allow TF32 on Ampere for faster FP32 matmuls/convolutions (gives throughput boost on A6000).
++# Also allow TF32 for torch.matmul on CUDA.
++torch.backends.cudnn.allow_tf32 = True
++torch.backends.cuda.matmul.allow_tf32 = True
+ 
+ # Triton-based ReLU removed: prefer cuDNN conv+ReLU fusion (channels_last) on Ampere GPUs.
+ # Keeping code lean and relying on PyTorch/cuDNN for fused conv+relu gives better throughput
+@@ -72,9 +76,12 @@
+             nn.Linear(4096, num_classes)
+         )
+ 
+-        # Convert model parameters/buffers to channels_last memory format to enable
+-        # high-throughput conv implementations and conv+relu fusion on Ampere GPUs.
+-        # This keeps the external interface unchanged while improving throughput.
++        # Move model to CUDA (if available) and convert parameters/buffers once to channels_last
++        # to enable high-throughput conv implementations and conv+relu fusion on Ampere GPUs.
++        # Doing both here avoids host<->device copies during inference.
++        if torch.cuda.is_available():
++            # move model to GPU
++            self.to('cuda')
+         self.to(memory_format=torch.channels_last)
+ 
+     def _relu_block(self, x: torch.Tensor) -> torch.Tensor:
+@@ -103,9 +110,13 @@
+ num_classes = 1000
+ 
+ def get_inputs():
+-    # Return a CUDA tensor in channels_last memory format for conv+relu fusion
+-    inp = torch.rand(batch_size, 3, 224, 224).cuda()
+-    inp = inp.to(memory_format=torch.channels_last)
++    # Return a tensor placed on the same device as the model, in channels_last memory format,
++    # and made contiguous. This avoids unexpected host<->device copies and enables cuDNN fusion.
++    inp = torch.rand(batch_size, 3, 224, 224)
++    if torch.cuda.is_available():
++        inp = inp.cuda().to(memory_format=torch.channels_last).contiguous()
++    else:
++        inp = inp.to(memory_format=torch.channels_last).contiguous()
+     return [inp]
+ 
+ def get_init_inputs():

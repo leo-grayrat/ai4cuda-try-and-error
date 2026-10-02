@@ -1,0 +1,25 @@
+@@ -4,9 +4,11 @@
+ import triton.language as tl
+ 
+ # Autotune configurations for different block sizes / warps
+-# Favor larger BLOCKs for Ampere (A6000) to increase utilization, keep a smaller fallback.
++# Favor larger BLOCKs for Ampere (A6000) to increase utilization, keep smaller fallbacks.
++# Added 8192 and a 4096 variant with fewer warps to explore different tradeoffs.
+ AUTOTUNE_CONFIGS = [
+-    triton.Config({"BLOCK": 4096}, num_warps=8, num_stages=2),
++    triton.Config({"BLOCK": 8192}, num_warps=8, num_stages=2),
++    triton.Config({"BLOCK": 4096}, num_warps=4, num_stages=2),
+     triton.Config({"BLOCK": 2048}, num_warps=8, num_stages=2),
+     triton.Config({"BLOCK": 1024}, num_warps=4, num_stages=2),
+ ]
+@@ -51,8 +53,8 @@
+ 
+     # Ensure input is contiguous for coalesced loads
+     x_contig = x.contiguous()
+-    # Allocate a separate output buffer to avoid read-after-write hazards
+-    out = x_contig.clone()
++    # Allocate an output buffer without copying the input to avoid needless memory bandwidth.
++    out = torch.empty_like(x_contig)
+ 
+     n_elements = x_contig.numel()
+ 

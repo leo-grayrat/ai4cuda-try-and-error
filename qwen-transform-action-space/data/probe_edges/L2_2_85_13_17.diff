@@ -1,0 +1,121 @@
+@@ -9,60 +9,64 @@
+     x_ptr,           # pointer to input tensor (N,C,H,W) flattened
+     scale_ptr,       # pointer to scale tensor (C,1,1) flattened
+     out_ptr,         # pointer to output tensor (N,C,H_out,W_out) flattened
+-    B, C, H, W, H_out, W_out, k, clamp_min, clamp_max, total_elements
++    B, C, H, W, H_out, W_out, k, clamp_min, clamp_max,
++    BLOCK_W: tl.constexpr
+ ):
+-    pid = tl.program_id(0)
+-    if pid >= total_elements:
++    # grid: program_id(0) -> combined (b * C * H_out) row,
++    #       program_id(1) -> block index along W_out (each program computes BLOCK_W outputs)
++    row = tl.program_id(0)
++    wblock = tl.program_id(1)
++    if row >= B * C * H_out:
+         return
+ 
+-    # decode linear index into (b, c, h_out, w_out)
+-    w_out_idx = pid % W_out
+-    tmp = pid // W_out
++    # decode linear index into (b, c, h_out)
++    tmp = row
+     h_out_idx = tmp % H_out
+     tmp = tmp // H_out
+     c_idx = tmp % C
+     b_idx = tmp // C
+ 
++    # compute horizontal offsets for this block of outputs
++    w_start = wblock * BLOCK_W
++    offs_w = w_start + tl.arange(0, BLOCK_W)              # shape: (BLOCK_W,)
++    mask_w = offs_w < W_out
++
+     h0 = h_out_idx * k
+-    w0 = w_out_idx * k
++    w0_base = offs_w * k                                 # starting input column for each output in the block
+ 
+-    # compute base offsets
+-    # input offset: ((b*C + c) * H + (h0 + i)) * W + (w0 + j)
++    # compute base pointers
+     base_in = (b_idx * C + c_idx) * H * W
+-    base_out = (b_idx * C + c_idx) * H_out * W_out + h_out_idx * W_out + w_out_idx
++    base_out = (b_idx * C + c_idx) * H_out * W_out + h_out_idx * W_out + offs_w
+ 
+-    # initialize max value to a very low number
+-    max_val = -1e20
++    # load per-channel scale once and broadcast
++    s = tl.load(scale_ptr + c_idx)                        # scalar
+ 
+-    # iterate over the pooling window
+-    i = 0
+-    while i < k:
+-        j = 0
++    # initialize per-output maxima
++    max_vals = tl.full((BLOCK_W,), -1e20, dtype=tl.float32)
++
++    # iterate over k x k pooling window, vectorized across BLOCK_W outputs
++    for i in range(k):
+         row_offset = base_in + (h0 + i) * W
+-        while j < k:
+-            idx = row_offset + (w0 + j)
+-            v = tl.load(x_ptr + idx)
+-            # tl.where used for comparisons to keep in Triton ops
+-            max_val = tl.where(v > max_val, v, max_val)
+-            j += 1
+-        i += 1
++        for j in range(k):
++            addrs = row_offset + (w0_base + j)             # vector of addresses for BLOCK_W outputs
++            vals = tl.load(x_ptr + addrs, mask=mask_w, other=-1e20)  # vector load with mask
++            # apply per-channel scale before reduction to preserve semantics for arbitrary (possibly negative) scales
++            vals = vals * s
++            max_vals = tl.where(vals > max_vals, vals, max_vals)
+ 
+-    # apply per-channel scale
+-    s = tl.load(scale_ptr + c_idx)
+-    max_val = max_val * s
++    # clamp results
++    max_vals = tl.where(max_vals < clamp_min, clamp_min, max_vals)
++    max_vals = tl.where(max_vals > clamp_max, clamp_max, max_vals)
+ 
+-    # clamp
+-    max_val = tl.where(max_val < clamp_min, clamp_min, max_val)
+-    max_val = tl.where(max_val > clamp_max, clamp_max, max_val)
+-
+-    tl.store(out_ptr + base_out, max_val)
++    # store vector of BLOCK_W outputs (with mask for the tail)
++    tl.store(out_ptr + base_out, max_vals, mask=mask_w)
+ 
+ 
+-def triton_pool_scale_clamp(x: torch.Tensor, scale: torch.Tensor, kernel_size: int, clamp_min: float, clamp_max: float):
++def triton_pool_scale_clamp(x: torch.Tensor, scale: torch.Tensor, kernel_size: int, clamp_min: float, clamp_max: float, BLOCK_W: int = 8):
+     """
+     Fused operator: elementwise multiply by scale (per-channel), 2D max pooling with kernel_size==stride,
+     and clamp to [clamp_min, clamp_max]. Assumes x is contiguous NCHW and scale is (C,1,1) or (C,).
+-    Returns a new tensor with shape (N, C, H_out, W_out).
++    This launcher tiles outputs along W_out by BLOCK_W to reduce launch overhead and enable vectorized loads.
+     """
+     assert x.is_cuda and scale.is_cuda, "Tensors must be on CUDA."
+     x = x.contiguous()
+@@ -76,13 +80,18 @@
+ 
+     out = torch.empty((B, C, H_out, W_out), device=x.device, dtype=x.dtype)
+ 
+-    total_elements = B * C * H_out * W_out
+-    # Launch one program per output element
+-    grid = (total_elements,)
++    # number of W blocks (each block computes BLOCK_W outputs along W_out)
++    W_blocks = (W_out + BLOCK_W - 1) // BLOCK_W
+ 
++    # Grid is (rows, W_blocks) where rows = B * C * H_out
++    rows = B * C * H_out
++    grid = (rows, W_blocks)
++
++    # Launch the tiled kernel, passing BLOCK_W as a constexpr
+     _pool_scale_clamp_kernel[grid](
+         x, scale, out,
+-        B, C, H, W, H_out, W_out, k, float(clamp_min), float(clamp_max), total_elements
++        B, C, H, W, H_out, W_out, k, float(clamp_min), float(clamp_max),
++        BLOCK_W=BLOCK_W
+     )
+     return out
+ 

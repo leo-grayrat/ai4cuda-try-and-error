@@ -1,0 +1,191 @@
+@@ -3,134 +3,93 @@
+ import triton
+ import triton.language as tl
+ 
+-# Autotune configs biased toward larger, warp-aligned blocks and multiple rows per program,
+-# while keeping a few small options for exploration.
++# Autotune configurations chosen to explore larger block sizes and warp counts
+ AUTOTUNE_CONFIGS = [
+-    # focused larger, warp-aligned blocks (preferred)
+-    triton.Config({"BLOCK": 256,  "ROWS_PER_PROG": 2}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK": 256,  "ROWS_PER_PROG": 4}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK": 512,  "ROWS_PER_PROG": 2}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK": 512,  "ROWS_PER_PROG": 4}, num_warps=8, num_stages=3),
+-    triton.Config({"BLOCK": 1024, "ROWS_PER_PROG": 2}, num_warps=8, num_stages=3),
+-    triton.Config({"BLOCK": 1024, "ROWS_PER_PROG": 4}, num_warps=8, num_stages=3),
+-    # a couple of smaller configs for completeness
+-    triton.Config({"BLOCK": 128, "ROWS_PER_PROG": 1}, num_warps=2, num_stages=2),
+-    triton.Config({"BLOCK": 64,  "ROWS_PER_PROG": 1}, num_warps=2, num_stages=1),
++    triton.Config({"BLOCK": 512},  num_warps=4, num_stages=2),
++    triton.Config({"BLOCK": 1024}, num_warps=8, num_stages=2),
++    triton.Config({"BLOCK": 2048}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK": 4096}, num_warps=8, num_stages=3),
+ ]
+ 
+-@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['rows','spatial_len'])
++@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['n_elements'])
+ @triton.jit
+-def _mish2_kernel(x_ptr, out_ptr, rows, spatial_len, ROWS_PER_PROG: tl.constexpr, BLOCK: tl.constexpr):
++def _mish2_kernel(x_ptr, out_ptr, n_elements, BLOCK: tl.constexpr):
+     """
+-    Triton kernel that applies Mish twice elementwise, operating natively on fp16
+-    to halve memory bandwidth, and using a numerically-stable softplus expression.
++    Triton kernel that computes mish(mish(x)) in a single fused pass.
++    Uses a numerically-stable softplus branch and a tanh formulation
++    that avoids calling a tanh intrinsic.
++    """
++    pid = tl.program_id(0)
++    block_start = pid * BLOCK
++    offsets = block_start + tl.arange(0, BLOCK)
++    mask = offsets < n_elements
+ 
+-    Grid layout:
+-      grid = (num_row_groups, num_spatial_chunks)
+-    program_id(0) -> row-group index (each program handles ROWS_PER_PROG rows)
+-    program_id(1) -> spatial chunk index
+-    """
+-    row_group = tl.program_id(0)
+-    chunk = tl.program_id(1)
++    # Load input block
++    x = tl.load(x_ptr + offsets, mask=mask, other=0.0)
+ 
+-    block_start = chunk * BLOCK
+-    offs = block_start + tl.arange(0, BLOCK)
+-    mask = offs < spatial_len
++    # Stable softplus: sp = log(1 + exp(x)) implemented with branches to avoid overflow
++    # For x > 0: softplus(x) = x + log(1 + exp(-x))
++    # For x <=0: softplus(x) = log(1 + exp(x))
++    neg_x = -x
++    # compute exp(-x) and exp(x) masked; use them where needed
++    exp_neg_x = tl.exp(neg_x)
++    exp_x = tl.exp(x)
++    sp = tl.where(x > 0.0, x + tl.log(1.0 + exp_neg_x), tl.log(1.0 + exp_x))
+ 
+-    # each program handles a small compile-time number of rows
+-    base_row = row_group * ROWS_PER_PROG
++    # tanh(sp) = (e^{2sp} - 1) / (e^{2sp} + 1)
++    e2 = tl.exp(2.0 * sp)
++    t = (e2 - 1.0) / (e2 + 1.0)
++    y = x * t
+ 
+-    # constants tuned for fp16 safety
+-    EXP_CLAMP = 11.0  # clamp exponent arguments to [-11, 11] for fp16 stability
++    # Second Mish: reuse same stable softplus approach on y
++    neg_y = -y
++    exp_neg_y = tl.exp(neg_y)
++    exp_y = tl.exp(y)
++    sp2 = tl.where(y > 0.0, y + tl.log(1.0 + exp_neg_y), tl.log(1.0 + exp_y))
+ 
+-    for r in range(ROWS_PER_PROG):
+-        row = base_row + r
+-        valid_row = row < rows
+-        base = row * spatial_len
++    e22 = tl.exp(2.0 * sp2)
++    t2 = (e22 - 1.0) / (e22 + 1.0)
++    out = y * t2
+ 
+-        # combined mask: spatial elements valid for this row
+-        full_mask = mask & valid_row
++    # Store result
++    tl.store(out_ptr + offsets, out, mask=mask)
+ 
+-        # Load input directly as fp16 (wrapper will pass fp16 tensors)
+-        x_h = tl.load(x_ptr + base + offs, mask=full_mask, other=0.0)
+-
+-        # Numerically-stable softplus:
+-        # softplus(x) = max(x, 0) + log(1 + exp(-abs(x)))
+-        abs_x = tl.abs(x_h)
+-        # clamp abs_x to keep exp arguments in safe range for fp16
+-        abs_x_clamped = tl.minimum(abs_x, EXP_CLAMP)
+-        max_x0 = tl.maximum(x_h, 0.0)
+-        exp_term = tl.exp(-abs_x_clamped)                # exp(-abs(x)) safe and small for large abs
+-        sp = max_x0 + tl.log(1.0 + exp_term)
+-
+-        # tanh(sp) via sigmoid: tanh(s) = 2*sigmoid(2*s) - 1
+-        u = 2.0 * sp
+-        # clamp exponent input for sigmoid calculation
+-        exp_arg = -u
+-        exp_arg_clamped = tl.minimum(tl.maximum(exp_arg, -EXP_CLAMP), EXP_CLAMP)
+-        exp_neg_u = tl.exp(exp_arg_clamped)
+-        sig = 1.0 / (1.0 + exp_neg_u)
+-        t = 2.0 * sig - 1.0
+-        y_h = x_h * t
+-
+-        # second Mish with same stable ops
+-        abs_y = tl.abs(y_h)
+-        abs_y_clamped = tl.minimum(abs_y, EXP_CLAMP)
+-        max_y0 = tl.maximum(y_h, 0.0)
+-        exp_term2 = tl.exp(-abs_y_clamped)
+-        sp2 = max_y0 + tl.log(1.0 + exp_term2)
+-
+-        u2 = 2.0 * sp2
+-        exp_arg2 = -u2
+-        exp_arg2_clamped = tl.minimum(tl.maximum(exp_arg2, -EXP_CLAMP), EXP_CLAMP)
+-        exp_neg_u2 = tl.exp(exp_arg2_clamped)
+-        sig2 = 1.0 / (1.0 + exp_neg_u2)
+-        t2 = 2.0 * sig2 - 1.0
+-        out_h = y_h * t2
+-
+-        # store fp16 output (wrapper will cast back to fp32 once)
+-        tl.store(out_ptr + base + offs, out_h, mask=full_mask)
+ 
+ def triton_mish2(x: torch.Tensor):
+     """
+-    Wrapper to launch the Triton kernel that computes mish(mish(x)).
+-    This wrapper converts the conv output to fp16 to reduce memory traffic,
+-    launches the kernel which operates natively on fp16, then converts the
+-    result back to fp32 once before returning.
++    Wrapper to launch the Triton kernel computing mish(mish(x)).
++    Ensures input is contiguous and on CUDA.
+     """
+     assert x.is_cuda, "Input must be on CUDA."
+-    # ensure contiguous for coalesced access
+     x = x.contiguous()
+-    # convert to fp16 to halve memory bandwidth
+-    x_h = x.half()
+-    N, C, H, W = x_h.shape
+-    rows = N * C
+-    spatial_len = H * W
+-    out_h = torch.empty_like(x_h)
+-    # Build a 2D grid; rely on autotuner's meta['ROWS_PER_PROG'] and meta['BLOCK']
+-    grid = lambda meta: ((rows + meta['ROWS_PER_PROG'] - 1) // meta['ROWS_PER_PROG'],
+-                         (spatial_len + meta['BLOCK'] - 1) // meta['BLOCK'])
+-    _mish2_kernel[grid](x_h, out_h, rows, spatial_len)
+-    # single cast back to fp32 (outside the kernel)
+-    return out_h.float()
++    out = torch.empty_like(x)
++    n = x.numel()
++    # grid based on BLOCK chosen by autotune
++    grid = lambda meta: ((n + meta['BLOCK'] - 1) // meta['BLOCK'],)
++    _mish2_kernel[grid](x, out, n)
++    return out
++
+ 
+ class ModelNew(nn.Module):
+     """
+-    Optimized model: reuses PyTorch Conv2d, but replaces the two sequential
+-    Mish activations with a single fused Triton kernel that computes
+-    mish(mish(x)) in one fused pass.
++    Optimized model that reuses PyTorch's Conv2d for the convolution
++    (leveraging highly-optimized library code) and replaces the two
++    sequential Mish activations with a single fused Triton kernel
++    that computes mish(mish(x)) in one pass to reduce memory traffic.
+     """
+     def __init__(self, in_channels, out_channels, kernel_size):
+         super(ModelNew, self).__init__()
++        # Keep the same Conv2d configuration as the original model
+         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size)
+ 
+     def forward(self, x):
+         x = self.conv(x)
+-        # fused Triton kernel applies Mish twice in one pass (wrapper will cast types)
++        # Apply fused Triton kernel for two Mish activations
+         x = triton_mish2(x)
+         return x
+ 
+-# Keep the same input generation helpers as the original module
++
++# Keep helper functions and constants consistent with the original module
+ batch_size   = 64
+ in_channels  = 64
+ out_channels = 128

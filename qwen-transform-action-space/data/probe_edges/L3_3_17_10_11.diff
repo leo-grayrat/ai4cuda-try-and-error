@@ -1,0 +1,93 @@
+@@ -5,11 +5,17 @@
+ import triton.language as tl
+ 
+ # Autotune configs for GEMM-like kernels
+-# Ampere-safe starting configs: reduce per-block accumulator and pipeline stages to avoid SM shared-memory overflow.
++# Ampere-friendly configs: include larger BLOCK_M/BLOCK_N options for high-throughput large GEMMs,
++# while keeping a few smaller configs for edge cases / reduced-resource GPUs.
+ AUTOTUNE_GEMM = [
+-    triton.Config({"BLOCK_M": 128, "BLOCK_N": 64,  "BLOCK_K": 32}, num_warps=4, num_stages=1),
+-    triton.Config({"BLOCK_M": 256, "BLOCK_N": 64,  "BLOCK_K": 32}, num_warps=8, num_stages=1),
+-    triton.Config({"BLOCK_M": 128, "BLOCK_N": 128, "BLOCK_K": 32}, num_warps=8, num_stages=1),
++    # conservative / low-resource options
++    triton.Config({"BLOCK_M": 128, "BLOCK_N": 64,  "BLOCK_K": 32}, num_warps=4,  num_stages=1),
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 64,  "BLOCK_K": 32}, num_warps=8,  num_stages=1),
++    # medium options
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 128, "BLOCK_K": 32}, num_warps=8,  num_stages=2),
++    triton.Config({"BLOCK_M": 512, "BLOCK_N": 128, "BLOCK_K": 32}, num_warps=8,  num_stages=2),
++    # larger option to improve throughput for very large M (N*L)
++    triton.Config({"BLOCK_M": 512, "BLOCK_N": 256, "BLOCK_K": 32}, num_warps=16, num_stages=2),
+ ]
+ 
+ @triton.autotune(configs=AUTOTUNE_GEMM, key=['M', 'N', 'K'])
+@@ -51,7 +57,7 @@
+         b = tl.load(b_ptrs, mask=(mask_k[:, None] & mask_n[None, :]), other=0.0)
+ 
+         # A: (BLOCK_M, BLOCK_K); B: (BLOCK_K, BLOCK_N)
+-        acc += tl.dot(a.to(tl.float32), b.to(tl.float32))
++        acc += tl.dot(a, b)
+ 
+     # add bias (broadcasted across rows)
+     bias = tl.load(bias_ptr + offs_n, mask=mask_n, other=0.0)
+@@ -190,13 +196,15 @@
+         out_expand1_mat = triton_gemm_relu(A_expand1, W_expand1_t, b_expand1)  # (M2, out_c1)
+         out_expand1 = out_expand1_mat.view(N, H, W, self.expand1x1.out_channels).permute(0, 3, 1, 2).contiguous()
+ 
+-        # Expand3x3: process per-image and in spatial chunks to avoid a huge im2col buffer
+-        # We'll unfold one image at a time and run GEMM on spatial chunks so we never allocate (N, C*9, H*W) fully.
++        # Expand3x3: unfold the whole batch once and GEMM over the combined (N * L) rows.
++        # This reduces thousands of small kernel launches into a few large GEMMs for much better throughput.
+         out_c3 = self.expand3x3.out_channels
+         Kp = self.expand3x3.in_channels * 3 * 3
+         L = H * W
+-        # Preallocate the final matrix (N*L, out_c3) on device
+-        out_expand3_mat = torch.empty((N * L, out_c3), device=device, dtype=dtype)
++        # Unfold the whole batch: (N, Kp, L)
++        patches = F.unfold(out_squeeze, kernel_size=3, padding=1, stride=1)  # (N, Kp, L)
++        # Reshape to (N*L, Kp)
++        patches_mat = patches.permute(0, 2, 1).contiguous().view(-1, Kp)  # (N*L, Kp)
+ 
+         W_expand3_t = self._W_expand3_t
+         b_expand3 = self._b_expand3
+@@ -206,24 +214,23 @@
+         if b_expand3.device != device:
+             b_expand3 = b_expand3.to(device)
+ 
+-        # Chunk size for spatial positions (tuneable). 8192 is a reasonable starting point.
+-        chunk_L = 8192
+-        for i in range(N):
+-            # Unfold a single image: shape (1, Kp, L)
+-            patches_i = F.unfold(out_squeeze[i:i+1], kernel_size=3, padding=1, stride=1)  # (1, Kp, L)
+-            # Process the spatial locations in chunks to keep memory small
+-            for start in range(0, L, chunk_L):
+-                end = min(L, start + chunk_L)
+-                # slice -> (1, Kp, chunk_len) then transpose to (chunk_len, Kp)
+-                patch_chunk = patches_i[:, :, start:end].permute(0, 2, 1).contiguous().view(-1, Kp)  # (chunk_len, Kp)
+-                if patch_chunk.device != device:
+-                    patch_chunk = patch_chunk.to(device)
+-                # GEMM + ReLU for this chunk
+-                out_chunk = triton_gemm_relu(patch_chunk, W_expand3_t, b_expand3)  # (chunk_len, out_c3)
+-                # write into the large output matrix
+-                out_expand3_mat[i * L + start : i * L + end] = out_chunk
+-            # allow patches_i to be freed
+-            del patches_i
++        # Preallocate the final matrix (N*L, out_c3) on device
++        total_rows = N * L
++        out_expand3_mat = torch.empty((total_rows, out_c3), device=device, dtype=dtype)
++
++        # Chunk across the combined axis (rows = N*L). Use a large chunk size for high throughput.
++        # chunk_rows can be tuned; 262144 is a reasonable default that balances memory and launch overhead.
++        chunk_rows = 262144
++        for start in range(0, total_rows, chunk_rows):
++            end = min(total_rows, start + chunk_rows)
++            patch_chunk = patches_mat[start:end]
++            # Ensure contiguous on device (patches_mat was created on device and is contiguous)
++            if patch_chunk.device != device:
++                patch_chunk = patch_chunk.to(device)
++            out_chunk = triton_gemm_relu(patch_chunk, W_expand3_t, b_expand3)  # (chunk_len, out_c3)
++            out_expand3_mat[start:end] = out_chunk
++        # free patches to release memory sooner
++        del patches, patches_mat
+ 
+         out_expand3 = out_expand3_mat.view(N, H, W, out_c3).permute(0, 3, 1, 2).contiguous()
+ 

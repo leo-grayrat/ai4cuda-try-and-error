@@ -1,0 +1,58 @@
+{
+  "agreement": {
+    "n": 55,
+    "observed_agreement": 0.7455,
+    "expected_agreement": 0.1878,
+    "cohens_kappa": 0.6866
+  },
+  "distribution_original": {
+    "Fuse": 17,
+    "PrecisionChange": 15,
+    "Other": 5,
+    "ChangeLaunchConfig": 3,
+    "HostDeviceOverlap": 7,
+    "LoopTransform": 1,
+    "Vectorize": 3,
+    "EliminateMaterialization": 2,
+    "Tile": 1,
+    "IncreaseWorkPerThread": 1
+  },
+  "distribution_blind": {
+    "Fuse": 14,
+    "PrecisionChange": 17,
+    "Other": 8,
+    "ChangeLaunchConfig": 5,
+    "LoopTransform": 1,
+    "IncreaseWorkPerThread": 2,
+    "EliminateMaterialization": 5,
+    "Vectorize": 2,
+    "Tile": 1
+  },
+  "categories_unused_by_blind": [
+    "WarpReduce",
+    "SharedMemoryTransform",
+    "HostDeviceOverlap"
+  ],
+  "headline_survival": {
+    "original_labels": {
+      "mi_plugin_bits": 0.697,
+      "null_mean_bits": 0.3969,
+      "p_value_one_sided": 0.0005,
+      "n_permutations": 20000
+    },
+    "blind_labels_no_definitions": {
+      "mi_plugin_bits": 0.4513,
+      "null_mean_bits": 0.3558,
+      "p_value_one_sided": 0.106195,
+      "n_permutations": 20000
+    },
+    "consensus_subset": {
+      "n_edges": 38,
+      "mi_plugin_bits": 0.6643,
+      "null_mean_bits": 0.3419,
+      "p_value_one_sided": 0.0016,
+      "n_permutations": 20000
+    }
+  },
+  "interpretation": "The result does NOT survive the definition-free relabelling: the original significance may reflect the vocabulary's own guidance rather than structure in the data. Section 3.6 must be downgraded."
+}

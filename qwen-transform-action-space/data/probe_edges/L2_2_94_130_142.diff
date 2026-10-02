@@ -1,0 +1,187 @@
+@@ -10,8 +10,7 @@
+ def gemm_bias_act_groupnorm_kernel(
+     x_ptr,              # input pointer (N * K) where K = in_features
+     weight_ptr,         # weight pointer (C_out * K) (row-major: out_channel x K)
+-    bias_lin_ptr,       # linear bias pointer (C_out,)
+-    bias_extra_ptr,     # extra bias pointer (C_out,)
++    bias_ptr,           # combined bias pointer (C_out,)  <-- precomputed on host (linear_bias + extra_bias)
+     gn_w_ptr,           # groupnorm weight pointer (C_out,)
+     gn_b_ptr,           # groupnorm bias pointer (C_out,)
+     out_ptr,            # output pointer (N * C_out)
+@@ -20,21 +19,26 @@
+     K,                  # input features
+     G,                  # num_groups
+     eps,                # groupnorm epsilon
+-    BLOCK_C: tl.constexpr,   # number of channels per group (group size) - constexpr
++    BLOCK_N: tl.constexpr,   # number of samples per program (tile over N)
++    BLOCK_C: tl.constexpr,   # number of channels per program (keep == group_size to preserve GroupNorm grouping)
+     BLOCK_K: tl.constexpr    # K tile size - constexpr
+ ):
+-    # pid maps to (sample, group)
+-    pid = tl.program_id(0)
+-    sample = pid // G
+-    group = pid % G
++    # program maps to (channel_block, batch_block)
++    pid_c = tl.program_id(0)
++    pid_n = tl.program_id(1)
+ 
+-    # channel offsets for this group's channels: shape (BLOCK_C,)
+-    c_start = group * BLOCK_C
++    # channel offsets for this block: shape (BLOCK_C,)
++    c_start = pid_c * BLOCK_C
+     offs_c = c_start + tl.arange(0, BLOCK_C)
+     mask_c = offs_c < C_out
+ 
+-    # initialize accumulator for each channel in group
+-    acc = tl.zeros((BLOCK_C,), dtype=tl.float32)
++    # batch offsets for this block: shape (BLOCK_N,)
++    n_start = pid_n * BLOCK_N
++    offs_n = n_start + tl.arange(0, BLOCK_N)
++    mask_n = offs_n < N
++
++    # accumulator per (sample, channel) in the tile
++    acc = tl.zeros((BLOCK_N, BLOCK_C), dtype=tl.float32)
+ 
+     # iterate over K in tiles of BLOCK_K
+     k_blocks = (K + BLOCK_K - 1) // BLOCK_K
+@@ -43,60 +47,61 @@
+         offs_k = k_start + tl.arange(0, BLOCK_K)
+         mask_k = offs_k < K  # shape (BLOCK_K,)
+ 
+-        # load input block for this sample: shape (BLOCK_K,)
+-        x_ptrs = x_ptr + sample * K + offs_k
+-        x_block = tl.load(x_ptrs, mask=mask_k, other=0.0)  # (BLOCK_K,)
++        # load x tile for all samples in this BLOCK_N: shape (BLOCK_N, BLOCK_K)
++        x_ptrs = x_ptr + offs_n[:, None] * K + offs_k[None, :]
++        mask_x = mask_n[:, None] & mask_k[None, :]
++        x_block = tl.load(x_ptrs, mask=mask_x, other=0.0)  # (BLOCK_N, BLOCK_K)
+ 
+-        # load weight tile for channels in this group: shape (BLOCK_C, BLOCK_K)
+-        # compute weight pointers: weight row offset = channel * K
++        # load weight tile for channels in this block: shape (BLOCK_C, BLOCK_K)
+         weight_row_offsets = offs_c[:, None] * K
+         weight_ptrs = weight_ptr + weight_row_offsets + offs_k[None, :]
+-        mask_w = mask_k[None, :] & (mask_c[:, None])
++        mask_w = mask_c[:, None] & mask_k[None, :]
+         w_block = tl.load(weight_ptrs, mask=mask_w, other=0.0)  # (BLOCK_C, BLOCK_K)
+ 
+-        # accumulate: per-channel dot product with x_block
+-        # elementwise multiply broadcast x_block over rows then sum over K axis
+-        prod = w_block * x_block[None, :]  # (BLOCK_C, BLOCK_K)
+-        acc = acc + tl.sum(prod, axis=1)
++        # accumulate: per-sample/per-channel dot product over K
++        # x_block: (BLOCK_N, BLOCK_K), w_block: (BLOCK_C, BLOCK_K)
++        # compute broadcast product -> (BLOCK_N, BLOCK_C, BLOCK_K) then sum over K -> (BLOCK_N, BLOCK_C)
++        prod = x_block[:, None, :] * w_block[None, :, :]
++        acc = acc + tl.sum(prod, axis=2)
+ 
+-    # add biases: linear bias + extra bias
+-    b_lin = tl.load(bias_lin_ptr + offs_c, mask=mask_c, other=0.0)
+-    b_extra = tl.load(bias_extra_ptr + offs_c, mask=mask_c, other=0.0)
+-    v = acc + b_lin + b_extra
++    # load combined bias for channels and broadcast across samples
++    b = tl.load(bias_ptr + offs_c, mask=mask_c, other=0.0)  # (BLOCK_C,)
++    b = b[None, :]  # (1, BLOCK_C) - will broadcast with acc (BLOCK_N, BLOCK_C)
++
++    v = acc + b  # (BLOCK_N, BLOCK_C)
+ 
+     # Hardtanh clamp to [-1, 1]
+     v = tl.minimum(tl.maximum(v, -1.0), 1.0)
+ 
+-    # Mish: v * tanh(softplus(v)), softplus = log(1 + exp(v))
+-    # compute tanh via exp to avoid using tl.tanh
+-    s = tl.log(1.0 + tl.exp(v))
++    # Stable softplus: softplus(x) ~ x for large x to avoid overflow, else log(1+exp(x))
++    # threshold chosen moderately large to be safe for fp32
++    s = tl.where(v > 20.0, v, tl.log(1.0 + tl.exp(v)))
++
++    # tanh via exp for numerical stability: tanh(s) = (1 - e^{-2s})/(1 + e^{-2s})
+     e = tl.exp(-2.0 * s)
+     tanh_s = (1.0 - e) / (1.0 + e)
+-    v = v * tanh_s  # activated values per channel
++    v = v * tanh_s  # Mish activation applied, shape (BLOCK_N, BLOCK_C)
+ 
+-    # compute GroupNorm over channels in this group for this sample
+-    # mean and variance across BLOCK_C channels
+-    # Note: mask_c can have False for tail channels, but group_size should divide C_out exactly in our usage.
+-    # Still keep safety:
+-    # compute count (number of valid channels)
++    # compute GroupNorm across channels for each sample in the BLOCK_N
++    mask_c_f = mask_c.to(tl.float32)[None, :]  # (1, BLOCK_C)
+     count = tl.sum(mask_c.to(tl.float32), axis=0)
+-    # avoid divide by zero
+     count = tl.maximum(count, 1.0)
+ 
+-    mean = tl.sum(v * mask_c.to(tl.float32), axis=0) / count
+-    diff = (v - mean) * mask_c.to(tl.float32)
+-    var = tl.sum(diff * diff, axis=0) / count
+-    invstd = 1.0 / tl.sqrt(var + eps)
++    mean = tl.sum(v * mask_c_f, axis=1) / count          # (BLOCK_N,)
++    diff = (v - mean[:, None]) * mask_c_f                # (BLOCK_N, BLOCK_C)
++    var = tl.sum(diff * diff, axis=1) / count            # (BLOCK_N,)
++    invstd = 1.0 / tl.sqrt(var + eps)                    # (BLOCK_N,)
+ 
+-    # load groupnorm affine params
+-    gw = tl.load(gn_w_ptr + offs_c, mask=mask_c, other=1.0)
+-    gb = tl.load(gn_b_ptr + offs_c, mask=mask_c, other=0.0)
++    # load groupnorm affine params (per-channel) and apply
++    gw = tl.load(gn_w_ptr + offs_c, mask=mask_c, other=1.0)  # (BLOCK_C,)
++    gb = tl.load(gn_b_ptr + offs_c, mask=mask_c, other=0.0)  # (BLOCK_C,)
+ 
+-    out_vals = diff * invstd * gw + gb
++    out_vals = diff * invstd[:, None] * gw[None, :] + gb[None, :]  # (BLOCK_N, BLOCK_C)
+ 
+-    # store output
+-    out_ptrs = out_ptr + sample * C_out + offs_c
+-    tl.store(out_ptrs, out_vals, mask=mask_c)
++    # store output: out is laid out as (N, C_out)
++    out_ptrs = out_ptr + offs_n[:, None] * C_out + offs_c[None, :]
++    mask_store = mask_n[:, None] & mask_c[None, :]
++    tl.store(out_ptrs, out_vals, mask=mask_store)
+ 
+ 
+ def triton_gemm_bias_act_groupnorm(x: torch.Tensor,
+@@ -125,27 +130,27 @@
+     group_size = C_out // G
+ 
+     # choose tile sizes
+-    BLOCK_C = group_size  # we compute exactly one group per program
+-    # choose BLOCK_K to balance memory and compute; 256 is a reasonable tile for Ampere
+-    BLOCK_K = 256
++    BLOCK_C = group_size   # keep BLOCK_C equal to group_size so each channel-block corresponds to a GroupNorm group
++    BLOCK_N = 8            # number of samples handled per program (tuneable)
++    BLOCK_K = 512          # larger K tile to increase compute per memory (tuneable)
+ 
+     x_contig = x.contiguous()
+     w_contig = linear_weight.contiguous()
+-    bias_lin_contig = linear_bias.contiguous()
+-    bias_extra_contig = extra_bias.contiguous()
++    # fold the two biases into one combined bias on host to avoid two loads per channel in the kernel
++    combined_bias = (linear_bias + extra_bias).contiguous()
+     gn_w_contig = gn_weight.contiguous()
+     gn_b_contig = gn_bias.contiguous()
+ 
+     out = torch.empty((N, C_out), device=x.device, dtype=x.dtype)
+ 
+-    grid = (N * G,)
++    # 2D grid: (channel_blocks, batch_blocks)
++    grid = ((C_out + BLOCK_C - 1) // BLOCK_C, (N + BLOCK_N - 1) // BLOCK_N)
+ 
+     # Launch kernel
+     gemm_bias_act_groupnorm_kernel[grid](
+         x_contig,
+         w_contig,
+-        bias_lin_contig,
+-        bias_extra_contig,
++        combined_bias,
+         gn_w_contig,
+         gn_b_contig,
+         out,
+@@ -154,6 +159,7 @@
+         K,
+         G,
+         eps,
++        BLOCK_N=BLOCK_N,
+         BLOCK_C=BLOCK_C,
+         BLOCK_K=BLOCK_K,
+     )

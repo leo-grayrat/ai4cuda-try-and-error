@@ -1,0 +1,78 @@
+@@ -6,8 +6,8 @@
+ 
+ # Triton fused kernels: inplace ReLU and inplace Add+ReLU
+ # These kernels operate on flattened contiguous tensors.
+-
+-BLOCK_SIZE = 4096  # tuned block size for Ampere (A6000)
++# Use a smaller block size to improve occupancy and reduce register pressure on Ampere.
++BLOCK_SIZE = 1024  # tuned block size for Ampere (A6000)
+ 
+ 
+ @triton.jit
+@@ -34,9 +34,8 @@
+     if not x.is_cuda:
+         return F.relu(x, inplace=True)
+ 
+-    # Avoid unconditional copies: only make contiguous if needed.
+-    if not x.is_contiguous():
+-        x = x.contiguous()
++    # Require caller to provide contiguous CUDA tensors to avoid hidden allocations.
++    assert x.is_contiguous(), "triton_relu_inplace requires contiguous CUDA tensors; call .contiguous() offline if needed"
+ 
+     n_elements = x.numel()
+     if n_elements == 0:
+@@ -44,7 +43,7 @@
+ 
+     grid = lambda meta: ((n_elements + BLOCK_SIZE - 1) // BLOCK_SIZE,)
+     # For the ReLU-only path we pass the same pointer for y_ptr; DO_ADD=False ensures it's not read.
+-    _fused_relu_add_inplace_kernel[grid](x, x, False, n_elements, BLOCK=BLOCK_SIZE, num_warps=4)
++    _fused_relu_add_inplace_kernel[grid](x, x, False, n_elements, BLOCK=BLOCK_SIZE, num_warps=8)
+     return x
+ 
+ 
+@@ -60,19 +59,16 @@
+     # Ensure same shape
+     assert x.shape == y.shape, "triton_add_relu_inplace requires tensors of same shape"
+ 
+-    # Avoid unnecessary copies but ensure tensors are contiguous for in-place store into x.
+-    if not x.is_contiguous():
+-        x = x.contiguous()
+-    # y is only read, so avoid forcing a copy unless absolutely necessary.
+-    if not y.is_contiguous():
+-        y = y.contiguous()
++    # Require caller to provide contiguous CUDA tensors to avoid hidden allocations.
++    assert x.is_contiguous(), "triton_add_relu_inplace requires contiguous CUDA tensors; call .contiguous() offline if needed"
++    assert y.is_contiguous(), "triton_add_relu_inplace requires contiguous CUDA tensors; call .contiguous() offline if needed"
+ 
+     n_elements = x.numel()
+     if n_elements == 0:
+         return x
+ 
+     grid = lambda meta: ((n_elements + BLOCK_SIZE - 1) // BLOCK_SIZE,)
+-    _fused_relu_add_inplace_kernel[grid](x, y, True, n_elements, BLOCK=BLOCK_SIZE, num_warps=4)
++    _fused_relu_add_inplace_kernel[grid](x, y, True, n_elements, BLOCK=BLOCK_SIZE, num_warps=8)
+     return x
+ 
+ 
+@@ -132,6 +128,21 @@
+ 
+         # Flag to ensure folding runs only once (lazy fuse on first eval forward)
+         self._bn_fused = False
++
++    def eval(self):
++        """
++        Override eval() to eagerly fold BatchNorm into Conv for inference when user switches to eval().
++        This avoids the first-forward slowdown by performing fusion up-front.
++        """
++        super(ModelNew, self).eval()
++        if (not self._bn_fused):
++            try:
++                self._fuse_all_bn()
++            except Exception:
++                # If fusion fails for any reason, keep going without crashing eval()
++                pass
++            self._bn_fused = True
++        return self
+ 
+     def _make_layer(self, block, out_channels, blocks, stride=1):
+         downsample = None

@@ -1,0 +1,129 @@
+@@ -60,35 +60,50 @@
+       - Tiles the hidden dimension and performs fp16 matmuls for GEMMs.
+       - Applies sigmoid with a Triton in-place fp16 kernel (avoids fp32 <-> fp16 conversions).
+       - Accumulates output contributions in fp32 to maintain numeric stability.
+-      - Reduces intermediate allocations and avoids repeated device transfers of parameters.
++      - Reduces intermediate allocations and avoids repeated device transfers of parameters by caching
++        converted/contiguous weights per device.
+     """
+     def __init__(self, input_size, hidden_size, output_size):
+         super(ModelNew, self).__init__()
+         self.linear1 = nn.Linear(input_size, hidden_size)
+         self.linear2 = nn.Linear(hidden_size, output_size)
++        # lightweight per-device cache to avoid repeated .to(device)/.half() allocations on every forward
++        # key is str(device) to be robust across CUDA/CPU device representations
++        self._weight_cache = {}
+ 
+-    def forward(self, x):
+-        # Tunable tiling parameters (balanced for A6000 / Ampere)
+-        CHUNK = 4096     # number of rows processed per iteration
+-        TILE_H = 1024    # hidden dimension tile size
+-        MICRO = 64       # micro-tile for fused stream (multiple of 32/64 to favor tensor cores)
++    def _prepare_weights_for_device(self, device):
++        key = str(device)
++        cached = self._weight_cache.get(key, None)
++        if cached is not None:
++            return cached
+ 
+-        device = x.device
+-        n = x.shape[0]
+-
+-        # Local references to parameters
++        # Move and cast once per device and cache the results.
+         W1 = self.linear1.weight
+         b1 = self.linear1.bias
+         W2 = self.linear2.weight
+         b2 = self.linear2.bias
+ 
+-        # Pre-cast and make contiguous for coalesced loads:
+-        # - W1_half_t: (input_size, hidden) so that x_chunk_half @ W1_half_t[:, micro] performs input-major loads
+-        # - W2_f32_t: (hidden, output_size) so sigmoid_micro @ W2_f32_t[micro] yields (chunk, output_size)
+-        W1_half_t = W1.to(device).half().t().contiguous()
+-        W2_f32_t = W2.to(device).float().t().contiguous()
++        # Keep shapes in standard (out_features, in_features) layout. We'll transpose during matmuls as needed.
++        W1_half = W1.to(device).half().contiguous()
++        W2_half = W2.to(device).half().contiguous()
+         b1_half = None if b1 is None else b1.to(device).half()
+         b2_f32 = None if b2 is None else b2.to(device).float()
++
++        cached = (W1_half, b1_half, W2_half, b2_f32)
++        self._weight_cache[key] = cached
++        return cached
++
++    def forward(self, x):
++        # Tunable tiling parameters (balanced for A6000 / Ampere)
++        CHUNK = 4096     # number of rows processed per iteration
++        # Use a larger TILE_H to reduce Python-level loop overhead and create larger GEMMs
++        TILE_H = 2048    # hidden dimension tile size (hidden_size=4096 -> two tiles)
++
++        device = x.device
++        n = x.shape[0]
++
++        # Prepare cached, device-resident weight views
++        W1_half, b1_half, W2_half, b2_f32 = self._prepare_weights_for_device(device)
+ 
+         outputs = []
+ 
+@@ -96,43 +111,35 @@
+         for row_start in range(0, n, CHUNK):
+             row_end = min(row_start + CHUNK, n)
+             x_chunk = x[row_start:row_end].to(device)  # (chunk, input_size), fp32
+-            x_chunk_half = x_chunk.half().contiguous()  # (chunk, input_size), fp16 for inner fp16 matmuls
++            x_chunk_half = x_chunk.half()              # (chunk, input_size), fp16
+ 
+             # accumulator for output (chunk, output_size) in fp32
+-            out_acc = torch.zeros((x_chunk.shape[0], W2.shape[0]), device=device, dtype=torch.float32)
++            out_acc = torch.zeros((x_chunk.shape[0], W2_half.shape[0]), device=device, dtype=torch.float32)
+ 
+-            # iterate over hidden tiles and stream micro-tiles to fuse GEMM1 -> Sigmoid -> GEMM2
+-            H = W1.shape[0]
++            # iterate over larger hidden tiles (fewer, bigger matmuls)
++            H = W1_half.shape[0]
+             for h_start in range(0, H, TILE_H):
+                 h_end = min(h_start + TILE_H, H)
+ 
+-                # stream micro-tiles inside this hidden tile
+-                for m_start in range(h_start, h_end, MICRO):
+-                    m_end = min(m_start + MICRO, h_end)
+-                    m_len = m_end - m_start
++                # parameter tiles (device-resident, half)
++                W1_tile = W1_half[h_start:h_end, :]         # (Ht, input_size)
++                b1_tile = None if b1_half is None else b1_half[h_start:h_end]  # (Ht,)
++                W2_tile = W2_half[:, h_start:h_end]         # (output_size, Ht)
+ 
+-                    # W1 panel for this micro-tile: W1_half_t[:, m_start:m_end] has shape (input_size, m_len)
+-                    W1_micro_panel = W1_half_t[:, m_start:m_end]         # (input_size, m)
+-                    # compute partial activations in fp16 then upcast to fp32 for stable sigmoid
+-                    # a_micro_fp16: (chunk, m_len)
+-                    a_micro_fp16 = torch.matmul(x_chunk_half, W1_micro_panel)
++                # GEMM 1: x_chunk_half @ W1_tile.T  => (chunk, Ht) in fp16
++                a_tile = torch.matmul(x_chunk_half, W1_tile.t())
++                if b1_tile is not None:
++                    # b1_tile is half; broadcasting addition keeps half dtype
++                    a_tile = a_tile + b1_tile[None, :]
+ 
+-                    # convert to fp32 for bias add and sigmoid
+-                    a_micro = a_micro_fp16.float()
+-                    if b1_half is not None:
+-                        b1_micro_fp32 = b1_half[m_start:m_end].float()
+-                        a_micro = a_micro + b1_micro_fp32[None, :]
++                # In-place Triton sigmoid on fp16 activation tile (avoids extra allocations)
++                a_tile = triton_sigmoid_fp16(a_tile)
+ 
+-                    # sigmoid in fp32
+-                    s_micro = torch.sigmoid(a_micro)  # (chunk, m_len), fp32
++                # GEMM 2: s_tile (a_tile) @ W2_tile.T => (chunk, output_size) in fp16
++                contrib = torch.matmul(a_tile, W2_tile.t())
+ 
+-                    # W2 micro transpose block for multiplication: (m_len, output_size)
+-                    W2_micro_t = W2_f32_t[m_start:m_end, :]  # (m_len, output_size)
+-
+-                    # immediately multiply and accumulate into out_acc (fp32)
+-                    # contrib: (chunk, output_size)
+-                    contrib = torch.matmul(s_micro, W2_micro_t)
+-                    out_acc += contrib
++                # Accumulate in fp32
++                out_acc += contrib.float()
+ 
+             # Add linear2 bias (fp32) if present
+             if b2_f32 is not None:

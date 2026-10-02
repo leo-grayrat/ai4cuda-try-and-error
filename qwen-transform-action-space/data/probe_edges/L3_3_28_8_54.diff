@@ -1,0 +1,204 @@
+@@ -10,9 +10,11 @@
+     triton.Config({"BLOCK_M": 128, "BLOCK_N": 128, "BLOCK_K": 32},  num_warps=8, num_stages=2),
+     triton.Config({"BLOCK_M": 128, "BLOCK_N": 256, "BLOCK_K": 64},  num_warps=8, num_stages=3),
+     triton.Config({"BLOCK_M": 256, "BLOCK_N": 256, "BLOCK_K": 64},  num_warps=8, num_stages=3),
++    # larger tile often beneficial for fp16/Tensor Cores
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 512, "BLOCK_K": 64},  num_warps=8, num_stages=3),
+ ]
+ 
+-@triton.autotune(configs=AUTOTUNE_CONFIGS_GEMM, key=['M', 'N', 'K', 'WITH_BIAS', 'WITH_GELU'])
++@triton.autotune(configs=AUTOTUNE_CONFIGS_GEMM, key=['M', 'N', 'K', 'WITH_BIAS', 'WITH_GELU', 'USE_FP16'])
+ @triton.jit
+ def _gemm_bias_gelu_kernel(
+     A_ptr, B_ptr, C_ptr, bias_ptr,
+@@ -20,13 +22,13 @@
+     stride_am, stride_ak,
+     stride_bk, stride_bn,
+     stride_cm, stride_cn,
+-    WITH_BIAS: tl.constexpr, WITH_GELU: tl.constexpr,
++    WITH_BIAS: tl.constexpr, WITH_GELU: tl.constexpr, USE_FP16: tl.constexpr,
+     BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr
+ ):
+     """
+     Compute C = A @ B  (A: M x K, B: K x N) with optional bias addition and optional GELU activation.
+-    A, B, C are float32.
+-    bias_ptr may be null (0) when WITH_BIAS==0.
++    A, B can be fp16 in memory to leverage Tensor Cores; inside the kernel we cast tiles to fp32
++    for accumulation. bias_ptr is expected to be fp32 for numerical stability.
+     """
+     pid_m = tl.program_id(0)
+     pid_n = tl.program_id(1)
+@@ -35,7 +37,7 @@
+     row_offsets = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
+     col_offsets = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
+ 
+-    # Initialize accumulator
++    # Initialize accumulator in fp32
+     acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
+ 
+     # Loop over K dimension in chunks
+@@ -50,14 +52,14 @@
+         a_mask = (row_offsets[:, None] < M) & (k_offsets[None, :] < K)
+         b_mask = (k_offsets[:, None] < K) & (col_offsets[None, :] < N)
+ 
+-        # Load blocks
+-        a_block = tl.load(a_ptrs, mask=a_mask, other=0.0)
+-        b_block = tl.load(b_ptrs, mask=b_mask, other=0.0)
++        # Load blocks (may be fp16 in memory). Cast to fp32 for accumulation.
++        a_block = tl.cast(tl.load(a_ptrs, mask=a_mask, other=0.0), tl.float32)
++        b_block = tl.cast(tl.load(b_ptrs, mask=b_mask, other=0.0), tl.float32)
+ 
+-        # Accumulate
++        # Accumulate in fp32
+         acc += tl.dot(a_block, b_block)
+ 
+-    # Add bias if requested
++    # Add bias if requested (bias_ptr should be fp32)
+     if WITH_BIAS:
+         # bias is length N (one per output column)
+         bias_ptrs = bias_ptr + col_offsets[None, :] * 1
+@@ -65,14 +67,13 @@
+         bias_vals = tl.load(bias_ptrs, mask=col_mask[None, :], other=0.0)
+         acc = acc + bias_vals
+ 
+-    # Apply GELU (approx via x * sigmoid(1.702 * x)) if requested
++    # Apply GELU (approx via x * sigmoid(1.702 * x)) if requested (in fp32)
+     if WITH_GELU:
+-        # compute sigmoid(1.702 * x)
+         x = acc
+         sig = 1.0 / (1.0 + tl.exp(-1.702 * x))
+         acc = x * sig
+ 
+-    # Write back result
++    # Write back result (C_ptr expected to be fp32)
+     c_ptrs = C_ptr + row_offsets[:, None] * stride_cm + col_offsets[None, :] * stride_cn
+     c_mask = (row_offsets[:, None] < M) & (col_offsets[None, :] < N)
+     tl.store(c_ptrs, acc, mask=c_mask)
+@@ -81,20 +82,31 @@
+ def triton_linear_gemm(A: torch.Tensor, B: torch.Tensor, bias: torch.Tensor = None, gelu: bool = False):
+     """
+     Wrapper to compute A @ B with optional bias and optional GELU fused in Triton.
+-    A: (M, K)
+-    B: (K, N)
+-    bias: (N,) or None
+-    Returns C: (M, N)
++    A: (M, K)  - may be float32 or float16
++    B: (K, N)  - may be float32 or float16 (we prefer passing fp16 for Tensor Core)
++    bias: (N,) or None (bias will be used in fp32)
++    Returns C: (M, N) in fp32
+     """
+     assert A.is_cuda and B.is_cuda, "Inputs must be on CUDA"
+-    assert A.dtype == torch.float32 and B.dtype == torch.float32, "Only float32 supported"
++    assert A.dtype in (torch.float32, torch.float16) and B.dtype in (torch.float32, torch.float16), "Only float32/float16 supported"
+     M, K = A.shape
+     Kb, N = B.shape
+     assert K == Kb, "Incompatible shapes for matmul"
+ 
+-    A_ = A.contiguous()
+-    B_ = B.contiguous()
+-    C = torch.empty((M, N), device=A.device, dtype=A.dtype)
++    # Decide whether to run the fp16 path (we will convert inputs to fp16 to leverage Tensor Cores)
++    use_fp16 = (A.dtype == torch.float16) or (B.dtype == torch.float16)
++
++    # Prepare A and B in memory layout expected by kernel.
++    # If using fp16 path, ensure the inputs are fp16 in GPU memory; the kernel will cast to fp32 internally.
++    if use_fp16:
++        A_ = A.contiguous().half()
++        B_ = B.contiguous().half()
++    else:
++        A_ = A.contiguous().float()
++        B_ = B.contiguous().float()
++
++    # Output is kept in fp32 to avoid changing rest of model dtype
++    C = torch.empty((M, N), device=A.device, dtype=torch.float32)
+ 
+     # prepare pointers and strides
+     stride_am = A_.stride(0)
+@@ -104,8 +116,11 @@
+     stride_cm = C.stride(0)
+     stride_cn = C.stride(1)
+ 
+-    bias_ptr = bias.contiguous() if (bias is not None) else torch.zeros(1, device=A.device, dtype=A.dtype)
+-    bias_ptr = bias_ptr.contiguous()
++    # bias should be fp32 for numerical stability
++    if bias is not None:
++        bias_ptr = bias.contiguous().float()
++    else:
++        bias_ptr = torch.zeros(1, device=A.device, dtype=torch.float32)
+ 
+     # grid according to autotuner block sizes
+     grid = lambda meta: (
+@@ -115,6 +130,7 @@
+ 
+     WITH_BIAS = 1 if bias is not None else 0
+     WITH_GELU = 1 if gelu else 0
++    USE_FP16 = 1 if use_fp16 else 0
+ 
+     _gemm_bias_gelu_kernel[grid](
+         A_, B_, C, bias_ptr,
+@@ -122,7 +138,7 @@
+         stride_am, stride_ak,
+         stride_bk, stride_bn,
+         stride_cm, stride_cn,
+-        WITH_BIAS, WITH_GELU
++        WITH_BIAS, WITH_GELU, USE_FP16
+     )
+     return C
+ 
+@@ -161,6 +177,13 @@
+         self.mlp_dropout = nn.Dropout(dropout)
+         self.mlp_fc2 = nn.Linear(mlp_dim, num_classes)
+ 
++        # Caches for transposed weights (to avoid repeated transposes each forward).
++        # We store the fp16 transposed copies and track the source weight data_ptr to refresh when it changes.
++        self._cached_patch_w_t = None
++        self._cached_patch_w_ptr = None
++        self._cached_fc1_w_t = None
++        self._cached_fc1_w_ptr = None
++
+     def forward(self, img):
+         p = self.patch_size
+         B = img.shape[0]
+@@ -181,10 +204,19 @@
+         # Prepare weight and bias for Triton: patch_to_embedding weight shape (dim, patch_dim)
+         weight = self.patch_to_embedding.weight  # (dim, patch_dim)
+         bias = self.patch_to_embedding.bias      # (dim,)
+-        weight_t = weight.t().contiguous()       # (patch_dim, dim)
+ 
+-        # Compute projection using Triton fused GEMM (includes bias)
+-        proj = triton_linear_gemm(x_flat, weight_t, bias=bias, gelu=False)  # (Bn, dim)
++        # Use cached transposed fp16 weight when possible (avoid repeated transposes).
++        if (self._cached_patch_w_t is None) or (self._cached_patch_w_ptr != weight.data_ptr()):
++            # store fp16 transposed contiguous copy for the fp16 GEMM path
++            self._cached_patch_w_t = weight.t().contiguous().half()
++            self._cached_patch_w_ptr = weight.data_ptr()
++        weight_t = self._cached_patch_w_t
++
++        # Convert activations to fp16 for the kernel to leverage Tensor Cores (kernel casts back to fp32 internally)
++        x_flat_h = x_flat.half().contiguous()
++
++        # Compute projection using Triton fused GEMM (includes bias); pass USE_FP16 via wrapper
++        proj = triton_linear_gemm(x_flat_h, weight_t, bias=bias, gelu=False)  # (Bn, dim) -> returns fp32
+ 
+         # Reshape back to (B, num_patches, dim)
+         x = proj.view(B, num_patches, -1)
+@@ -204,10 +236,18 @@
+         # MLP head: fused first linear + GELU via Triton, then dropout and final linear via PyTorch
+         fc1_w = self.mlp_fc1.weight  # (mlp_dim, dim)
+         fc1_b = self.mlp_fc1.bias    # (mlp_dim,)
+-        fc1_w_t = fc1_w.t().contiguous()  # (dim, mlp_dim)
+ 
+-        # Triton fused matmul + bias + GELU (approximation)
+-        hidden = triton_linear_gemm(x_cls.contiguous(), fc1_w_t, bias=fc1_b, gelu=True)  # (B, mlp_dim)
++        # Use cached transposed fp16 fc1 weight to avoid re-transpose each forward
++        if (self._cached_fc1_w_t is None) or (self._cached_fc1_w_ptr != fc1_w.data_ptr()):
++            self._cached_fc1_w_t = fc1_w.t().contiguous().half()
++            self._cached_fc1_w_ptr = fc1_w.data_ptr()
++        fc1_w_t = self._cached_fc1_w_t
++
++        # Convert input to fp16 for kernel
++        x_cls_h = x_cls.contiguous().half()
++
++        # Triton fused matmul + bias + GELU (approximation). Kernel returns fp32 output.
++        hidden = triton_linear_gemm(x_cls_h, fc1_w_t, bias=fc1_b,
+...[TRUNCATED]

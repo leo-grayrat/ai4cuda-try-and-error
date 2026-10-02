@@ -1,0 +1,119 @@
+@@ -59,12 +59,16 @@
+ 
+ 
+ # Autotune configs for fused add + LayerNorm kernel.
+-# Favor Ampere-friendly BLOCK sizes and small ROWS_PER_PROG for higher parallelism.
++# Target Ampere-friendly tile sizes and ROWS_PER_PROG choices to cover common C (96,192,384).
+ ALN_AUTOTUNE_CONFIGS = [
+-    triton.Config({"BLOCK": 256, "ROWS_PER_PROG": 1}, num_warps=4, num_stages=2),
++    # Small N (<=128): process full row in one tile and multiple rows per program
++    triton.Config({"BLOCK": 128, "ROWS_PER_PROG": 4}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK": 128, "ROWS_PER_PROG": 2}, num_warps=8, num_stages=2),
++    # Medium N (<=256): two tiles per row, moderate rows per program
+     triton.Config({"BLOCK": 256, "ROWS_PER_PROG": 2}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK": 256, "ROWS_PER_PROG": 4}, num_warps=8, num_stages=3),
++    # Larger N: bigger block, fewer rows per program
+     triton.Config({"BLOCK": 512, "ROWS_PER_PROG": 1}, num_warps=8, num_stages=3),
+-    triton.Config({"BLOCK": 512, "ROWS_PER_PROG": 2}, num_warps=8, num_stages=3),
+ ]
+ 
+ @triton.autotune(configs=ALN_AUTOTUNE_CONFIGS, key=['n_rows', 'N'])
+@@ -81,16 +85,17 @@
+     ROWS_PER_PROG: tl.constexpr,
+ ):
+     """
+-    For each program id:
+-      - handles up to ROWS_PER_PROG rows (row_start ... row_start+ROWS_PER_PROG-1)
++    Two-pass kernel that avoids the extra global read of a per-row temporary.
+ 
+-    For each row:
+-      - First pass: compute vals = A[row, :] + B[row, :], accumulate s and ss, and store vals to out_sum_ptr
+-      - compute mean and rsigma
+-      - Second pass: load vals from out_sum_ptr and write normalized outputs to out_norm_ptr
++    Pass 1:
++      - scan A and B to compute fp32 accumulators s and ss (no global stores)
++    Compute mean and rsigma.
+ 
+-    This removes the host-side summed = a + b write and the associated extra device kernel,
+-    while keeping a single in-kernel write of the summed data (to return to caller).
++    Pass 2:
++      - re-load A and B in the same tiling loop and write both out_sum (original dtype)
++        and out_norm (float32) in the same pass.
++
++    Both passes use identical tiling so loads are coalesced and vectorized.
+     """
+     pid = tl.program_id(0)
+     row_start = pid * ROWS_PER_PROG
+@@ -104,7 +109,7 @@
+ 
+         offs_base = row * N
+ 
+-        # First pass: compute vals = A+B, accumulate s and ss, and store vals into out_sum
++        # First pass: accumulate statistics in fp32 (no global writes)
+         s = tl.zeros([], dtype=tl.float32)
+         ss = tl.zeros([], dtype=tl.float32)
+ 
+@@ -116,34 +121,38 @@
+ 
+             a = tl.load(a_ptr + offs, mask=mask, other=0.0)
+             b = tl.load(b_ptr + offs, mask=mask, other=0.0)
+-            vals = a + b
++            vals_f = tl.cast(a + b, tl.float32)
+ 
+-            # store the raw sum as original dtype for return
+-            tl.store(out_sum_ptr + offs, vals, mask=mask)
+-
+-            # accumulate statistics in fp32 (loads are already fp32)
+-            s += tl.sum(vals, axis=0)
+-            ss += tl.sum(vals * vals, axis=0)
++            s += tl.sum(vals_f, axis=0)
++            ss += tl.sum(vals_f * vals_f, axis=0)
+ 
+             off += BLOCK
+ 
+-        # compute mean and reciprocal std
++        # compute mean and reciprocal std (in fp32)
+         n_float = tl.cast(N, tl.float32)
+         mean = s / n_float
+         var = ss / n_float - mean * mean
+         rsigma = 1.0 / tl.sqrt(var + tl.cast(eps, tl.float32))
+ 
+-        # Second pass: load vals from out_sum_ptr (one load) and write normalized outputs
++        # Second pass: reload A and B and write both out_sum and out_norm
+         off = 0
+         while off < N:
+             idx = off + col_offsets
+             mask = idx < N
+             offs = offs_base + idx
+ 
+-            vals = tl.load(out_sum_ptr + offs, mask=mask, other=0.0)
+-            normed = (vals - mean) * rsigma
++            a = tl.load(a_ptr + offs, mask=mask, other=0.0)
++            b = tl.load(b_ptr + offs, mask=mask, other=0.0)
++            vals = a + b  # keep original dtype for out_sum
++            vals_f = tl.cast(vals, tl.float32)
+ 
++            # store summed output (original dtype)
++            tl.store(out_sum_ptr + offs, vals, mask=mask)
++
++            # compute and store normalized (fp32)
++            normed = (vals_f - mean) * rsigma
+             tl.store(out_norm_ptr + offs, normed, mask=mask)
++
+             off += BLOCK
+ 
+ 
+@@ -153,9 +162,10 @@
+     Inputs a and b are (B, L, C). Returns (sum, normed) both same shape as inputs.
+     Falls back to PyTorch on CPU.
+ 
+-    Implementation detail:
+-      - Compute the elementwise sum inside the Triton kernel (no host-side full add kernel).
+-      - The kernel writes out_sum (same dtype as inputs) and out_norm (float32).
++    Implementation note:
++      - We compute the elementwise sum inside the Triton kernel and return both
++        the summed tensor (same dtype as inputs) and the normalized tensor (float32).
++      - Ensure tensors are contiguous before launching Triton for coalesced loads.
+     """
+     if not a.is_cuda or not b.is_cuda:
+         summed = a + b

@@ -1,0 +1,194 @@
+@@ -3,91 +3,110 @@
+ import triton
+ import triton.language as tl
+ 
+-# Autotune configs for the fused softmax + bias + scale + sigmoid kernel.
++# Autotune configs tailored for NVIDIA A6000 (Ampere). Multiple configs to pick best.
+ AUTOTUNE_CONFIGS = [
+-    triton.Config({"BLOCK_SIZE": 32},  num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK_SIZE": 64},  num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK_SIZE": 128}, num_warps=8, num_stages=2),
++    triton.Config({"BLOCK_SIZE": 64, "ROWS_PER_PROG": 8}, num_warps=8, num_stages=2),
++    triton.Config({"BLOCK_SIZE": 128, "ROWS_PER_PROG": 4}, num_warps=8, num_stages=2),
++    triton.Config({"BLOCK_SIZE": 32, "ROWS_PER_PROG": 16}, num_warps=8, num_stages=2),
+ ]
+ 
+-# A fused kernel that computes softmax over channels for each (n, h, w),
+-# then adds a per-channel bias, multiplies by a scalar scaling factor, and applies sigmoid.
+-#
+-# Memory layout expected: input and output are contiguous NCHW tensors.
+-# The kernel treats each (n, h, w) as a "row" of length C (channels).
+ @triton.autotune(configs=AUTOTUNE_CONFIGS, key=['C'])
+ @triton.jit
+ def _fused_softmax_bias_scale_sigmoid_kernel(
+-    inp_ptr,           # pointer to input tensor (N*C*H*W elements, NCHW layout)
+-    out_ptr,           # pointer to output tensor (same shape as input)
+-    bias_ptr,          # pointer to bias vector of length C
+-    M,                 # number of rows = N * H * W
+-    C,                 # number of channels
+-    H,                 # height
+-    W,                 # width
+-    scaling,           # scalar scaling factor (float)
+-    BLOCK_SIZE: tl.constexpr,  # number of channels processed per inner block (constexpr)
++    inp_ptr,       # pointer to input tensor (N*C*H*W elements, NCHW layout)
++    out_ptr,       # pointer to output tensor (same shape)
++    bias_ptr,      # pointer to bias vector of length C
++    M,             # number of rows = N * H * W
++    C,             # number of channels
++    H,             # height
++    W,             # width
++    scaling,       # scalar scaling factor (float)
++    BLOCK_SIZE: tl.constexpr,
++    ROWS_PER_PROG: tl.constexpr,
+ ):
+-    # Which (n, h, w) row this program is handling
+-    row = tl.program_id(0)
++    """
++    Vectorized kernel that processes ROWS_PER_PROG rows in parallel.
++    Each 'row' corresponds to a specific (n, h, w) and has C channels.
++    The input layout is NCHW, and the memory stride between consecutive channels
++    for a given (n,h,w) is HW = H*W. We compute addresses as base + c * HW.
++    The kernel performs numerically stable softmax across channels per row,
++    then adds bias (per-channel), scales, and applies sigmoid.
++    """
++    # row_start: first row index handled by this program
++    row_start = tl.program_id(0) * ROWS_PER_PROG
++    rows = row_start + tl.arange(0, ROWS_PER_PROG)          # shape (ROWS_PER_PROG,)
++    mask_rows = rows < M                                    # shape (ROWS_PER_PROG,)
+ 
+-    # Compute coordinates n, h, w from row index (row in [0, M))
+     HW = H * W
+-    # integer divisions / mods on Python ints are fine here
+-    n = row // HW
+-    rem = row - n * HW
++    offs = tl.arange(0, BLOCK_SIZE)                         # channel offsets within a block (BLOCK_SIZE,)
++
++    # Initialize per-row running max and running sum for stable softmax merge
++    neg_inf = -1e20
++    running_max = tl.full((ROWS_PER_PROG,), neg_inf, dtype=tl.float32)  # per-row
++    running_sum = tl.zeros((ROWS_PER_PROG,), dtype=tl.float32)          # per-row
++
++    # Precompute n, h, w for each row to form base addresses
++    # rows may be out-of-range; computations are safe since we'll mask loads/stores
++    n = rows // HW
++    rem = rows - n * HW
+     h = rem // W
+     w = rem - h * W
++    # base index for channel 0: n * C * HW + h * W + w
++    base = n * C * HW + h * W + w                              # shape (ROWS_PER_PROG,)
+ 
+-    # base element index for channel c = 0
+-    # layout index for element (n, c, h, w):
+-    # idx = ((n*C + c) * H + h) * W + w = n*C*H*W + c*H*W + h*W + w
+-    # So base = n*C*H*W + h*W + w, and channel offsets are base + c*HW
+-    base = n * C * HW + h * W + w
++    # First sweep: compute running_max and running_sum across channel blocks
++    for c_start in range(0, C, BLOCK_SIZE):
++        col = c_start + offs                                  # (BLOCK_SIZE,)
++        mask_cols = col < C                                   # (BLOCK_SIZE,)
+ 
+-    offs = tl.arange(0, BLOCK_SIZE)  # channel offsets within a block
++        # addresses shape: (ROWS_PER_PROG, BLOCK_SIZE)
++        # addr = base[:,None] + col[None,:] * HW
++        addresses = base[:, None] + (col[None, :] * HW)
+ 
+-    # First pass: compute max over channels for numerical stability
+-    neg_inf = -1e20
+-    max_val = tl.full((1,), neg_inf, dtype=tl.float32)
+-    c = 0
+-    # iterate over channel blocks
++        # combined mask: True only where both row and column are valid
++        mask = (mask_rows[:, None]) & (mask_cols[None, :])
++
++        # load values (masked positions get neg_inf)
++        vals = tl.load(inp_ptr + addresses, mask=mask, other=neg_inf)  # shape (R, B)
++
++        # block-wise max per row (shape (R,))
++        block_max = tl.max(vals, axis=1)
++
++        # compute exp(vals - block_max) per row and sum
++        exps = tl.exp(vals - block_max[:, None])
++        block_sum = tl.sum(exps, axis=1)
++
++        # numerically stable merge of (running_max, running_sum) with (block_max, block_sum)
++        cond = block_max > running_max  # per-row boolean
++        # compute both branches
++        exp_rm_bm = tl.exp(running_max - block_max)
++        exp_bm_rm = tl.exp(block_max - running_max)
++
++        sum_if_block_bigger = running_sum * exp_rm_bm + block_sum
++        sum_if_running_bigger = running_sum + block_sum * exp_bm_rm
++
++        running_sum = tl.where(cond, sum_if_block_bigger, sum_if_running_bigger)
++        running_max = tl.maximum(running_max, block_max)
++
++    # Second sweep: compute final softmax and write outputs (fuse bias, scale, sigmoid)
+     for c_start in range(0, C, BLOCK_SIZE):
+         col = c_start + offs
+-        mask = col < C
+-        addresses = base + col * HW
+-        vals = tl.load(inp_ptr + addresses, mask=mask, other=neg_inf)
+-        # vals is a vector of length BLOCK_SIZE; reduce to scalar max for this block
+-        block_max = tl.max(vals, axis=0)
+-        max_val = tl.maximum(max_val, block_max)
++        mask_cols = col < C
++        addresses = base[:, None] + (col[None, :] * HW)
++        mask = (mask_rows[:, None]) & (mask_cols[None, :])
+ 
+-    # Second pass: compute sum of exp(x - max)
+-    sum_exp = tl.zeros((1,), dtype=tl.float32)
+-    for c_start in range(0, C, BLOCK_SIZE):
+-        col = c_start + offs
+-        mask = col < C
+-        addresses = base + col * HW
+-        vals = tl.load(inp_ptr + addresses, mask=mask, other=neg_inf)
+-        exps = tl.exp(vals - max_val)
+-        # accumulate sum across the block
+-        sum_exp += tl.sum(exps, axis=0)
++        vals = tl.load(inp_ptr + addresses, mask=mask, other=neg_inf)  # (R, B)
++        exps = tl.exp(vals - running_max[:, None])                     # (R, B)
++        soft = exps / running_sum[:, None]                             # (R, B)
+ 
+-    # Third pass: compute final softmax values, add bias, scale, apply sigmoid, and store
+-    for c_start in range(0, C, BLOCK_SIZE):
+-        col = c_start + offs
+-        mask = col < C
+-        addresses = base + col * HW
+-        vals = tl.load(inp_ptr + addresses, mask=mask, other=neg_inf)
+-        exps = tl.exp(vals - max_val)
+-        soft = exps / sum_exp  # broadcasted scalar division
++        # load bias for columns (shape (BLOCK_SIZE,))
++        bias_vals = tl.load(bias_ptr + col, mask=mask_cols, other=0.0)  # (BLOCK_SIZE,)
++        # broadcast bias to rows
++        bias_broadcast = bias_vals[None, :]
+ 
+-        # load bias for corresponding channels (bias is length C)
+-        bias_vals = tl.load(bias_ptr + col, mask=mask, other=0.0)
+-
+-        out = soft + bias_vals
++        out = soft + bias_broadcast
+         out = out * scaling
+-
+-        # sigmoid: 1 / (1 + exp(-x))
++        # sigmoid
+         out = 1.0 / (1.0 + tl.exp(-out))
+ 
+         tl.store(out_ptr + addresses, out, mask=mask)
+@@ -95,14 +114,13 @@
+ 
+ def triton_fused_softmax_bias_scale_sigmoid(x: torch.Tensor, bias: torch.Tensor, scaling: float):
+     """
+-    Wrapper that:
+-    - ensures tensors are CUDA and contiguous in NCHW
+-    - prepares grid and launches Triton kernel
++    Wrapper to launch the Triton kernel.
++    x: tensor NCHW, contiguous, on CUDA, dtype=float32
++    bias: 1D tensor length C
+     """
+-    assert x.is_cuda and bias.is_cuda, "Tensors must be on CUDA"
+-    assert x.dtype == torch.float32 and bias.dtype == torch.float32, "Only fp32 is supported"
++    assert x.is_cuda and bias.is_cuda, "Tensors must be on CUDA."
++    assert x.dtype == torch.float32 and bias.dtype == torch.float32, "Only fp32 supported."
+ 
+-   
+...[TRUNCATED]

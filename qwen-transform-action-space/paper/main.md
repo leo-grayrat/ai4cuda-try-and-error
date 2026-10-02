@@ -11,20 +11,20 @@ reproducible from the accompanying scripts; Section 3.6 reports a statistical er
 Agentic reinforcement-learning systems now write GPU kernels that beat compiler autotuning. They update a policy
 over sampled text and attach one execution-level reward at the end of thousands of decisions. Performance, however,
 belongs to a handful of program design decisions — fuse two passes, stop materializing an intermediate, change the
-per-thread workload — each realized across many tokens and several separated code sites. We ask whether this is not
-merely a credit-assignment nuisance but a wrong choice of *coordinate system*: the action unit. We formalize a
-candidate action as a typed program transformation `a = (τ, ℓ, θ)`, and separate three claims the literature
+per-thread workload — each realized across many tokens and several separated code sites. We ask whether this is the
+wrong *coordinate system*: the action unit. We formalize a candidate action as a typed program transformation `a = (τ, ℓ, θ)`, and separate three claims the literature
 conflates: description, search efficiency, learning efficiency. On public AdaExplore trajectories (2,510 successful
 parent→child edges; 55 annotated over 45 tasks) a frozen 12-category vocabulary covers 90.9% of edges using 10
 categories, and under symmetric permutation calibration the semantic label predicts realised speedup beyond its own
-granularity (p = 0.0005) while coarse diff structure (p = 0.752) and hunk count alone (p = 0.436) do not. Two
-statistics we first cited are withdrawn here as an identity and a sampling artefact; our own 117-assertion
-reconciliation harness could not see the error that reversed this headline. Cross-task recurrence sits at chance, so
-transferability is unsupported. K-Search, CuAsmRL, CodeAct and ReCode already occupy parts of the interface this
-thesis proposes, narrowing our contribution to measurement and protocol. Search and learning stay untested; we
+granularity (p = 0.0005) while coarse diff structure (p = 0.752) and hunk count (p = 0.436) do not. Three
+qualifications are reported rather than buried: two supporting statistics are withdrawn as an identity and a
+sampling artefact (our 117-assertion harness missed the error that reversed this headline); cross-task recurrence
+sits at chance; and relabelling without the category definitions leaves the headline insignificant (p = 0.106,
+kappa = 0.687). K-Search, CuAsmRL, CodeAct and CUDA Agent's own skill checklist already occupy parts of the
+proposed interface, narrowing our contribution to measurement and protocol. Search and learning stay untested; we
 specify the five-condition experiment that decides them, including the branch that kills the direction.
 
-*(245 words, measured by `scripts/audit_spec_coverage.py`)*
+*(250 words, measured by `scripts/audit_spec_coverage.py`)*
 
 ---
 
@@ -48,16 +48,20 @@ stability. Each step is a sensible response to a symptom of the training substra
 the material we could verify*, is forced by memory hierarchies, warp semantics, coalescing, or shared-memory bank
 conflicts.
 
-Two qualifications to that criticism are necessary, and we state them before an adversary does.
+Two qualifications are necessary, and the first one is not a hedge we chose but a distinction the system itself
+makes.
 
-* **We cannot verify what the action space of that system actually is.** Its abstract describes a
-  skill-augmented development environment with automated verification and profiling [1]. An agent embedded in such
-  an environment, operating through file-editing tools, may already have a de-facto action structure imposed at the
-  environment layer. We therefore do not claim that CUDA Agent "treats every token as an independent action"; we
-  claim that *the learning interface it documents* is a token-level policy optimized against an episode-level
-  outcome, and that whatever structure exists is an artefact of tool affordances rather than a designed action space.
-  The stronger version of the criticism would require the paper's environment specification, which is not in the
-  abstract.
+* **That paper uses "action" for two different things at two different layers, and we must say which one we are
+  attacking.** In its reinforcement-learning formulation the action is explicitly the token: its clipped PPO
+  objective defines $a_t$ as "the action (i.e., token) taken at position $t$" [1, Sec. 5.2]. But its environment
+  is separately described in these terms: a toolset of Bash, Read/Write, Edit/MultiEdit, Glob, Grep,
+  NotebookEdit, BashOutput and KillBash, where "*these tools define the action space of the agent* and serve as the
+  only mechanisms through which it can interact with the system" [1, App. "Details of Agent Loop"], with MultiEdit
+  characterised as applying "multiple atomic edits within one file". So the claim "CUDA Agent treats each token as
+  an independent action" is true of its credit-bearing layer and false of its interface layer, where the unit is
+  already an edit-sized operation. That is precisely the ambiguity this paper is about: the same system carries two
+  candidate coordinate systems, and the training machinery is attached to the finer one. Our question is which layer
+  should carry the learning signal, not whether anyone has ever used a coarse action.
 * **The transfer argument must not be over-read.** NKI-Agent adapts the CUDA-Agent framework to AWS Trainium and
   reports that GRPO with a binary compilation reward *fails to improve on supervised fine-tuning* [18]. That is a
   failed transfer of the reinforcement-learning component, not a successful transfer of the recipe, and citing it
@@ -65,13 +69,21 @@ Two qualifications to that criticism are necessary, and we state them before an 
   still uncomfortable for the field: the training recipe is under-specified enough that reproducing it on new
   hardware changes which parts survive, and the reinforcement-learning part is not the portable core.
 
-We note candidly that the specific numerical details often repeated about these design choices — the exact reward
-level set, the exact asymmetric clipping bounds, the pretraining-corpus frequency of CUDA — could not be verified
-for this paper. The preprint has no HTML rendering and we did not parse the 17 MB PDF source bundle; the internals
-are not released. We therefore argue only at the level the abstract supports, and we flag the unverifiable parts
-rather than asserting them. This is itself a small illustration of the data-availability constraint in Section 3.1,
-and one reason our critique is framed as a question about modelling coordinates rather than about that system's
-design decisions.
+Unlike our earlier draft, we are not arguing from the abstract alone. The arXiv LaTeX source of [1] is retrievable
+as an 18 MB e-print bundle and we read it, so the design choices we call generic can be quoted rather than
+characterised: the reward is a four-level quantised function $r \in \{-1, 1, 2, 3\}$ keyed to correctness and to a
+>5% margin over the eager and `torch.compile` baselines, explicitly because "operators vary substantially in
+optimization difficulty, making raw speedup an unreliable proxy for code quality"; the PPO clip is asymmetric with
+$\varepsilon_{\text{lower}} = 0.2$ and $\varepsilon_{\text{higher}} = 0.28$; the initial trial "could only train
+stably for 17 steps before the model's performance collapsed", reaching 200 after the warm-up stages; and the stated
+root cause is a "severe domain distribution mismatch", because "CUDA coding data accounts for less than 0.01% of
+pretraining data", with low-probability tokens near $\pi_\theta \approx 10^{-9}$ amplifying train/inference
+numerical-precision differences into importance-ratio variance [1, Sec. 5.1-5.2].
+
+Every one of those five mechanisms is a response to a symptom of training a long-horizon policy on rare text under
+a sparse outcome. None of them is derived from a property of GPUs. Note also that the source is candid that the
+quantised reward exists to stop easy kernels from dominating selection — the same concern we raise independently in
+Section 5.5 about scoring candidates by raw measured speedup.
 
 So the honest question is not whether the result is impressive — it is — but what the *incremental scientific
 claim* is, and whether the modelling choices are contingent on the domain or merely on the training substrate.
@@ -198,8 +210,12 @@ Any optimization loop over programs must decide what counts as one action. Three
 
 The turn row is not decoration. Recent multi-turn kernel RL work attributes reward at the turn level and reports
 that this matters [32], which means the field has already partly moved up from tokens — just not onto a typed
-program-transformation space. Our claim is specifically about the fourth row, and Section 4 has to be read as an
-experiment capable of distinguishing it from the third.
+program-transformation space. And the rows are not mutually exclusive even within one system: CUDA Agent's
+*interface* is edit- and tool-shaped, since its documented action space is a set of operations that includes MultiEdit
+("multiple atomic edits within one file"), while the policy selecting them is trained at token granularity [1]. One
+system occupying two rows at once is the clearest available evidence that the coordinate system is a real design
+variable rather than a by-product of whichever framework is in use. Our claim is specifically about the fourth row,
+and Section 4 has to be read as an experiment capable of distinguishing it from the third.
 
 The middle row deserves emphasis, because it is where most "semantic" code-RL work actually sits, and it is
 tempting to assume it is already the transformation level. It is not. An edit span is defined by the diff
@@ -380,11 +396,11 @@ The prerequisite question gets a qualified yes.
 
 | Quantity | Value | Status |
 |---|---|---|
-| Vocabulary reuse rate \(\|V\|/\|E\|\) | 10 / 55 = 0.18 | meaningful |
+| Vocabulary reuse rate $\|V\|/\|E\|$ | 10 / 55 = 0.18 | meaningful |
 | Fraction of edges not requiring `Other` | 90.9% | meaningful, but see 3.4 |
-| \(H(\text{primary label})\) | 2.67 bits; 0.805 of its own maximum (10 cells) | meaningful |
-| \(H(\text{coarse structure descriptor, 24 cells})\) | 4.26 bits; 0.928 of maximum | meaningful comparator |
-| \(H(\text{diff fingerprint})\) | 5.78 bits = \(\log_2 55\) exactly | **identity, not evidence** |
+| $H(\text{primary label})$ | 2.67 bits; 0.805 of its own maximum (10 cells) | meaningful |
+| $H(\text{coarse structure descriptor, 24 cells})$ | 4.26 bits; 0.928 of maximum | meaningful comparator |
+| $H(\text{diff fingerprint})$ | 5.78 bits = $\log_2 55$ exactly | **identity, not evidence** |
 | Edges labelled at two or more separated regions | 30 / 55 = 54.5% | **not attributable to single actions** |
 
 Primary-label counts: `Fuse` 17, `PrecisionChange` 15, `HostDeviceOverlap` 7, `Other` 5,
@@ -454,13 +470,13 @@ if the argument for the coordinate change were "transformations compress", it wo
 hunks. What is needed is a test of whether the semantic label carries information about the *outcome* that surface
 structure does not.
 
-Take the quartile of realized speedup versus parent as the outcome (\(H = 2.00\) bits, 4 cells) and ask how much of
+Take the quartile of realized speedup versus parent as the outcome ($H = 2.00$ bits, 4 cells) and ask how much of
 it each descriptor explains. Raw mutual information is biased in favour of descriptors with more cells, so the
 comparison must be calibrated. The first draft calibrated it wrongly.
 
 **The error.** Our Miller–Madow correction was applied to a conditional entropy as
-\(\hat H = H_{\text{plug-in}} + (k_X-1)/2n\), which is the bias term for a *marginal* entropy. The bias of the
-plug-in mutual-information estimator is \((k_X-1)(k_Y-1)/2n\); with \(k_Y = 4\) the first draft under-corrected by a
+$\hat H = H_{\text{plug-in}} + (k_X-1)/2n$, which is the bias term for a *marginal* entropy. The bias of the
+plug-in mutual-information estimator is $(k_X-1)(k_Y-1)/2n$; with $k_Y = 4$ the first draft under-corrected by a
 factor of three, and it under-corrected the 10-cell label descriptor far less than the 24-cell coarse descriptor.
 It also permuted only the semantic descriptor against a same-cardinality null and never gave the coarse descriptor
 the same treatment. The reported conclusion — "semantic labels yield less information than surface structure
@@ -469,18 +485,18 @@ the same treatment. The reported conclusion — "semantic labels yield less info
 **The corrected test.** We now estimate mutual information three ways and calibrate both descriptors symmetrically,
 holding the descriptor fixed and permuting the outcome (20,000 permutations, seed 20261002).
 
-| Descriptor | cells | MI plug-in | MI Miller–Madow | null mean | null SD | permutation \(p\) |
+| Descriptor | cells | MI plug-in | MI Miller–Madow | null mean | null SD | permutation $p$ |
 |---|---|---|---|---|---|---|
 | primary semantic label | 10 | 0.697 bits | 0.624 bits | 0.397 | 0.072 | **0.0005** |
 | coarse diff structure | 24 | 0.937 bits | 0.792 bits | 0.990 | 0.085 | 0.752 |
 | hunk count alone | 9 | 0.367 bits | 0.276 bits | 0.361 | 0.071 | 0.436 |
 
 This reverses the first draft's finding, and the reversal is not a matter of which bias formula one prefers: under
-the formula-free permutation test, the semantic label sits far above its own null (\(p = 0.0005\)), while the coarse
+the formula-free permutation test, the semantic label sits far above its own null ($p = 0.0005$), while the coarse
 descriptor's observed mutual information is *below* its own null mean (0.937 vs 0.990) — its apparently superior raw
 number is over-fitting to 24 cells, 11 of which hold a single edge. We also report the honest counterweight: the
-paired bootstrap difference \(\mathrm{MI}_{\text{label}} - \mathrm{MI}_{\text{coarse}}\) is \(-0.361\) bits with a
-95% CI of \([-0.689,\,-0.034]\). In uncalibrated terms coarse structure still wins; we argue that uncalibrated terms
+paired bootstrap difference $\mathrm{MI}_{\text{label}} - \mathrm{MI}_{\text{coarse}}$ is $-0.361$ bits with a
+95% CI of $[-0.689,\,-0.034]$. In uncalibrated terms coarse structure still wins; we argue that uncalibrated terms
 are the wrong terms, but the number is there for anyone who disagrees.
 
 **So what does this buy the thesis?** Less than it appears to. A label that predicts the outcome beyond its own
@@ -514,12 +530,17 @@ implementing the operation yourself and delegate it to a library backend — `x.
 *whether to implement it at all*.
 
 We should be careful not to over-sell this. Choosing a library call over a hand-written kernel is not an obscure
-insight; agent systems that record "use cuBLAS for the heavy GEMM" in a comment are doing something a designer of the
-action space would presumably have included. What the finding actually demonstrates is narrower and more useful as a
-warning: **an action vocabulary assembled by introspection missed the highest-payoff decision in its own data, and
-the pre-registered numeric threshold (25% `Other`) failed to notice, because the refusals were homogeneous.** Any
-proposal to enumerate a transformation space should be tested against exactly this failure mode — by measuring what
-the refusals are *about*, not how many there are.
+insight, and it is not even absent from the strongest system in this area — but that system handles it the other
+way round. CUDA Agent's skill file *regulates* backend choice instead of offering it as an action: third-party
+libraries are forbidden except cuBLAS for GEMM and cuDNN for convolutions, cuDNN is made mandatory for
+Conv/ConvTranspose, and a context manager aborts execution on any fallback into `torch.nn.functional`, so that gains
+"originate solely from the generated CUDA kernels" [1, App. "SKILL.md"]. A decision worth 327x in our sample is
+therefore encoded as a constraint over admissible solutions rather than as something the agent reasons about, which
+is how it fell outside our vocabulary as well. The finding we actually keep is narrower: **an action vocabulary
+assembled by introspection missed the highest-payoff decision in its own data, and the pre-registered numeric
+threshold (25% `Other`) failed to notice, because the refusals were homogeneous.** Any proposal to enumerate a
+transformation space should be tested against exactly this failure mode — by measuring what the refusals are *about*,
+not how many there are.
 
 **(b) Autotuning contaminates nearly everything.** 53 of 55 edges co-modify `@triton.autotune` — adding it, removing
 it, rewriting the candidate list, or changing the cache key. In this corpus, structural transformation and
@@ -544,8 +565,8 @@ The prerequisite question is answered **yes for existence, no for the two proper
 * **Existence (supported).** Successful schedule-level optimizations compress onto a small recurring typed
   vocabulary: 10 categories, 90.9% coverage against an actively invited `Other`, 2.67 bits versus 4.26 bits for a
   faithful coarse description of the same diffs. And the labels are not a decorative partition: they predict the
-  realized speedup quartile beyond their own granularity (\(p = 0.0005\)) where hunk structure does not
-  (\(p = 0.752\), \(p = 0.436\)).
+  realized speedup quartile beyond their own granularity ($p = 0.0005$) where hunk structure does not
+  ($p = 0.752$, $p = 0.436$).
 * **Cross-task transferability (not supported).** Distinct-task recurrence sits at chance under the label-permutation
   null (Section 3.5). The sampling design caps it, and we retract the claim rather than hedge it.
 * **Cross-site coordination (unidentifiable).** With 0 of 55 edges carrying a single label, the multi-region
@@ -738,6 +759,23 @@ What is actually distinguishable, stated at its real strength:
   and our novelty narrows to: the descriptive measurement in Section 3, the falsification discipline, and the
   kernel-specific confound controls that only this domain forces (autotune isolation, backend substitution).
 
+* **Against a named transformation vocabulary that already exists in practice [1].** The strongest existing system
+  already instructs its model in exactly our vocabulary, as prose. Its skill file orders optimizations by expected
+  impact — Priority 1 algorithmic (>50%): kernel fusion to reduce memory traffic, shared-memory tiling for reuse,
+  memory coalescing; Priority 2 hardware utilization (20-50%): vectorized `float2/float4` loads, warp-level
+  `__shfl_sync`/`__ballot_sync` primitives, occupancy tuning by block size and registers; Priority 3 fine-tuning
+  (<20%): instruction-level parallelism, FP16/TF32 mixed precision, prefetching and double buffering — and appends a
+  checklist covering bank-conflict avoidance by padding, loop unrolling, WMMA/MMA tensor cores, persistent kernels
+  and CUDA Graphs. It even prescribes the expectation-recording habit we would need for credit assignment: "Document
+  expectation: 'Fusion will eliminate 3 kernels, expect ~20% speedup'" before implementing.
+  This is bad news for a novelty claim and good news for the premise. Somebody who ships the strongest published
+  system in this domain already believes optimization behaviour is describable as a small, ranked, named set of
+  program transformations. What that system does *not* do is make the vocabulary the interface of learning or search:
+  the enumerated names live in a prompt, the policy is still trained over tokens, the tiers are advice rather than
+  typed parameters with realization obligations, and no one has measured whether that checklist covers real
+  successful optimizations or merely sounds right. Our Section 3 is that measurement, and Section 4 is the protocol
+  for the part their design leaves untouched.
+
 A sharper formulation of the real difference, which does not depend on our vocabulary being correct: edit-, turn- and
 plan/action-unification methods take their unit from the *interface* (what a diff, a tool call, or a recursive function
 expansion happens to be), whereas a transformation takes its unit from the *program's performance model* (what the
@@ -862,12 +900,13 @@ structure and tool noise in the same sequence — not an empirical one.
 Positioning against each cluster is argued in Sections 1.1 and 5.1-5.6; this section records only which work belongs
 to which cluster and what we take from it.
 
-**Agentic RL and CUDA generation.** KernelBench [2]; CUDA Agent, the system our framing is aimed at [1]; CUDA-L1
-(contrastive ranking over execution feedback) [16]; Dr. Kernel (reward design for Triton) [17]; CudaPerf (structural
-rewards from coalescing, occupancy, arithmetic intensity and synchronization, at token level) [15]; NKI-Agent (the
-CUDA-Agent recipe on AWS Trainium, with a negative GRPO result) [18]; Kevin (multi-turn RL, turn-level reward
-attribution) [32]. Our critique targets the documented learning interface, not an asserted token-level action space
-(Section 1.1).
+**Agentic RL and CUDA generation.** KernelBench [2]; CUDA Agent, the system our framing is aimed at, whose source we
+read rather than whose abstract we paraphrased: it trains a token-level PPO policy inside a tool-defined environment
+whose action space is Edit/MultiEdit-class operations, and it ships a priority-ranked named optimization checklist in
+its skill file [1]; CUDA-L1 (contrastive ranking over execution feedback) [16]; Dr. Kernel (reward design for
+Triton) [17]; CudaPerf (structural rewards from coalescing, occupancy, arithmetic intensity and synchronization,
+still at token level) [15]; NKI-Agent (the CUDA-Agent recipe on AWS Trainium, with a negative GRPO result) [18];
+Kevin (multi-turn RL, turn-level reward attribution) [32].
 
 **Credit assignment below the trajectory.** A 69-paper survey corpus organised by credit granularity — trajectory,
 segment, step, token — with an identification analysis showing that text-only histories can leave even the *sign* of
@@ -924,7 +963,7 @@ Declaring this, as our first draft did, is not a control. We state the acceptanc
 so that the gap is measurable rather than rhetorical:
 
 1. **Independent blind human annotation** of the same 55 edges by at least two annotators who did not author the
-   vocabulary, reporting Cohen's \(\kappa\) or Krippendorff's \(\alpha\). With \(\kappa\) unreported, "10 categories
+   vocabulary, reporting Cohen's $\kappa$ or Krippendorff's $\alpha$. With $\kappa$ unreported, "10 categories
    cover 90.9%" and "the annotator could name almost anything" are indistinguishable.
 2. **Bottom-up vocabulary construction from a disjoint source** — induce categories open-coded from a held-out half of
    the corpus by a different family (human or model), freeze, then test whether the pre-registered vocabulary is
@@ -936,7 +975,33 @@ so that the gap is measurable rather than rhetorical:
    definitions, examples, or parameter slots, to reduce the chance that category *semantics* are shared by
    construction.
 
-We did none of these. Every number in Section 3 should be read as conditional on them.
+We did not merely declare these. Criteria 2, 3 and 4 were executed before releasing this draft, and the result is
+uncomfortable.
+
+**Definition-free relabelling (criterion 4).** A separate annotator labelled the same 55 edges seeing only the twelve
+bare category names — no definitions, no parameter slots, no examples, no decision rules. Agreement with the original
+pass is substantial: 74.5% raw agreement, Cohen's $\kappa = 0.687$. Three categories went entirely unused by the
+blind pass (`WarpReduce`, `SharedMemoryTransform`, `HostDeviceOverlap`), which tracks the Triton-abstraction reading of
+Section 3.5 better than it tracks a labelling failure.
+
+**Does the headline survive (criterion 3)? Not by itself.** Recomputing the Section 3.6 permutation test on the blind
+labels gives MI 0.451 bits with $p = 0.106$ — not significant — where the informed labels gave 0.697 bits with
+$p = 0.0005$. Restricting to the 38 edges where the two passes agree restores significance (MI 0.664,
+$p = 0.0016$). The informativeness of the vocabulary is therefore partly a property of the elicitation: supplying
+the definitions sharpens labels into something that predicts outcomes, and we cannot yet separate how much of that is
+structure in the programs from how much is guidance we provided. Criterion 1 — genuinely independent, preferably human
+annotation — remains unexecuted and is the only test that can separate them. Section 3.6 is stated at this weaker
+strength accordingly.
+
+**Bottom-up open coding (criterion 2, partial).** A coder with no access to the frozen list induced 7 categories from
+24 successful edges drawn from tasks disjoint from the annotated sample (zero task overlap;
+`data/opencode_result.md`). The recovered space is recognisably the same territory — work/layout remapping, precision
+regime, setup hoisting and caching, pipeline-stage reshaping, backend reassignment, algebraic reformulation,
+redundant data-movement removal — with two informative divergences. The coder made launch-constant adjustment strictly
+secondary (19 co-occurrences, 0 primary), suggesting our `ChangeLaunchConfig` over-partitions what the data treats as
+accompaniment; and the coder independently rediscovered backend reassignment, the same category we were forced into
+`Other`. That is convergent evidence about the *space* and about one hole in our list, not convergent validity for the
+twelve names as drawn, since coder and vocabulary still share a model family.
 
 Two disciplinary measures we did take are worth recording because they partly constrain the annotator: `Other` was
 explicitly invited and each `Other` had to justify rejecting all eleven specific categories (which is how the
@@ -1006,13 +1071,21 @@ any pipeline that reports to itself: reconciliation checks must be paired with a
 a method, which in our case was the adversarial review stage, and which no self-review we could have scheduled
 would have substituted for.
 
-**(2) An automated reviewer can fabricate evidence.** One reviewer asserted that it had read the full text of
-CUDA Agent and quoted a sentence from it that would have strengthened our central criticism. The quotation was not
-reproducible: the preprint has one version and no HTML rendering, and we could not retrieve any text to check it
-against. We rejected the quotation, and correspondingly weakened Section 1.1 — which is the right direction for an
-unverifiable claim that happens to favour the paper's thesis. Reviewers under an advocacy mandate, including ones
-disposed to attack, have an incentive structure that can generate supporting artefacts; their citations need the same
-provenance discipline as any other source, and this paper cannot claim that its own review stage satisfied it.
+**(2) Our own retrieval failure was recorded as somebody else's fabrication.** One reviewer quoted CUDA Agent's
+source — "these tools define the action space of the agent" — in support of a stronger version of our critique. We
+could not reproduce it: the preprint has one version and no HTML rendering, so we classified the quotation as
+fabricated, dropped it, and weakened Section 1.1 accordingly. The quotation was accurate. When we later fetched the
+arXiv e-print as a LaTeX source bundle and read it, the sentence was there verbatim, along with the tool list and
+the paper's own statement that its PPO action $a_t$ is the token.
+
+The failure was not credulity but a category error in the other direction: we treated "I cannot retrieve this
+format" as "this cannot be verified", and then applied a conservative-looking rule — discard the unverifiable —
+which happened to discard a *true and inconvenient-to-us* claim. Two consequences for any pipeline that cites at
+all: a rejected quotation should be re-attempted through a different channel (source archive, alternate host) before
+it is deleted, because a format limitation is not an evidentiary one; and the direction of the error matters — a
+policy that only ever trims claims *favouring* the paper will systematically under-report, and here it deleted
+accurate material. Our §1.1 is now written from the source rather than from the abstract, and the correction is
+itself part of what we want on the record.
 
 **(3) A five-seat panel from one model family is one reviewer, not five.** Sul and Ré's blog carries an aside that
 reads as a prediction about this paper's own quality gate: a multi-agent "three-way review" is a sensible
@@ -1046,11 +1119,14 @@ On 55 annotated MCTS edges spanning 45 tasks, 10 of 12 frozen categories cover 9
 invited `Other`, at 2.67 bits versus 4.26 bits for a faithful coarse description of the same diffs. More importantly,
 the labels are not a decorative partition: under symmetric permutation calibration the semantic label is
 significantly informative about realised speedup (plug-in mutual information 0.697 bits, 0.624 after bias
-correction, \(p = 0.0005\)) while coarse diff structure (\(p = 0.752\)) and hunk count alone (\(p = 0.436\)) do not
-beat their own nulls.
+correction, $p = 0.0005$) while coarse diff structure ($p = 0.752$) and hunk count alone ($p = 0.436$) do not
+beat their own nulls. That claim is weaker than it first appears: relabelling the same edges without being given the
+category definitions leaves the same test insignificant ($p = 0.106$, against $p = 0.0005$; the two passes agree on
+74.5% of edges at $\kappa = 0.687$), so part of the effect is elicited by the vocabulary rather than found in the
+programs (Section 7.1). We report the weaker version.
 
 **Two arguments we built for it do not.** The first was compression itself, presented in opposition to a diff-fingerprint
-entropy of 5.78 bits: with 55 pairwise-distinct fingerprints that quantity is identically \(\log_2 55\), and the claim
+entropy of 5.78 bits: with 55 pairwise-distinct fingerprints that quantity is identically $\log_2 55$, and the claim
 that "no category ever produced the same diff twice" is true of any labelling whatsoever. Both are withdrawn. The
 second was cross-task recurrence, which sits at chance under a label-permutation null (16 observed distinct tasks for
 `Fuse` against a null mean of 16.03) because our sampling caps edges per task. The transferability argument in

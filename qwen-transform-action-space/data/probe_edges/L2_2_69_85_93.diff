@@ -1,0 +1,47 @@
+@@ -56,42 +56,11 @@
+ 
+     n_elements = x_contig.numel()
+ 
+-    # Autotune BLOCK among a few candidates (warm-up/autotune work is allowed
+-    # during the harness warm-up phase). Try larger BLOCKs for Ampere GPUs.
+-    blocks_to_try = [1024, 2048, 4096, 8192]
+-    best_BLOCK = blocks_to_try[0]
+-    best_time = float('inf')
++    # Fixed block size tuned for Ampere (avoids autotune overhead in hot path)
++    BLOCK = 4096
++    grid = lambda meta: ((n_elements + BLOCK - 1) // BLOCK,)
+ 
+-    # Helper to build grid for a given BLOCK
+-    def grid_for(B):
+-        return lambda meta: ((n_elements + B - 1) // B,)
+-
+-    # Perform a small autotune sweep; these are warm-up runs and should not affect
+-    # the timed performance phase in the test harness.
+-    if torch.cuda.is_available():
+-        # Ensure device sync before measurement
+-        for B in blocks_to_try:
+-            grid = grid_for(B)
+-            # small warm-up for this config
+-            for _ in range(3):
+-                _hswish_relu_kernel[grid](x_contig, out, n_elements, BLOCK=B)
+-            torch.cuda.synchronize()
+-            # measure a few iterations
+-            start_evt = torch.cuda.Event(enable_timing=True)
+-            end_evt = torch.cuda.Event(enable_timing=True)
+-            start_evt.record()
+-            for _ in range(10):
+-                _hswish_relu_kernel[grid](x_contig, out, n_elements, BLOCK=B)
+-            end_evt.record()
+-            torch.cuda.synchronize()
+-            elapsed_ms = start_evt.elapsed_time(end_evt) / 10.0
+-            if elapsed_ms < best_time:
+-                best_time = elapsed_ms
+-                best_BLOCK = B
+-
+-    # Final launch using the chosen BLOCK
+-    grid = grid_for(best_BLOCK)
+-    _hswish_relu_kernel[grid](x_contig, out, n_elements, BLOCK=best_BLOCK)
++    _hswish_relu_kernel[grid](x_contig, out, n_elements, BLOCK=BLOCK)
+     return out
+ 
+ 

@@ -1,0 +1,212 @@
+@@ -3,108 +3,139 @@
+ import triton
+ import triton.language as tl
+ 
+-# Autotune configurations for different BLOCK_C (number of channels processed per iteration)
++# Autotune configurations exploring different block sizes for spatial and channels
+ AUTOTUNE_CONFIGS = [
+-    triton.Config({"BLOCK_C": 8}, num_warps=2, num_stages=2),
+-    triton.Config({"BLOCK_C": 16}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK_C": 32}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK_C": 64}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK_S": 64,  "BLOCK_C": 8},  num_warps=2, num_stages=2),
++    triton.Config({"BLOCK_S": 128, "BLOCK_C": 8},  num_warps=4, num_stages=2),
++    triton.Config({"BLOCK_S": 128, "BLOCK_C": 16}, num_warps=4, num_stages=2),
++    triton.Config({"BLOCK_S": 256, "BLOCK_C": 16}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK_S": 256, "BLOCK_C": 32}, num_warps=8, num_stages=3),
+ ]
+ 
+ 
+ @triton.autotune(configs=AUTOTUNE_CONFIGS, key=['C', 'S'])
+ @triton.jit
+-def _logsumexp_hardswish_kernel(
+-    x_ptr,        # input pointer (B, C, S) flattened as (B*C*S)
+-    out_ptr,      # output pointer (B, 1, S) flattened as (B*S)
++def _lse_hsw_fused_kernel(
++    x_ptr,        # pointer to input flattened (B*C*S)
++    out_ptr,      # pointer to output flattened (B*S)
+     B,            # batch size
+-    C,            # number of channels to reduce over
++    C,            # channels to reduce over
+     S,            # spatial size D*H*W
+     bias_val,     # scalar bias to subtract (python float)
+-    BLOCK_C: tl.constexpr,  # number of channels processed per inner iteration (constexpr)
++    BLOCK_S: tl.constexpr,  # spatial block size processed by one program
++    BLOCK_C: tl.constexpr,  # channel block size processed per inner iteration
+ ):
+     """
+-    Each program handles one (b, s) element: reduces across the C dimension.
+-    Indexing:
+-      input linear index for channel c: ((b * C + c) * S) + s
+-      output linear index: (b * S) + s
++    Each program handles a block of spatial elements for a single batch:
++      program ids: pid_b = program_id(0), pid_s = program_id(1)
++    The kernel loads contiguous spatial chunks of size BLOCK_S for each channel block,
++    which improves memory coalescing compared to strided channel-major accesses.
+     """
+-    pid = tl.program_id(0)  # index over B * S
+-    s = pid % S
+-    b = pid // S
++    pid_b = tl.program_id(0)      # batch index
++    pid_s = tl.program_id(1)      # spatial-block index
+ 
+-    # Precompute arange for channel block
+-    c_block_idx = tl.arange(0, BLOCK_C)
++    s_start = pid_s * BLOCK_S
++    s_range = tl.arange(0, BLOCK_S)
++    s_idx = s_start + s_range  # absolute spatial indices
++    s_mask = s_idx < S         # mask for valid spatial positions
+ 
+-    # Base offset for channel 0
+-    base = (b * C) * S + s  # offset corresponding to channel c=0
++    # initialize max over channels for each spatial position
++    neg_inf = -1e20
++    max_vals = tl.full((BLOCK_S,), neg_inf, dtype=tl.float32)
+ 
+-    # First pass: compute max over channels
+-    neg_inf = -1e20
+-    max_val = neg_inf
+-    c = 0
+-    while c < C:
+-        offs = base + (c + c_block_idx) * S
+-        mask = (c + c_block_idx) < C
++    # iterate over channels in blocks of BLOCK_C
++    c_start = 0
++    while c_start < C:
++        c_range = tl.arange(0, BLOCK_C)
++        c_idx = c_start + c_range  # channel indices for this block
++        c_mask = c_idx < C
++
++        # compute offsets: ((pid_b * C + c_idx) * S) + s_idx
++        # shape of offs: (BLOCK_C, BLOCK_S) via broadcasting
++        base_channels = (pid_b * C + c_idx) * S  # shape (BLOCK_C,)
++        offs = base_channels[:, None] + s_idx[None, :]  # shape (BLOCK_C, BLOCK_S)
++
++        # combined mask shape (BLOCK_C, BLOCK_S)
++        mask = c_mask[:, None] & s_mask[None, :]
++
++        # load values (out-of-range entries get neg_inf)
++        vals = tl.load(x_ptr + offs, mask=mask, other=neg_inf)  # shape (BLOCK_C, BLOCK_S)
++
++        # reduce max across channel dimension (axis=0)
++        chunk_max = tl.max(vals, axis=0)  # shape (BLOCK_S,)
++        max_vals = tl.maximum(max_vals, chunk_max)
++
++        c_start += BLOCK_C
++
++    # second pass: compute sum of exp(x - max)
++    sum_exp = tl.zeros((BLOCK_S,), dtype=tl.float32)
++    c_start = 0
++    while c_start < C:
++        c_range = tl.arange(0, BLOCK_C)
++        c_idx = c_start + c_range
++        c_mask = c_idx < C
++
++        base_channels = (pid_b * C + c_idx) * S
++        offs = base_channels[:, None] + s_idx[None, :]
++        mask = c_mask[:, None] & s_mask[None, :]
++
+         vals = tl.load(x_ptr + offs, mask=mask, other=neg_inf)
+-        # reduce to scalar max
+-        chunk_max = tl.max(vals, axis=0)
+-        max_val = tl.maximum(max_val, chunk_max)
+-        c += BLOCK_C
++        # subtract max (broadcast) and exponentiate; invalid entries masked to 0.0
++        exp_vals = tl.exp(vals - max_vals[None, :])
++        exp_masked = tl.where(mask, exp_vals, 0.0)
++        sum_exp = sum_exp + tl.sum(exp_masked, axis=0)
+ 
+-    # Second pass: compute sum(exp(x - max_val))
+-    sum_exp = 0.0
+-    c = 0
+-    while c < C:
+-        offs = base + (c + c_block_idx) * S
+-        mask = (c + c_block_idx) < C
+-        vals = tl.load(x_ptr + offs, mask=mask, other=neg_inf)
+-        # subtract max and exponentiate; out-of-range entries will be masked to 0.0
+-        exp_vals = tl.exp(vals - max_val)
+-        masked = tl.where(mask, exp_vals, 0.0)
+-        sum_exp = sum_exp + tl.sum(masked, axis=0)
+-        c += BLOCK_C
++        c_start += BLOCK_C
+ 
+-    # compute logsumexp
+-    # add a tiny epsilon to avoid log(0) numerical issues
+-    lse = max_val + tl.log(sum_exp + 1e-30)
++    # compute logsumexp: max + log(sum_exp)
++    lse = max_vals + tl.log(sum_exp + 1e-30)
+ 
+     # HardSwish: x * sigmoid(x + 3) / 6
+     sig = 1.0 / (1.0 + tl.exp(-(lse + 3.0)))
+     hsw = lse * sig / 6.0
+ 
+     # subtract bias and clamp to [-1, 1]
+-    out_val = hsw - bias_val
+-    out_val = tl.minimum(tl.maximum(out_val, -1.0), 1.0)
++    out_vals = hsw - bias_val
++    out_vals = tl.minimum(tl.maximum(out_vals, -1.0), 1.0)
+ 
+-    # store result into out_ptr at (b, s) -> linear index b * S + s
+-    out_index = b * S + s
+-    tl.store(out_ptr + out_index, out_val)
++    # store results for valid spatial indices
++    out_offsets = pid_b * S + s_idx
++    tl.store(out_ptr + out_offsets, out_vals, mask=s_mask)
+ 
+ 
+ def fused_logsumexp_hardswish(x: torch.Tensor, bias: torch.Tensor):
+     """
+-    x: tensor of shape (B, C, D, H, W), contiguous on CUDA
+-    bias: tensor of shape (1,1,1,1) (broadcastable), use its scalar value
+-    returns: tensor of shape (B, 1, D, H, W)
++    Fused operation:
++      Input x shape: (B, C, D, H, W)
++      Output shape: (B, 1, D, H, W)
++    This wrapper launches the Triton kernel which reduces across channel dimension
++    with spatial-blocking for better memory coalescing.
+     """
+     assert x.is_cuda, "Input must be CUDA tensor"
+-    assert bias.numel() == 1, "Bias must be a single value (broadcastable 1 element)"
+     x = x.contiguous()
+     B, C, D, H, W = x.shape
+     S = D * H * W
++
+     out = torch.empty((B, 1, D, H, W), device=x.device, dtype=x.dtype)
+ 
+-    # Flatten views to match linear addressing in kernel
+     x_flat = x.view(B * C * S)
+     out_flat = out.view(B * S)
+ 
++    # bias is broadcastable; extract scalar
++    # accept bias of any shape that reduces to a single value
+     bias_val = float(bias.reshape(-1)[0].item())
+ 
+-    # Grid: one program per (b, s)
+-    grid = (B * S,)
++    # grid: (B, num_spatial_blocks)
++    num_s_blocks = (S + 1 - 1) // 1  # placeholder to guide autotune; actual block chosen by autotune configs
++    # Use actual number of blocks computed from a reasonable max BLOCK_S (autotune will override)
++    # We compute based on smallest BLOCK_S in configs (64) to ensure grid is sufficient;
++    # Triton's autotune will launch with different meta BLOCK_S values, but grid dimensions must be correct.
++    min_BLOCK_S = 64
++    num_s_blocks = (S + min_BLOCK_S - 1) // min_BLOCK_S
++    grid = (B, num_s_blocks)
+ 
+-    _logsumexp_hardswish_kernel[grid](
++    # Launch kernel (autotune will select BLOCK_S, BLOCK_C)
++    _lse_hsw_fused_kernel[grid](
+         x_flat,
+         out_flat,
+         B, C, S,
+@@ -117,9 +148,10 @@
+ class ModelNew(nn.Module):
+     """
+     Optimized Model:
+-      - Uses the standard nn.ConvTranspose3d for the heavy convolution transpose.
+-      - Fuses logsumexp over channels, HardSwish activation, bias subtraction and clamp
+-        into a single Triton kernel for the elementwise reduction + postprocessing.
++      - Keeps nn.ConvTranspose3d for the transpose convolution (leverages PyTorch highly-optimized impl).
++      - Replaces the channel-wise LogSumExp + HardSwish + bias subtraction + clamp
++        with a fused Triton kernel that processes contiguous spatial blocks per program,
++        improving memory coalescing and reducing kernel-launch ove
+...[TRUNCATED]

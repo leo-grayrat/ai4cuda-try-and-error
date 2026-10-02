@@ -1,0 +1,212 @@
+@@ -3,38 +3,107 @@
+ import triton
+ import triton.language as tl
+ 
+-# Fused Triton kernel:
+-# For each output row (n, c, pd, ph) and a vector of output-width positions (pw),
+-# 1) compute mean and invstd for the four corresponding source rows ((d0,h0),(d0,h1),(d1,h0),(d1,h1))
+-#    by loading the full width (W) of each source row,
+-# 2) load the two required width positions (w0, w1) from each row,
+-# 3) apply LayerNorm using the computed stats and gamma/beta,
+-# 4) average the 8 normalized values and apply GELU,
+-# 5) store the results for the vector of pw positions.
+-#
+-# This eliminates a separate mean/invstd precompute kernel and avoids writing/reading
+-# large temporary mean/invstd arrays, reducing memory traffic and kernel-launch overhead.
++# Improved variant of Kernel 1:
++# - Compute per-row mean & invstd as before, but store them in fp16 to halve memory traffic
++#   when the subsequent fused pooling+norm+gelu kernel reads statistics.
++# - The pooling+norm+gelu kernel loads mean/invstd (fp16) and casts to fp32 for computation.
++# This reduces memory bandwidth for the large mean/invstd arrays and typically improves overall runtime.
+ 
++# -----------------------------
++# Triton kernel: compute mean and inverse std (invstd) per row (row = (n, c, d, h))
++# Outputs are stored in fp16 to save memory bandwidth.
++# -----------------------------
+ @triton.jit
+-def _pool_norm_gelu_onfly_kernel(
++def _row_mean_invstd_kernel_fp16(
++    x_ptr,        # pointer to input tensor (N, C, D, H, W) flattened
++    mean_ptr,     # pointer to output means per row (n_rows,) dtype=float16
++    invstd_ptr,   # pointer to output invstd per row (n_rows,) dtype=float16
++    sum_weight,   # scalar to add prior to normalization
++    eps,          # eps for numerical stability
++    n_rows,       # number of rows = N*C*D*H
++    W,            # width (elements per row)
++    BLOCK_W: tl.constexpr,  # constexpr block width (should equal W for efficiency)
++):
++    row_id = tl.program_id(0)
++    if row_id >= n_rows:
++        return
++
++    offs = tl.arange(0, BLOCK_W)
++    row_ptr = x_ptr + row_id * W
++
++    mask = offs < W
++    vals = tl.load(row_ptr + offs, mask=mask, other=0.0).to(tl.float32)
++
++    # add the broadcasted scalar before computing statistics
++    vals = vals + sum_weight
++
++    # compute mean and variance across the width dimension
++    # Use W in the division for correctness
++    mean = tl.sum(vals) / W
++    dif = vals - mean
++    var = tl.sum(dif * dif) / W
++    invstd = 1.0 / tl.sqrt(var + eps)
++
++    # Store as fp16 to reduce memory footprint
++    tl.store(mean_ptr + row_id, mean.to(tl.float16))
++    tl.store(invstd_ptr + row_id, invstd.to(tl.float16))
++
++
++def triton_compute_mean_invstd_fp16(x: torch.Tensor, sum_weight: float, eps: float):
++    """
++    Compute mean and invstd per row (row = n,c,d,h) for input x with shape (N,C,D,H,W).
++    Returns two 1D tensors of shape (n_rows,) with dtype=float16 on same device as x.
++    """
++    assert x.is_cuda and x.dtype == torch.float32
++    x = x.contiguous()
++    N, C, D, H, W = x.shape
++    # Kernel written for W=64 for this architecture
++    BLOCK_W = 64
++    assert W == BLOCK_W, f"Kernel expects W={BLOCK_W}, got {W}"
++
++    n_rows = N * C * D * H
++    mean = torch.empty(n_rows, device=x.device, dtype=torch.float16)
++    invstd = torch.empty(n_rows, device=x.device, dtype=torch.float16)
++
++    grid = (n_rows,)
++
++    _row_mean_invstd_kernel_fp16[grid](
++        x,
++        mean,
++        invstd,
++        float(sum_weight),
++        float(eps),
++        n_rows,
++        W,
++        BLOCK_W=BLOCK_W,
++    )
++    return mean, invstd
++
++
++# -----------------------------
++# Triton kernel: perform fused avgpool3d (2x2x2) + LayerNorm (on-the-fly using mean/invstd) + GELU
++# mean & invstd are provided in fp16 to reduce memory reads; they are cast to fp32 inside kernel.
++# -----------------------------
++@triton.jit
++def _pool_norm_gelu_kernel_fp16(
+     src_ptr,       # pointer to input tensor (N,C,D,H,W) flattened
+     dst_ptr,       # pointer to output tensor (N,C,D_out,H_out,W_out) flattened
++    mean_ptr,      # pointer to per-row means (n_rows,) dtype=float16
++    invstd_ptr,    # pointer to per-row invstds (n_rows,) dtype=float16
+     gamma_ptr,     # pointer to LayerNorm weight (length W)
+     beta_ptr,      # pointer to LayerNorm bias (length W)
+-    eps,           # layernorm eps
++    sum_weight,    # scalar sum_weight (same as used in mean/invstd)
+     N, C, D, H, W, # input dims
+     D_out, H_out, W_out,  # output dims
+-    BLOCK_W: tl.constexpr,       # full width block (expects W == BLOCK_W)
+-    BLOCK_OUT_W: tl.constexpr,   # vectorized output width block (expects W_out == BLOCK_OUT_W)
++    BLOCK_OUT_W: tl.constexpr,  # constexpr block width for output W_out
+ ):
+     pid = tl.program_id(0)
+     total_rows = N * C * D_out * H_out
+     if pid >= total_rows:
+         return
+ 
+-    # vector indices for the output width positions handled by this program
+-    offs_out = tl.arange(0, BLOCK_OUT_W)  # 0..BLOCK_OUT_W-1
+-    pw = offs_out  # pw offsets within [0..W_out-1]
++    offs = tl.arange(0, BLOCK_OUT_W)  # 0..BLOCK_OUT_W-1, vectorized over output width positions
++    pw = offs  # output width offsets for this program; these are in [0..W_out-1]
+ 
+     # decode pid -> n, c, pd, ph
+     tmp = pid
+@@ -52,7 +121,11 @@
+     h0 = ph * 2
+     h1 = h0 + 1
+ 
+-    # compute base row indices for the four source rows
++    # source width indices
++    src_w0 = pw * 2         # vector of size BLOCK_OUT_W
++    src_w1 = src_w0 + 1
++
++    # linear base indices for the four source rows (one per (d,h) pair)
+     # row_index = ((n * C + c) * D + d) * H + h
+     base0 = ((n * C + c) * D + d0) * H + h0
+     base1 = ((n * C + c) * D + d0) * H + h1
+@@ -65,154 +138,127 @@
+     ptr2 = src_ptr + base2 * W
+     ptr3 = src_ptr + base3 * W
+ 
+-    # Compute mean and invstd for each of the four rows by loading the full width (W).
+-    offsW = tl.arange(0, BLOCK_W)
+-
+-    # Load full rows (BLOCK_W should equal W for this architecture; mask used for safety)
+-    maskW = offsW < W
+-    vals0 = tl.load(ptr0 + offsW, mask=maskW, other=0.0).to(tl.float32)
+-    vals1 = tl.load(ptr1 + offsW, mask=maskW, other=0.0).to(tl.float32)
+-    vals2 = tl.load(ptr2 + offsW, mask=maskW, other=0.0).to(tl.float32)
+-    vals3 = tl.load(ptr3 + offsW, mask=maskW, other=0.0).to(tl.float32)
+-
+-    # Note: we do NOT add sum_weight here. Adding a scalar before LayerNorm is a no-op for the normalized result,
+-    # and adding it here previously caused inconsistency between stats and the separately-loaded elements.
+-    # Therefore we omit the broadcast-add entirely (it is algebraically redundant).
+-
+-    # Compute mean and invstd across width dimension for each row
+-    # W is known at compile time (BLOCK_W), but we still use the runtime W for correctness.
+-    mean0 = tl.sum(vals0) / W
+-    dif0 = vals0 - mean0
+-    var0 = tl.sum(dif0 * dif0) / W
+-    invstd0 = 1.0 / tl.sqrt(var0 + eps)
+-
+-    mean1 = tl.sum(vals1) / W
+-    dif1 = vals1 - mean1
+-    var1 = tl.sum(dif1 * dif1) / W
+-    invstd1 = 1.0 / tl.sqrt(var1 + eps)
+-
+-    mean2 = tl.sum(vals2) / W
+-    dif2 = vals2 - mean2
+-    var2 = tl.sum(dif2 * dif2) / W
+-    invstd2 = 1.0 / tl.sqrt(var2 + eps)
+-
+-    mean3 = tl.sum(vals3) / W
+-    dif3 = vals3 - mean3
+-    var3 = tl.sum(dif3 * dif3) / W
+-    invstd3 = 1.0 / tl.sqrt(var3 + eps)
+-
+-    # For the vector of output pw positions, compute the source width indices (two per output)
+-    src_w0 = pw * 2        # vector size BLOCK_OUT_W
+-    src_w1 = src_w0 + 1
+-
++    # masks for loading within width bounds
+     mask0 = src_w0 < W
+     mask1 = src_w1 < W
+ 
+-    # Extract the needed elements from the already-loaded full-row vectors (no extra global loads)
+-    a0 = vals0[src_w0]
+-    a1 = vals0[src_w1]
++    # Load the raw 8 values for each output pw (vectorized)
++    a0 = tl.load(ptr0 + src_w0, mask=mask0, other=0.0).to(tl.float32)
++    a1 = tl.load(ptr0 + src_w1, mask=mask1, other=0.0).to(tl.float32)
++    b0 = tl.load(ptr1 + src_w0, mask=mask0, other=0.0).to(tl.float32)
++    b1 = tl.load(ptr1 + src_w1, mask=mask1, other=0.0).to(tl.float32)
++    c0 = tl.load(ptr2 + src_w0, mask=mask0, other=0.0).to(tl.float32)
++    c1 = tl.load(ptr2 + src_w1, mask=mask1, other=0.0).to(tl.float32)
++    d0v = tl.load(ptr3 + src_w0, mask=mask0, other=0.0).to(tl.float32)
++    d1v = tl.load(ptr3 + src_w1, mask=mask1, other=0.0).to(tl.float32)
+ 
+-    b0 = vals1[src_w0]
+-    b1 = vals1[src_w1]
++    # load mean and invstd for each corresponding source row (scalars)
++    # mean & invstd stored as fp16 to save bandwidth; cast to fp32 for computation
++    mean0 = tl.load(mean_ptr + base0).to(tl.float32)
++    invstd0 = tl.load(invstd_ptr + base0).to(tl.float32)
++    mean1 = tl.load(mean_ptr + base1).to(tl.float32)
++    invstd1 = tl.load(invstd_ptr + base1).to(tl.float32)
++    mean2 = tl.load(mean_ptr + base2).to(tl.float32)
++    invstd2 = tl.load(invstd_ptr + base2).to(tl.float32)
++    me
+...[TRUNCATED]
