@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (MiKTeX 26.2) (preloaded format=xelatex 2026.6.8)  2 OCT 2026 22:16
+This is XeTeX, Version 3.141592653-2.6-0.999998 (MiKTeX 26.2) (preloaded format=xelatex 2026.6.8)  2 OCT 2026 23:19
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1534,109 +1534,110 @@ LaTeX Font Info:    Font shape `TU/DejaVuSansMono(0)/m/n' will be
 
 [1
 
-] [2]
+]
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(0)/m/n' will be
-(Font)              scaled to size 7.665pt on input line 141.
+(Font)              scaled to size 7.665pt on input line 129.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(0)/m/n' will be
-(Font)              scaled to size 5.475pt on input line 141.
-
-Underfull \hbox (badness 1102) in paragraph at lines 154--155
+(Font)              scaled to size 5.475pt on input line 129.
+ [2]
+Underfull \hbox (badness 1102) in paragraph at lines 144--145
 []\TU/DejaVuSerif(0)/m/n/10.95 The standard response is better credit assignmen
 t: find the important spans,
  []
 
 [3]
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(0)/m/n' will be
-(Font)              scaled to size 10.0pt on input line 175.
+(Font)              scaled to size 10.0pt on input line 165.
 LaTeX Font Info:    Font shape `TU/DejaVuSansMono(0)/m/n' will be
-(Font)              scaled to size 9.49097pt on input line 175.
+(Font)              scaled to size 9.49097pt on input line 165.
  [4]
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(1)/m/n' will be
-(Font)              scaled to size 12.0427pt on input line 238.
+(Font)              scaled to size 12.0427pt on input line 228.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(1)/m/n' will be
-(Font)              scaled to size 8.42989pt on input line 238.
+(Font)              scaled to size 8.42989pt on input line 228.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(1)/m/n' will be
-(Font)              scaled to size 6.02135pt on input line 238.
+(Font)              scaled to size 6.02135pt on input line 228.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(2)/m/n' will be
-(Font)              scaled to size 12.04391pt on input line 238.
+(Font)              scaled to size 12.04391pt on input line 228.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(2)/m/n' will be
-(Font)              scaled to size 8.43074pt on input line 238.
+(Font)              scaled to size 8.43074pt on input line 228.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(2)/m/n' will be
-(Font)              scaled to size 6.02196pt on input line 238.
+(Font)              scaled to size 6.02196pt on input line 228.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(3)/m/n' will be
-(Font)              scaled to size 12.04147pt on input line 238.
+(Font)              scaled to size 12.04147pt on input line 228.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(3)/m/n' will be
-(Font)              scaled to size 8.42903pt on input line 238.
+(Font)              scaled to size 8.42903pt on input line 228.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(3)/m/n' will be
-(Font)              scaled to size 6.02074pt on input line 238.
+(Font)              scaled to size 6.02074pt on input line 228.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(0)/m/it' will be
-(Font)              scaled to size 10.0pt on input line 239.
- [5] [6]
+(Font)              scaled to size 10.0pt on input line 229.
+ [5]
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(1)/m/it' will be
-(Font)              scaled to size 10.95pt on input line 277.
+(Font)              scaled to size 10.95pt on input line 267.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(1)/m/it' will be
-(Font)              scaled to size 7.665pt on input line 277.
+(Font)              scaled to size 7.665pt on input line 267.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(1)/m/it' will be
-(Font)              scaled to size 5.475pt on input line 277.
+(Font)              scaled to size 5.475pt on input line 267.
 LaTeX Font Info:    Font shape `TU/DejaVuSansMono(0)/m/n' will be
-(Font)              scaled to size 5.69458pt on input line 282.
+(Font)              scaled to size 5.69458pt on input line 272.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(1)/m/it' will be
-(Font)              scaled to size 6.0pt on input line 282.
+(Font)              scaled to size 6.0pt on input line 272.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(1)/m/it' will be
-(Font)              scaled to size 5.0pt on input line 282.
+(Font)              scaled to size 5.0pt on input line 272.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(0)/m/n' will be
-(Font)              scaled to size 6.0pt on input line 282.
- [7]
+(Font)              scaled to size 6.0pt on input line 272.
+ [6]
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(1)/m/n' will be
-(Font)              scaled to size 10.95pt on input line 309.
+(Font)              scaled to size 10.95pt on input line 299.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(1)/m/n' will be
-(Font)              scaled to size 7.665pt on input line 309.
+(Font)              scaled to size 7.665pt on input line 299.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(1)/m/n' will be
-(Font)              scaled to size 5.475pt on input line 309.
- [8] [9]
-Overfull \hbox (6.42276pt too wide) in paragraph at lines 360--360
+(Font)              scaled to size 5.475pt on input line 299.
+ [7] [8]
+Overfull \hbox (6.42276pt too wide) in paragraph at lines 352--352
 []|\TU/DejaVuSerif(0)/m/n/10 Threshold|  
  []
 
 
-Overfull \hbox (5.85345pt too wide) in paragraph at lines 360--361
+Overfull \hbox (5.85345pt too wide) in paragraph at lines 352--353
 []|\TU/DejaVuSerif(0)/m/n/10 Fired?|  
  []
 
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(1)/m/n' will be
-(Font)              scaled to size 10.0pt on input line 363.
+(Font)              scaled to size 10.0pt on input line 355.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(1)/m/n' will be
-(Font)              scaled to size 7.0pt on input line 363.
+(Font)              scaled to size 7.0pt on input line 355.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(1)/m/n' will be
-(Font)              scaled to size 5.0pt on input line 363.
+(Font)              scaled to size 5.0pt on input line 355.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(1)/m/it' will be
-(Font)              scaled to size 10.0pt on input line 363.
+(Font)              scaled to size 10.0pt on input line 355.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(1)/m/it' will be
-(Font)              scaled to size 7.0pt on input line 363.
+(Font)              scaled to size 7.0pt on input line 355.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(0)/b/n' will be
-(Font)              scaled to size 10.0pt on input line 363.
+(Font)              scaled to size 10.0pt on input line 355.
+[9]
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(0)/m/n' will be
-(Font)              scaled to size 7.0pt on input line 393.
+(Font)              scaled to size 7.0pt on input line 385.
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(0)/m/n' will be
-(Font)              scaled to size 5.0pt on input line 393.
+(Font)              scaled to size 5.0pt on input line 385.
 
-Overfull \hbox (35.78825pt too wide) in paragraph at lines 394--394
+Overfull \hbox (35.78825pt too wide) in paragraph at lines 386--386
 []|$[][][][]$|  
  []
 
 [10] [11]
-Overfull \hbox (20.92363pt too wide) in alignment at lines 456--460
+Overfull \hbox (20.92363pt too wide) in alignment at lines 448--452
  [] [] [] [] [] [] [] 
  []
 
 
-Overfull \hbox (20.92363pt too wide) in alignment at lines 460--465
+Overfull \hbox (20.92363pt too wide) in alignment at lines 452--457
  [] [] [] [] [] [] [] 
  []
 
 [12]
 LaTeX Font Info:    Font shape `TU/DejaVuSansMono(0)/b/n' will be
-(Font)              scaled to size 10.3926pt on input line 476.
+(Font)              scaled to size 10.3926pt on input line 468.
  [13]
 File: figures/fig1_entropy_comparison.png Graphic file (type bmp)
 <figures/fig1_entropy_comparison.png>
@@ -1657,39 +1658,39 @@ ignored: Infinite glue shrinkage found in box being split [19]
 ignored: Infinite glue shrinka
 ge found in box being split [20] [21] [22] [23] [24] [25] [26]
 [27] [28] [29] [30] [31] [32]
-Underfull \hbox (badness 1436) in paragraph at lines 827--829
+Underfull \hbox (badness 1436) in paragraph at lines 819--821
 \TU/DejaVuSerif(0)/m/n/10.95 P. Ranganathan, O. Bastani, A. Yazdanbakhsh. \TU/D
 ejaVuSerif(0)/b/n/10.95 Learning Performance-
  []
 
 [33]
-Overfull \hbox (7.73973pt too wide) in paragraph at lines 859--861
+Overfull \hbox (7.73973pt too wide) in paragraph at lines 851--853
 []\TU/DejaVuSerif(0)/b/n/10.95 The Correctness Illusion in LLM-Generated GPU Ke
 rnels. \TU/DejaVuSerif(0)/m/n/10.95 arXiv:2606.20128,
  []
 
 
-Underfull \hbox (badness 1852) in paragraph at lines 861--863
+Underfull \hbox (badness 1852) in paragraph at lines 853--855
 []\TU/DejaVuSerif(0)/b/n/10.95 A Contract-Grade Verifier for LLM-Generated GPU 
 Kernels, and a
  []
 
-
-Overfull \hbox (40.45018pt too wide) in paragraph at lines 873--875
+[34]
+Overfull \hbox (40.45018pt too wide) in paragraph at lines 865--867
 []\TU/DejaVuSerif(0)/b/n/10.95 Score Centering Stabilizes Off-policy Reinforcem
 ent Learning. \TU/DejaVuSerif(0)/m/n/10.95 arXiv:2609.20807,
  []
 
-[34]
-Underfull \hbox (badness 10000) in paragraph at lines 891--892
+
+Underfull \hbox (badness 10000) in paragraph at lines 883--884
 \TU/DejaVuSerif(0)/m/n/10.95 url:https://hazyresearch.stanford.edu/blog/2026-08
 -05-retire-the-abstractions
  []
 
 LaTeX Font Info:    Font shape `TU/DejaVuSerif(1)/m/n' will be
-(Font)              scaled to size 6.0pt on input line 902.
+(Font)              scaled to size 6.0pt on input line 894.
 [35]
-Underfull \hbox (badness 5374) in paragraph at lines 907--908
+Underfull \hbox (badness 5374) in paragraph at lines 899--900
 \TU/DejaVuSansMono(0)/m/n/10.95 data/annotations.json\TU/DejaVuSerif(0)/m/n/10.
 95 , calibration in \TU/DejaVuSansMono(0)/m/n/10.95 data/informativeness_calibr
 ation.json\TU/DejaVuSerif(0)/m/n/10.95 .
@@ -1704,10 +1705,10 @@ L3 programming layer <2026-01-19>
 Here is how much of TeX's memory you used:
  21001 strings out of 402983
  387190 string characters out of 5448483
- 1009425 words of memory out of 5000000
+ 1009424 words of memory out of 5000000
  49405 multiletter control sequences out of 15000+600000
  638848 words of font info for 162 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 90i,10n,116p,1865b,709s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 90i,10n,116p,1865b,713s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
 Output written on main.pdf (37 pages).

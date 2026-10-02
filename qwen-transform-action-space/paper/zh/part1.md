@@ -20,18 +20,13 @@
 
 如今的智能体式强化学习系统已经能写出击败编译器自动调优的 GPU 内核。CUDA Agent 在 KernelBench 的三个难度划分上报告了 100%、100% 和 92% 的快于 `torch.compile` 比率，在最难的划分上比最强的专有模型高出约 40% [1,2]。它达到这一步的方式，是把一个语言模型放进一个真实的开发沙箱——编译、验证正确性、剖析、迭代——并用 PPO 在很长的多轮智能体轨迹上优化策略，上下文长度量级为 10⁵ token [1]。公开的产物是一个 6,000 样本的操作数据集、一份技能规约，以及奖励与预热（warm-up）的训练配方；模型权重、智能体轨迹和训练期可观测量并不公开 [1,3]。
 
-仅从摘要和公开配方的层面来读，训练那一侧的机制是一连串由一般动机驱动的修补：在要求模型跑长 episode 之前，先用更短的 episode 给它预热；在强化学习之前，先在成功轨迹上做监督微调（supervised fine-tuning）；离线预训练一个 critic；给奖励设界，使基于结果的打分不过度奖励那些余量大的任务；约束策略更新幅度以保持稳定。每一步都是对训练底座某一症状的合理回应。而在*我们所能核实的那份材料所描述的范围内*，没有一步是被存储层次（memory hierarchies）、warp 语义、合并访存（coalescing）或共享内存 bank 冲突所逼出来的。
+那份配方所处理的，是在稀有文本上训练长时程策略的难度。奖励是一个四级量化函数 $r \in \{-1, 1, 2, 3\}$，挂钩于正确性、以及相对 eager 与 `torch.compile` 基线超过 5% 的余量，其理由明写为 "operators vary substantially in optimization difficulty, making raw speedup an unreliable proxy for code quality"（算子在优化难度上差异极大，使得原始加速比成为代码质量的一个不可靠代理）；PPO 裁剪是非对称的，取 $\varepsilon_{\text{lower}} = 0.2$ 与 $\varepsilon_{\text{higher}} = 0.28$；最初一次训练 "could only train stably for 17 steps before the model's performance collapsed"（只能稳定训练 17 步，随后模型性能崩溃），对 actor 与 critic 都做预热之后才达到 200 步；其陈明的根因是一处 "severe domain distribution mismatch"（严重的领域分布错配），因为 "CUDA coding data accounts for less than 0.01% of pretraining data"（CUDA 编码数据在预训练数据中占比不足 0.01%），于是靠近 $\pi_\theta \approx 10^{-9}$ 的低概率 token 会把训练/推理之间的数值精度差异放大成重要性比的方差 [1, Sec. 5.1-5.2]。
 
-对这一批评需要两点限定。
+此中每一个装置回应的都是训练底座的某个症状；没有哪一个衍生自 GPU 的某个属性。存储层次（memory hierarchies）、warp 语义、合并访存（coalescing）与共享内存 bank 冲突在它们的理由里一次也不曾出现。它们出现在*奖励*里——奖励只在轨迹末端被观测一次，然后摊到产生它的那些 token 上。
 
-* **那篇论文在两个不同层次上把"动作"一词用于两件不同的事，我们必须说清楚进攻的是哪一个。** 在其强化学习形式化里，动作被明确地定义为 token：它那个带裁剪的 PPO 目标把 $a_t$ 定义为 "the action (i.e., token) taken at position $t$"（在位置 $t$ 上采取的动作（亦即 token））[1, Sec. 5.2]。但它的环境又被另行如此描述：一套由 Bash、Read/Write、Edit/MultiEdit、Glob、Grep、NotebookEdit、BashOutput 与 KillBash 构成的工具集，其中 *"these tools define the action space of the agent"*（这些工具定义了智能体的动作空间），且是其 "only mechanisms through which it can interact with the system"（与系统交互的唯一机制）[1, App. "Details of Agent Loop"]，而 MultiEdit 被刻画为施加 "multiple atomic edits within one file"（单文件内的多处原子编辑）。因此，"CUDA Agent 把每一个 token 都当作一个独立动作"这一论断，对它那个承载信用的层次为真，对它那个接口层次为假——在后一层里，动作单元已经是一个编辑大小的操作。这恰恰是本文所要针对的那种含混：同一个系统携带两套候选坐标系，而训练机器被挂在更细的那一套上。我们的问题是哪一个层次应当承载学习信号，而不是是否曾有人使用过粗粒度动作。
-* **可迁移性论断不可被过度解读。** NKI-Agent 把 CUDA-Agent 框架迁移到 AWS Trainium，并报告带二值编译奖励的 GRPO *未能超过监督微调* [18]。那是强化学习这一组件的一次失败迁移，而不是配方的成功迁移；把它当作"配方原封不动地搬走了"的证据来引用会自相矛盾。它所确实支持的，是一个更窄、仍然值得认真对待的结论：训练配方欠规定到这种程度——在新硬件上复现它会改变哪些部分存活下来，而强化学习那一部分并不是可携带的核心。
+这个摊派发生在哪一层，取决于学习器被当作“选择了什么”，而这套系统对那个单元有两种不同的说法。在其强化学习形式化里，动作就是 token：带裁剪的目标把 $a_t$ 定义为 "the action (i.e., token) taken at position $t$"（在位置 $t$ 上采取的动作，亦即 token）[1, Sec. 5.2]。在其环境描述里，动作却是更粗的东西：一套由 Bash、Read/Write、Edit/MultiEdit、Glob、Grep、NotebookEdit、BashOutput 与 KillBash 构成的工具集，其中 "these tools define the action space of the agent"（这些工具定义了智能体的动作空间），而 MultiEdit 施加的是 "multiple atomic edits within one file"（单文件内的多处原子编辑）[1, App. "Details of Agent Loop"]。同一个可用系统里因此并存着两种候选决策单元，而训练机器挂在更细的那一种上。
 
-[1] 的 arXiv LaTeX 源码可作为一个 18 MB 的 e-print 包被检索到，我们读了它，于是那些我们称为"通用"的设计选择可以被逐字引用，而非仅作刻画：奖励是一个四级量化函数 $r \in \{-1, 1, 2, 3\}$，挂钩于正确性、以及相对 eager 与 `torch.compile` 基线超过 5% 的余量，其理由明写为 "operators vary substantially in optimization difficulty, making raw speedup an unreliable proxy for code quality"（算子在优化难度上差异极大，使得原始加速比是代码质量的一个不可靠代理）；PPO 裁剪是非对称的，取 $\varepsilon_{\text{lower}} = 0.2$ 与 $\varepsilon_{\text{higher}} = 0.28$；初始试验 "could only train stably for 17 steps before the model's performance collapsed"（只能稳定训练 17 步随后模型性能崩溃），在预热阶段之后达到 200 步；而其陈明的根因是一处 "severe domain distribution mismatch"（严重的领域分布错配），因为 "CUDA coding data accounts for less than 0.01% of pretraining data"（CUDA 编码数据在预训练数据中占比不足 0.01%），靠近 $\pi_\theta \approx 10^{-9}$ 的低概率 token 会把训练/推理之间的数值精度差异放大为重要性比的方差 [1, Sec. 5.1-5.2]。
-
-那五个机制中的每一个，都是在稀疏结果之下、对稀有文本上训练长时程策略所生症状的一种回应，没有一个是衍生自 GPU 的某个属性。另请注意，源码坦承那个量化奖励的存在是为了阻止简单内核主导选择——这与我们在第 5.5 节就"按原始测得加速比给候选打分"独立提出的关切相同。
-
-所以，诚实的问题不是这个结果是否惊人——它确实惊人——而是那个*增量性的科学论断*是什么，以及这些建模选择究竟是取决于这一领域，还是仅仅取决于训练底座。
+本文要问的是：若把单元改取自定义程序性能模型的带类型程序变换，会发生什么；以及在这一步之前，在公开可得的数据上，这样的单元究竟能不能被描述出来。第 2.1 节列出候选单元，第 3 节度量已发表轨迹能够支持到哪一步，第 4 节给出足以裁定其余部分的实验。
 
 ### 1.2 中间的那个黑洞
 
@@ -161,6 +156,8 @@ transformation:  P_t --a_t--> P_{t+1},   a_t ∈ A, reusable, comparable, statab
 $\mathit{code}_A \neq \mathit{code}_B$　但　$a_A = a_B = \mathrm{WarpReduce}$
 
 这样一来，在归约 A 上收集的经验可按动作而非按表层代码来索引，并在归约 B 上复用，从而把 $Q(P, \text{token string})$ 变成 $Q(P, a)$。
+
+已发表的跨厂商结果只能间接说明这一点。NKI-Agent 把 CUDA-Agent 框架移植到 AWS Trainium，并报告带二值编译奖励的 GRPO *未能超过监督微调* [18]。也就是说，即使在智能体接口确实跟着搬过去的地方，强化学习那一部分也没有迁移成功——“配方会原样转移”因此是一个待检验的假设，而不是一个前提。
 
 这就是论题所需要的那个"可迁移"的版本，而且必须立刻标记出来：支撑它的证据并不在本文的数据里。第 3.5 节表明，在一个标签置换零分布下，变换标签的跨任务复现处于机会水平，因为我们的抽样对每个任务的边数设有上限。因此，论题的可迁移性解读**并不为我们的数据所支持**——它是一个需要第 4 节去挣得的假设，而 $Q(P, a)$ 在此是被作为一个未来实验的对象来陈述，而不是作为一个发现。
 

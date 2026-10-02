@@ -36,52 +36,33 @@ optimizing a policy over long multi-turn agent trajectories with PPO, at a conte
 The released artifacts are a 6,000-sample operation dataset, a skill specification, and the reward and warm-up
 training recipe; the model weights, agent trajectories, and training-time observables are not public [1,3].
 
-Read at the level of the abstract and the released recipe, the training-side machinery is a chain of generally
-motivated fixes: warm the model up on shorter episodes before asking it to run long ones; supervise-fine-tune on
-successful trajectories before reinforcement learning; pretrain a critic offline; bound the reward so that
-outcome-based scoring does not over-reward tasks with large headroom; constrain the policy update range to keep
-stability. Each step is a sensible response to a symptom of the training substrate. None of them, *as described in
-the material we could verify*, is forced by memory hierarchies, warp semantics, coalescing, or shared-memory bank
-conflicts.
+What that recipe manages is the difficulty of training a long-horizon policy on rare text. The reward is a
+four-level quantised function $r \in \{-1, 1, 2, 3\}$ keyed to correctness and to a >5% margin over the eager and
+`torch.compile` baselines, chosen because "operators vary substantially in optimization difficulty, making raw
+speedup an unreliable proxy for code quality"; the PPO clip is asymmetric, with $\varepsilon_{\text{lower}} = 0.2$
+and $\varepsilon_{\text{higher}} = 0.28$; the first run "could only train stably for 17 steps before the model's
+performance collapsed", and 200 stable steps came from warming up both actor and critic; the stated cause is a
+"severe domain distribution mismatch", because "CUDA coding data accounts for less than 0.01% of pretraining
+data", which yields low-probability tokens near $\pi_\theta \approx 10^{-9}$ whose importance ratios destabilise
+under train/inference precision differences [1, Sec. 5.1-5.2].
 
-Two qualifications are necessary.
+Each of those devices answers a symptom of the training substrate. None of them is derived from a property of a
+GPU: memory hierarchies, warp semantics, coalescing and bank conflicts appear nowhere in their justification. They
+appear in the *reward*, which is observed once, at the end of a trajectory, and then spread over the tokens that
+produced it.
 
-* **That paper uses "action" for two different things at two different layers, and the distinction is its own, not
-  ours.** In its reinforcement-learning formulation the action is explicitly the token: its clipped PPO
-  objective defines $a_t$ as "the action (i.e., token) taken at position $t$" [1, Sec. 5.2]. But its environment
-  is separately described in these terms: a toolset of Bash, Read/Write, Edit/MultiEdit, Glob, Grep,
-  NotebookEdit, BashOutput and KillBash, where "*these tools define the action space of the agent* and serve as the
-  only mechanisms through which it can interact with the system" [1, App. "Details of Agent Loop"], with MultiEdit
-  characterised as applying "multiple atomic edits within one file". So the claim "CUDA Agent treats each token as
-  an independent action" is true of its credit-bearing layer and false of its interface layer, where the unit is
-  already an edit-sized operation. That is precisely the ambiguity this paper is about: the same system carries two
-  candidate coordinate systems, and the training machinery is attached to the finer one. Our question is which layer
-  should carry the learning signal, not whether anyone has ever used a coarse action.
-* **The transfer argument must not be over-read.** NKI-Agent adapts the CUDA-Agent framework to AWS Trainium and
-  reports that GRPO with a binary compilation reward *fails to improve on supervised fine-tuning* [18]. That is a
-  failed transfer of the reinforcement-learning component, not a successful transfer of the recipe, and citing it
-  as evidence that "the recipe moves untouched" would be self-contradictory. What it does support is narrower and
-  still worth taking seriously: the training recipe is under-specified enough that reproducing it on new
-  hardware changes which parts survive, and the reinforcement-learning part is not the portable core.
+Where that spreading happens is decided by what the learner is treated as having chosen, and this system describes
+that unit twice, in two different ways. In its reinforcement-learning formulation the action is the token: the
+clipped objective defines $a_t$ as "the action (i.e., token) taken at position $t$" [1, Sec. 5.2]. In its
+environment description the action is something coarser: a toolset of Bash, Read/Write, Edit/MultiEdit, Glob, Grep,
+NotebookEdit, BashOutput and KillBash, where "these tools define the action space of the agent" and MultiEdit
+applies "multiple atomic edits within one file" [1, App. "Details of Agent Loop"]. Two candidate units of decision
+therefore coexist inside one working system, and the learning machinery is attached to the finer of them.
 
-The arXiv LaTeX source of [1] is retrievable as an 18 MB
-e-print bundle and we read it, so the design choices we call generic can be quoted rather than
-characterised: the reward is a four-level quantised function $r \in \{-1, 1, 2, 3\}$ keyed to correctness and to a
->5% margin over the eager and `torch.compile` baselines, explicitly because "operators vary substantially in
-optimization difficulty, making raw speedup an unreliable proxy for code quality"; the PPO clip is asymmetric with
-$\varepsilon_{\text{lower}} = 0.2$ and $\varepsilon_{\text{higher}} = 0.28$; the initial trial "could only train
-stably for 17 steps before the model's performance collapsed", reaching 200 after the warm-up stages; and the stated
-root cause is a "severe domain distribution mismatch", because "CUDA coding data accounts for less than 0.01% of
-pretraining data", with low-probability tokens near $\pi_\theta \approx 10^{-9}$ amplifying train/inference
-numerical-precision differences into importance-ratio variance [1, Sec. 5.1-5.2].
-
-Every one of those five mechanisms is a response to a symptom of training a long-horizon policy on rare text under
-a sparse outcome. None of them is derived from a property of GPUs. Note also that the source is candid that the
-quantised reward exists to stop easy kernels from dominating selection — the same concern we raise independently in
-Section 5.5 about scoring candidates by raw measured speedup.
-
-So the honest question is not whether the result is impressive — it is — but what the *incremental scientific
-claim* is, and whether the modelling choices are contingent on the domain or merely on the training substrate.
+This paper asks what changes if the unit is taken instead from the program's performance model — a typed program
+transformation — and, ahead of that, whether such a unit can be described at all on the evidence that is public.
+Section 2.1 lays out the candidate units, Section 3 measures what the published trajectories support, and Section 4
+specifies the experiment that would settle the rest.
 
 ### 1.2 The black hole in the middle
 
@@ -288,6 +269,11 @@ $\mathit{code}_A \neq \mathit{code}_B$ but $a_A = a_B = \mathrm{WarpReduce}$
 
 so that experience collected on reduction A can be indexed by action rather than by surface code and reused on
 reduction B, turning $Q(P, \text{token string})$ into $Q(P, a)$.
+
+Published cross-vendor results bear on this only indirectly. NKI-Agent ports the CUDA-Agent framework to AWS
+Trainium and reports that GRPO with a binary compilation reward *fails to improve on supervised fine-tuning* [18].
+The reinforcement-learning component therefore did not carry over even where the agent interface did, which makes
+"the recipe transfers" an assumption to be tested rather than a premise.
 
 This is the version of "transferable" that the thesis needs, and it must be flagged immediately: the evidence
 for it is not in this paper's data. Section 3.5 shows that cross-task recurrence of the transformation
@@ -843,7 +829,9 @@ candidate selection scores proposals by raw measured speedup, a spurious 100x ex
 categorizing the reward is therefore not benchmark hygiene but a structural precondition for transformation-level
 credit assignment — otherwise a value function indexed on actions will learn to prefer transformations that are
 structurally unsound but numerically loud, and the abstraction will have imported the vulnerability rather than
-fixed it.
+fixed it. The quantised reward of [1] already addresses part of this from the other direction — it is designed so
+that tasks with large headroom do not dominate selection — which is a reason to treat reward shaping as settled
+infrastructure and the choice of action unit as the open question.
 
 ### 5.6 The training-substrate criticism
 
@@ -863,9 +851,9 @@ errors, profiler dumps, and odd intermediate program states — than a statement
 syntax, which is consistent with the general finding that training-inference mismatch, not domain rarity, is what
 destabilizes LLM reinforcement training [26,27].
 
-We deliberately stop short of asserting the specific base-model accuracy figures that circulate around this debate:
-they appear in secondary write-ups we could not verify against the primary source (Section 1.1), and the training-time
-observables are not released [1]. The argument above is therefore a *framing* claim — that the token-level interface is
+The specific base-model accuracy figures that circulate around this debate are not asserted here: the primary
+source does not report them, and its training-time observables are not released [1]. The argument above is
+therefore a *framing* claim — that the token-level interface is
 a plausible common cause of both the instability and the credit problem, because it forces one policy to model program
 structure and tool noise in the same sequence — not an empirical one.
 
