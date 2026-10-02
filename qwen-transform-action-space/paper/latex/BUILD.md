@@ -12,10 +12,10 @@ edit that and re-run this script rather than editing `main.tex`.
 
 ## Compilation status
 
-Engine found: **C:\Users\34788\AppData\Local\Programs\MiKTeX\miktex\bin\x64\xelatex.exe**
+Engine found: **C:\Users\34788\AppData\Local\Programs\MiKTeX\miktex\bin\x64\latexmk.exe**
 PDF produced: **yes — main.pdf**
 
-Built with xelatex; run twice so references settle.
+Built with latexmk; run twice so references settle.
 
 Reproduce:
 

@@ -1078,19 +1078,19 @@ asked to question a method.
 4. A. Shypula, A. Madaan, Y. Zeng, U. Alon, J. Gardner, M. Hashemi, G. Neubig, P. Ranganathan, O. Bastani, A. Yazdanbakhsh. **Learning Performance-Improving Code Edits.** ICLR 2024 (Spotlight). arXiv:2302.07867.
 5. R. Zhao, D. Bieber, K. Swersky, D. Tarlow. **Neural Networks for Modeling Source Code Edits.** ICLR 2019. arXiv:1904.02818.
 6. W. Cheng, Y. Cao, C. Shen, B. Li, J. Chen, Y. Li, W. Hu. **To Diff or Not to Diff? Structure-Aware and Adaptive Output Formats for Efficient LLM-based Code Editing.** Findings of ACL 2026. arXiv:2604.27296.
-7. **SWE-RL: Advancing LLM Reasoning via Reinforcement Learning on Open Software Evolution.** arXiv:2502.18449, 2025.
+7. Y. Wei, O. Duchenne, J. Copet, Q. Carbonneaux, L. Zhang, D. Fried, G. Synnaeve, R. Singh, S. I. Wang. **SWE-RL: Advancing LLM Reasoning via Reinforcement Learning on Open Software Evolution.** arXiv:2502.18449, 2025.
 8. J. Ragan-Kelley, C. Barnes, A. Adams, S. Paris, F. Durand, S. Amarasinghe. **Halide: a language and compiler for optimizing parallelism, locality, and recomputation in image processing pipelines.** PLDI 2013, pp. 519-530; reproduced in ACM SIGPLAN Notices 48(6). doi:10.1145/2499370.2462176.
-9. **TVM: An Automated End-to-End Optimizing Compiler for Deep Learning.** OSDI 2018. arXiv:1802.04799.
-10. **Ansor: Generating High-Performance Tensor Programs for Deep Learning.** OSDI 2020. arXiv:2006.06762.
+9. T. Chen, T. Moreau, Z. Jiang, L. Zheng, E. Yan, M. Cowan, H. Shen, L. Wang, Y. Hu, L. Ceze, C. Guestrin, A. Krishnamurthy. **TVM: An Automated End-to-End Optimizing Compiler for Deep Learning.** OSDI 2018. arXiv:1802.04799.
+10. L. Zheng, C. Jia, M. Sun, Z. Wu, C. H. Yu, A. Haj-Ali, Y. Wang, J. Yang, D. Zhuo, K. Sen, J. E. Gonzalez, I. Stoica. **Ansor: Generating High-Performance Tensor Programs for Deep Learning.** OSDI 2020. arXiv:2006.06762.
 11. R. S. Sutton, D. Precup, S. Singh. **Between MDPs and Semi-MDPs: A Framework for Temporal Abstraction in Reinforcement Learning.** Artificial Intelligence 112(1-2):181-211, 1999. doi:10.1016/S0004-3702(99)00052-1.
 12. P.-L. Bacon, J. Harb, D. Precup. **The Option-Critic Architecture.** AAAI 2017. arXiv:1609.05140.
-13. **When Do Options Help? Policy Necrosis and Redundant Coverage in Option-Critic.** arXiv:2609.05508, 2026.
+13. B. Liu, Y. Jing. **When Do Options Help? Policy Necrosis and Redundant Coverage in Option-Critic.** arXiv:2609.05508, 2026.
 14. G. Wang, Y. Xie, Y. Jiang, A. Mandlekar, C. Xiao, Y. Zhu, L. Fan, A. Anandkumar. **Voyager: An Open-Ended Embodied Agent with Large Language Models.** arXiv:2305.16291, 2023.
 15. Q. I. Mahmud, N. K. Ahmed, A. Jannesari. **Multi-turn RL with Structural and Performance Aware Rewards for CUDA Kernel Generation.** (method name: CudaPerf). arXiv:2607.20908, 2026.
-16. **CUDA-L1: Improving CUDA Optimization via Contrastive Reinforcement Learning.** arXiv:2507.14111, 2025.
-17. **Dr. Kernel: Reinforcement Learning Done Right for Triton Kernel Generations.** arXiv:2602.05885, 2026.
+16. X. Li, A. Wang, G. Wang, J. Li, C. Shum. **CUDA-L1: Improving CUDA Optimization via Contrastive Reinforcement Learning.** arXiv:2507.14111, 2025.
+17. W. Liu, J. Xu, Y. Li, L. Zheng, T. Li, Q. Liu, J. He. **Dr. Kernel: Reinforcement Learning Done Right for Triton Kernel Generations.** arXiv:2602.05885, 2026.
 18. J. Tang, J. Huan, H. Zhou, Y. Zhang, L. Wang. **NKI-Agent: Domain-Specific Fine-Tuning and Agentic Tool Use for Neuron Kernel Generation.** DL4C @ ICML 2026. arXiv:2607.04395.
-19. **Hardening Agent Benchmarks with Adversarial Hacker-Fixer Loops.** arXiv:2606.08960, 2026.
+19. Z. Zhong, I. Segal, I. Bercovich, S. Saxena, K. Zhang, A. Raghunathan. **Hardening Agent Benchmarks with Adversarial Hacker-Fixer Loops.** arXiv:2606.08960, 2026.
 20. **The Correctness Illusion in LLM-Generated GPU Kernels.** arXiv:2606.20128, 2026.
 21. **A Contract-Grade Verifier for LLM-Generated GPU Kernels, and a Native Blackwell Backward for the Gated-Linear-Recurrence Family.** arXiv:2608.12700, 2026.
 22. **KernelBench-Verified: Do LLM-Generated Kernels Actually Beat PyTorch?** arXiv:2607.16241, 2026.
@@ -1098,7 +1098,7 @@ asked to question a method.
 24. **Measuring the Checker: Mutation Analysis for GPU-Kernel Benchmark Oracles.** arXiv:2609.22220, 2026.
 25. **How Much of a Real Workload Can LLM-Generated GPU Kernels Actually Reach?** arXiv:2609.21058, 2026.
 26. **Rethinking Training-Inference Mismatch in LLM Reinforcement Learning: Where It Arises and How to Correct It.** arXiv:2609.32444, 2026.
-27. **Score Centering Stabilizes Off-policy Reinforcement Learning.** arXiv:2609.20807, 2026.
+27. M. Marek, M. Ryabinin. **Score Centering Stabilizes Off-policy Reinforcement Learning.** arXiv:2609.20807, 2026.
 28. **FlashRT: Agent Harness for Guiding Agents to Deploy Real-Time Multimodal Applications.** arXiv:2607.18171, 2026.
 29. S. Cao, Z. Mao, J. E. Gonzalez, I. Stoica. **K-Search: LLM Kernel Generation via Co-Evolving Intrinsic World Model.** arXiv:2602.19128, 2026. *Abstract states: "explicitly decouples high-level algorithmic planning from low-level program instantiation"; targets kernels "requiring coordinated, multi-step structural transformations"; average $2.10\times$ over state-of-the-art evolutionary search, up to $14.3\times$ on complex MoE kernels.*
 30. G. He, E. Yoneki. **CuAsmRL: Optimizing GPU SASS Schedules via Deep Reinforcement Learning.** CGO 2025. arXiv:2501.08071. *RL agents apply mutation actions to SASS schedules; also used to reveal optimization moves automatically.*

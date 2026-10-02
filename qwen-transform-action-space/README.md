@@ -66,7 +66,7 @@ Stage 1 RESEARCH（quick）→ Stage 1.5 EXPERIMENT → Stage 2 WRITE → Stage 
 | Stage 4 | `stage4_revision/REVISION_NOTES.md` | R-1..R-8 逐项处置；**头条统计结论反号** |
 | Stage 3′/4′ | `stage3prime_rereview/` | R-1..R-6 MET、R-7/R-8 PARTIAL；抓出 §5.2 残留矛盾 |
 | Stage 4.5 | `STAGE4_5_FINAL_INTEGRITY.md`（含 v3 复跑） | 从零复核引用；新发现并修 3 处引用字段错误；v3 补入 [33]–[35] |
-| Stage 5 | `paper/latex/`、`paper/zh/full.md` | LaTeX 源 + 36 条 bib + **已编译 PDF（35 页，5 图全嵌入，经结构性验证）**；中文对照稿 |
+| Stage 5 | `paper/latex/`、`paper/zh/full.md` | LaTeX 源 + **BibTeX 自动生成的文献表**（`references.bib` 36 条，正文 `[n]` → `\cite{}`，PDF 内 111 个内部跳转 + 52 个可点 URL）+ **已编译 PDF（经结构性验证）**；中文对照稿 |
 
 终态关卡（v3，全部可重跑）：
 
@@ -106,6 +106,14 @@ PATH，而 MiKTeX 实际装在用户目录下（`AppData\Local\Programs\MiKTeX\m
   `scripts/repair_section_order.py` 负责修正搬移时误切的节顺序并卡住结构不变量。
 - 中文稿与英文稿同步经过 `scripts/denarrate_zh.py`，去掉了
   「不作遮掩地报告」「诚实的配重」「不是我们选的推托」这类自我表扬式修辞与硬译指代。
+
+### 参考文献怎么生成
+
+正文里的 `[n]` 在构建时会被 `scripts/make_latex.py` 改写成 `\cite{}`，手敲的 `## References`
+列表从构建副本中剔除，由 **latexmk + BibTeX + unsrtnat（数字模式）** 生成带编号、可跳转的
+文献表；`references.bib` 本身由 `scripts/make_bib.py` 从已经过 `verify_references.py` 回源的
+列表派生，不手敲。构建时会报告**没有作者段的条目**（当前剩 8 条：20、21、22、23、24、25、26、28，
+arXiv API 限流后待补），因为空作者会在文献表里退化为只有标题、很容易被忽略。
 
 ### 已知未完成（不作表面修补）
 

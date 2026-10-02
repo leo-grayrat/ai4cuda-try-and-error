@@ -29,11 +29,11 @@ specify the five-condition experiment that decides them, including the branch th
 
 Modern agentic reinforcement-learning systems can now write GPU kernels that beat compiler autotuning.
 CUDA Agent reports 100%, 100%, and 92% faster-than-`torch.compile` rates on the three KernelBench difficulty
-splits, outperforming the strongest proprietary models by about 40% on the hardest split [1,2]. It reaches there by
+splits, outperforming the strongest proprietary models by about 40% on the hardest split \cite{cuda1,kernelbench2}. It reaches there by
 placing a language model inside a real development sandbox — compile, verify correctness, profile, iterate — and
-optimizing a policy over long multi-turn agent trajectories with PPO, at a context length of order 10⁵ tokens [1].
+optimizing a policy over long multi-turn agent trajectories with PPO, at a context length of order 10⁵ tokens \cite{cuda1}.
 The released artifacts are a 6,000-sample operation dataset, a skill specification, and the reward and warm-up
-training recipe; the model weights, agent trajectories, and training-time observables are not public [1,3].
+training recipe; the model weights, agent trajectories, and training-time observables are not public \cite{cuda1,adaexplore3}.
 
 What that recipe manages is the difficulty of training a long-horizon policy on rare text. The reward is a
 four-level quantised function $r \in \{-1, 1, 2, 3\}$ keyed to correctness and to a >5% margin over the eager and
@@ -43,7 +43,7 @@ and $\varepsilon_{\text{higher}} = 0.28$; the first run "could only train stably
 performance collapsed", and 200 stable steps came from warming up both actor and critic; the stated cause is a
 "severe domain distribution mismatch", because "CUDA coding data accounts for less than 0.01% of pretraining
 data", which yields low-probability tokens near $\pi_\theta \approx 10^{-9}$ whose importance ratios destabilise
-under train/inference precision differences [1, Sec. 5.1-5.2].
+under train/inference precision differences \cite[Sec.~ 5.1-5.2]{cuda1}.
 
 Each of those devices answers a symptom of the training substrate. None of them is derived from a property of a
 GPU: memory hierarchies, warp semantics, coalescing and bank conflicts appear nowhere in their justification. They
@@ -52,10 +52,10 @@ produced it.
 
 Where that spreading happens is decided by what the learner is treated as having chosen, and this system describes
 that unit twice, in two different ways. In its reinforcement-learning formulation the action is the token: the
-clipped objective defines $a_t$ as "the action (i.e., token) taken at position $t$" [1, Sec. 5.2]. In its
+clipped objective defines $a_t$ as "the action (i.e., token) taken at position $t$" \cite[Sec.~ 5.2]{cuda1}. In its
 environment description the action is something coarser: a toolset of Bash, Read/Write, Edit/MultiEdit, Glob, Grep,
 NotebookEdit, BashOutput and KillBash, where "these tools define the action space of the agent" and MultiEdit
-applies "multiple atomic edits within one file" [1, App. "Details of Agent Loop"]. Two candidate units of decision
+applies "multiple atomic edits within one file" \cite[App.~ Details of Agent Loop]{cuda1}. Two candidate units of decision
 therefore coexist inside one working system, and the learning machinery is attached to the finer of them.
 
 This paper asks what changes if the unit is taken instead from the program's performance model — a typed program
@@ -75,7 +75,7 @@ GAE estimate credit *statistically* over token sequences.
 This gap has its own research literature. A recent survey synthesises a 69-paper
 corpus of credit-assignment methods for LLM reinforcement learning organised precisely by *granularity* — trajectory,
 segment, step, token — and reports that sparse outcome rewards "say little about which token, reasoning step, tool
-call, memory operation, or agent caused an outcome" [35]. Current practice therefore already intervenes below the
+call, memory operation, or agent caused an outcome" \cite{from35}. Current practice therefore already intervenes below the
 trajectory: process rewards, span-level advantage reweighting, turn-level verifiable supervision, counterfactual
 token credit. Almost all of that work changes the **credit target** while leaving the **action unit** at the token,
 so the learner still treats a single program decision as hundreds of separate actions whose joint realization it must
@@ -121,7 +121,7 @@ the shape of the object we mean.
 ### 1.4 What would count, and what this paper actually claims
 
 That transformations carry more semantics than tokens is not a new idea: Halide, TVM, and Ansor already put schedule
-transformations at the centre of their search spaces [8,9,10]. The claim here is specific to LLM-in-the-loop
+transformations at the centre of their search spaces \cite{halide8,tvm9,ansor10}. The claim here is specific to LLM-in-the-loop
 optimization:
 
 > Moving the interface from *generate the whole program* to *select a parameterized transformation, then realize
@@ -144,13 +144,13 @@ This paper does three things:
    *descriptive* claim that transformations are a stable description unit, the *search* claim that they change
    search efficiency, and the *learning* claim that they change learning efficiency. The first is necessary but in
    no way sufficient for the other two. It also separates the transformation cut from the neighbouring *turn-level*
-   and *edit-level* cuts, both of which already exist in the literature [30,32].
+   and *edit-level* cuts, both of which already exist in the literature \cite{cuasmrl30,kevin32}.
 2. **Reports a calibrated measurement study on public trajectories** (Section 3). The descriptive claim survives a
    symmetric permutation test; the transferability claim does not survive its own null.
 3. **Specifies a falsifiable experimental framework** (Section 4): five conditions including an enumeration-plus-cost-model
    arm, and a reading tree under which each possible pattern of results implies a specific, pre-committed conclusion —
    including patterns that kill the direction outright. Since the protocol is not novel as a *system* — K-Search has
-   already realized its structured-action condition with positive results [29] — its value is as an instrument for
+   already realized its structured-action condition with positive results \cite{ksearch29} — its value is as an instrument for
    *independently falsifying* that class of result rather than as a proposal to be first.
 
 ### 1.5 Scope
@@ -173,14 +173,14 @@ Any optimization loop over programs must decide what counts as one action. Three
 |----------------|-----------------|---------------------|-----------------------------------|
 | Token | one sampled token | GAE/value estimates over $\sim 10^{3}$--$10^{4}$ steps | decision unit invisible; credit is statistical guesswork |
 | Edit span / code block | a contiguous diff region | the span | decisions are *not* contiguous; spans overlap and split arbitrarily |
-| Turn / tool call | one agent step in a multi-turn loop | the turn | coarser, but a turn still bundles several independent decisions (cf. multi-turn kernel RL [32]) |
+| Turn / tool call | one agent step in a multi-turn loop | the turn | coarser, but a turn still bundles several independent decisions (cf. multi-turn kernel RL \cite{kevin32}) |
 | Transformation | typed $(\tau, \ell, \theta)$ | the selected transformation | granularity is a design choice; realization may be the real bottleneck |
 
 The turn row is occupied: recent multi-turn kernel RL attributes reward at the turn level and reports that this
-matters [32]. The field has moved up from tokens by one level, not onto a typed program-transformation space. And the
+matters \cite{kevin32}. The field has moved up from tokens by one level, not onto a typed program-transformation space. And the
 rows are not mutually exclusive even within one system: CUDA Agent's
 *interface* is edit- and tool-shaped, since its documented action space is a set of operations that includes MultiEdit
-("multiple atomic edits within one file"), while the policy selecting them is trained at token granularity [1]. One
+("multiple atomic edits within one file"), while the policy selecting them is trained at token granularity \cite{cuda1}. One
 system occupying two rows at once is the clearest available evidence that the coordinate system is a real design
 variable rather than a by-product of whichever framework is in use. The claim concerns the fourth row, and Section 4
 is built to distinguish it from the third.
@@ -230,7 +230,7 @@ question, so this paper does not build it.
 The test for whether a candidate sits at the right granularity can be stated without a vocabulary: an abstraction is
 worth keeping when it is *purely a contract* rather than a convenience for human readers. Sul and Ré make the same
 distinction from the other side when they argue that CUDA DSLs may retire as cognitive offloaders but hit "a floor
-where an abstraction is purely the contract, rather than an offloader, and it stops" [36]. Translated to actions:
+where an abstraction is purely the contract, rather than an offloader, and it stops" \cite{retire36}. Translated to actions:
 `Fuse(producer, consumer)` is a contract because an implementer cannot satisfy it without touching the sites the
 fusion requires, whereas `memory optimization` is only a label — nothing fails to count as it. That is also why the
 cross-site obligation of Section 2.2 matters so much: it is the operational content of "contract".
@@ -263,7 +263,7 @@ so that experience collected on reduction A can be indexed by action rather than
 reduction B, turning $Q(P, \text{token string})$ into $Q(P, a)$.
 
 Published cross-vendor results bear on this only indirectly. NKI-Agent ports the CUDA-Agent framework to AWS
-Trainium and reports that GRPO with a binary compilation reward *fails to improve on supervised fine-tuning* [18].
+Trainium and reports that GRPO with a binary compilation reward *fails to improve on supervised fine-tuning* \cite{nkiagent18}.
 The reinforcement-learning component therefore did not carry over even where the agent interface did, which makes
 "the recipe transfers" an assumption to be tested rather than a premise.
 
@@ -278,11 +278,11 @@ hypothesis that Section 4 would have to earn.
 
 ### 3.1 Data and why this corpus
 
-We use AdaExplore's public parent→child optimization trajectories [3], collected on KernelBench [2]. This choice
+We use AdaExplore's public parent→child optimization trajectories \cite{adaexplore3}, collected on KernelBench \cite{kernelbench2}. This choice
 is forced rather than convenient. CUDA Agent, the system that motivates the critique, does not release agent
 trajectories, generated versions, tool calls, feedback logs, per-token critic values, raw probabilities, or
 advantages; requests for this in the public issue tracker have gone unanswered. Any study that needs the
-*training-time observables* of that system is simply not executable by outsiders [1]. AdaExplore is a public
+*training-time observables* of that system is simply not executable by outsiders \cite{cuda1}. AdaExplore is a public
 search trajectory corpus, which is what the prerequisite question actually needs.
 
 Archive structure per task: `step_N.py` (the `ModelNew` source), `step_N_log.json` (MCTS node metadata),
@@ -485,7 +485,7 @@ insight, and it is not even absent from the strongest system in this area — bu
 way round. CUDA Agent's skill file *regulates* backend choice instead of offering it as an action: third-party
 libraries are forbidden except cuBLAS for GEMM and cuDNN for convolutions, cuDNN is made mandatory for
 Conv/ConvTranspose, and a context manager aborts execution on any fallback into `torch.nn.functional`, so that gains
-"originate solely from the generated CUDA kernels" [1, App. "SKILL.md"]. A decision worth 327x in our sample is
+"originate solely from the generated CUDA kernels" \cite[App.~ SKILL.md]{cuda1}. A decision worth 327x in our sample is
 therefore encoded as a constraint over admissible solutions rather than as something the agent reasons about, which
 is how it fell outside our vocabulary as well. The transferable part of the finding is narrower: **an action
 vocabulary assembled by introspection missed the highest-payoff decision in its own data, and the pre-registered
@@ -500,7 +500,7 @@ hyperparameter search are empirically inseparable, with two consequences. For at
 exactly this inability to assign a primary cause (only 14 edges were labelled high-confidence; 38 medium, 3 low).
 For method: any action-level credit assignment scheme built on trajectories of this kind must first *factor
 autotuning out of the action space*, or it will learn a mixture of two different things. This is not a novel
-requirement — CuAsmRL separates autotuning from schedule search by construction [30] — but it is one that a
+requirement — CuAsmRL separates autotuning from schedule search by construction \cite{cuasmrl30} — but it is one that a
 vocabulary designed from source-diff inspection will silently violate, because `num_warps` and `num_stages` look
 like launch parameters and are written like code.
 
@@ -576,13 +576,13 @@ settle it, since each keeps an LLM in the loop; without this arm the protocol ca
 Two prior systems occupy positions this table claims to distinguish, and the protocol must be read accordingly.
 K-Search already *"explicitly decouples high-level algorithmic planning from low-level program instantiation"* and
 reports an average $2.10\times$ over state-of-the-art evolutionary search on FlashInfer kernels, up to $14.3\times$ on complex MoE
-kernels [29] — that is a realized Structured-action condition with a positive result. CuAsmRL trains a reinforcement
+kernels \cite{ksearch29} — that is a realized Structured-action condition with a positive result. CuAsmRL trains a reinforcement
 agent over an explicit action space of SASS schedule mutations, and separates autotuning from schedule search by
-construction [30]. So Section 4 is not a proposal for a system; it is an instrument for *independently falsifying*
+construction \cite{cuasmrl30}. So Section 4 is not a proposal for a system; it is an instrument for *independently falsifying*
 class results of that kind, by supplying the controls those systems do not run against each other.
 
 The turn-level cut (Section 2.1) already exists in kernel RL, where multi-turn credit
-attribution is reported to matter [32]. Structured-action must beat *turn-level* decomposition, not merely token-level
+attribution is reported to matter \cite{kevin32}. Structured-action must beat *turn-level* decomposition, not merely token-level
 generation, or the abstraction has been paid for twice.
 
 ### 4.3 Reading tree
@@ -594,7 +594,7 @@ and search cost (rollouts, tokens, wall-clock to first valid-and-faster kernel) 
 |---------------------------|----------------------|---------------------------------------|
 | $\mathrm{Free\text{-}plan} \sim \mathrm{Structured\text{-}action} > \mathrm{Direct}$ | planning helps; structure adds nothing | **no paper here**; drop the abstraction claim |
 | Structured-action > Free-plan > Direct | the typed action space supplies extra inductive bias | core positive result; proceed to learning-level experiments |
-| $\mathrm{Structured\text{-}action} > \mathrm{Direct}$ but $\sim$ turn-level decomposition | the gain is hierarchy, not typing | re-aim at credit assignment over agent turns [32] rather than at a vocabulary |
+| $\mathrm{Structured\text{-}action} > \mathrm{Direct}$ but $\sim$ turn-level decomposition | the gain is hierarchy, not typing | re-aim at credit assignment over agent turns \cite{kevin32} rather than at a vocabulary |
 | $\mathrm{Oracle\text{-}action} \gg \mathrm{Structured\text{-}action}$ | abstraction is useful, but *selection* is the bottleneck | reformulate as a policy-over-actions problem; $Q(P, a)$ becomes the object of study |
 | $\mathrm{Oracle\text{-}action} \sim \mathrm{Direct}$ | telling the model what to do does not help | **direction is dead**: strategy/realization separation buys nothing, so no action space can help |
 | Structured-action < Free-plan | the imposed granularity is actively harmful | investigate coupling: good optimizations may not decompose |
@@ -639,7 +639,7 @@ Drawing on Sections 3.7 and 3.6, any instantiation of Section 4 must add:
 1. **Autotune isolation.** Autotune candidate sets fixed identically across all conditions, or explicitly
    modelled as a separate action dimension. Without this the comparison is between "structure" and "structure plus
    hyperparameter search", which is the wrong contrast; 53 of our 55 edges violate it by construction (Section 3.7b).
-   CuAsmRL provides a working precedent by scheduling *after* autotuning rather than jointly [30]. Two ways this
+   CuAsmRL provides a working precedent by scheduling *after* autotuning rather than jointly \cite{cuasmrl30}. Two ways this
    control fails in practice, both of which produce misleading results: pinning the candidate *list* does not pin the
    selected configuration, so the arms can still land on different block sizes; and shrinking the list to make it
    shareable can floor every arm at once, manufacturing a spurious null.
@@ -668,40 +668,40 @@ have the infrastructure for that here, and no observational study can substitute
 
 ### 5.1 Edit-based and transformation-based code optimization are closer than a clean distinction suggests
 
-The nearest neighbours are systems that learn to make performance-improving *code edits* [4,5,31], that treat the
-edit *format* as a training decision [6], and that learn program evolution from repository history [7]. The clean
+The nearest neighbours are systems that learn to make performance-improving *code edits* \cite{learning4,neural5,llm31}, that treat the
+edit *format* as a training decision \cite{to6}, and that learn program evolution from repository history \cite{swerl7}. The clean
 three-way distinction — typed semantics, cross-site coordination, cross-task vocabulary reuse — is cleaner than the
 evidence supports: two of those three legs do not survive the measurements of Section 3.5, so the defensible position
 is narrower.
 
 What remains distinguishable:
 
-* **Against edit-level work [4,5,31].** AEGIS decomposes slow→fast pairs into reusable *atomic edits* [31], and PIRE
-  learns function-level performance edits [4]. Both are operation-level, and neither is *typed with parameters whose
+* **Against edit-level work \cite{learning4,neural5,llm31}.** AEGIS decomposes slow→fast pairs into reusable *atomic edits* \cite{llm31}, and PIRE
+  learns function-level performance edits \cite{learning4}. Both are operation-level, and neither is *typed with parameters whose
   realization obligation is defined across sites*. What this paper adds to that comparison is a measurement rather
   than an idea: whether a fixed 12-category typed vocabulary covers real successful edges without being inflated.
   It does, at 90.9%, and the residual is homogeneous in a way that indicates a missing category (Section 3.7a).
-* **Against transformation-level systems [29,30].** K-Search
+* **Against transformation-level systems \cite{ksearch29,cuasmrl30}.** K-Search
   decouples algorithmic planning from program instantiation and gets large gains on kernels "requiring coordinated,
-  multi-step structural transformations" [29]; CuAsmRL defines an explicit RL action space over SASS schedule
-  mutations and even uses it to surface optimization moves automatically [30]. Neither, however, reports a
+  multi-step structural transformations" \cite{ksearch29}; CuAsmRL defines an explicit RL action space over SASS schedule
+  mutations and even uses it to surface optimization moves automatically \cite{cuasmrl30}. Neither, however, reports a
   *coverage measurement against a frozen vocabulary on public trajectories*, and neither reports the kind of null
   calibration of Section 3.6. Our residual claim is the descriptive one plus the protocol that could falsify the
   positive results.
-* **Against format-level work [6].** AdaEdit shows the emitted representation changes latency and cost by over 30%
+* **Against format-level work \cite{to6}.** AdaEdit shows the emitted representation changes latency and cost by over 30%
   at matched accuracy. That supports the general shape of "the coordinate system is not neutral", but it is a claim
   about *cost*; ours has to be about *inductive bias*, which is stronger and testable only by intervention.
-* **Against turn-level decomposition [32,35].** Kevin attributes reward per agent turn for CUDA kernels and reports
+* **Against turn-level decomposition \cite{kevin32,from35}.** Kevin attributes reward per agent turn for CUDA kernels and reports
   correctness 56%→82%; the wider credit-assignment literature increasingly works at segment and step granularity
-  [35]. The field has already moved up from tokens one level. A transformation vocabulary must earn its keep
+  \cite{from35}. The field has already moved up from tokens one level. A transformation vocabulary must earn its keep
   over *that*, which is why Section 4.2 includes turn-level decomposition as a comparison point rather than
   treating token-level generation as the only baseline.
-* **Against plan/action unification [33,34].** Two agent-side results make a representation claim here, and
+* **Against plan/action unification \cite{executable33,recode34}.** Two agent-side results make a representation claim here, and
   they cut against us. CodeAct replaces text/JSON tool calls with executable Python as a *unified action space* and
-  reports up to 20% higher success across 17 models [33] — direct evidence that the action representation is not
+  reports up to 20% higher success across 17 models \cite{executable33} — direct evidence that the action representation is not
   neutral, which is the shape of our thesis minus its kernel specificity. ReCode goes further and dissolves the
   boundary between planning and acting altogether, treating high-level plans as placeholder functions recursively
-  expanded into primitive actions with dynamic granularity control [34]; that is, in another domain, close to the
+  expanded into primitive actions with dynamic granularity control \cite{recode34}; that is, in another domain, close to the
   Structured-action condition of Section 4. Neither is about GPU kernels, neither freezes a typed transformation
   vocabulary, neither reports whether such a vocabulary covers real successful optimizations, and — crucially —
   neither runs a Free-plan control of the kind Section 4.1 insists on. The consequence is that the Section 4.3
@@ -709,7 +709,7 @@ What remains distinguishable:
   and what is left to claim is: the descriptive measurement in Section 3, the falsification discipline, and the
   kernel-specific confound controls that only this domain forces (autotune isolation, backend substitution).
 
-* **Against a named transformation vocabulary that already exists in practice [1].** The strongest existing system
+* **Against a named transformation vocabulary that already exists in practice \cite{cuda1}.** The strongest existing system
   already instructs its model in exactly our vocabulary, as prose. Its skill file orders optimizations by expected
   impact — Priority 1 algorithmic (>50%): kernel fusion to reduce memory traffic, shared-memory tiling for reuse,
   memory coalescing; Priority 2 hardware utilization (20-50%): vectorized `float2/float4` loads, warp-level
@@ -734,21 +734,21 @@ dangerous — a performance model is exactly what an LLM is worst at being assum
 
 ### 5.2 Hierarchical RL has a name for this, and a warning
 
-Temporal abstraction is old technology: options [11], the option-critic architecture [12], and skill libraries in
-LLM agents such as Voyager [14]. Our $a = (\tau, \ell, \theta)$ is an option with parameters. That lineage brings two
+Temporal abstraction is old technology: options \cite{between11}, the option-critic architecture \cite{the12}, and skill libraries in
+LLM agents such as Voyager \cite{voyager14}. Our $a = (\tau, \ell, \theta)$ is an option with parameters. That lineage brings two
 things we should inherit rather than re-derive: the formal machinery for policies over sub-policies, and a candid
 literature on *when higher-level actions fail to help*. Recent work on option-critic pathologies reports policy
 necrosis and redundant coverage - learned options that are never used or that overlap so much that the hierarchy
-buys nothing [13]. That literature is why Section 4.3 pre-commits negative and indeterminate branches rather than
+buys nothing \cite{when13}. That literature is why Section 4.3 pre-commits negative and indeterminate branches rather than
 only a winning one. The present data does not decide between them: the semantic label is informative about realised
 speedup beyond surface structure (Section 3.6), and whether that survives independent labelling is open
 (Section 7.1). The hierarchy is therefore neither confirmed nor shown redundant — it remains exactly the open question
-that [13] and Section 4 are about.
+that \cite{when13} and Section 4 are about.
 
 ### 5.3 The compiler lineage is a warning too
 
-Halide separated schedule from computation [8]; TVM learned to search over schedule transformations [9]; Ansor
-searches over tensor-computation factorizations [10]. These systems already treat program transformation as the
+Halide separated schedule from computation \cite{halide8}; TVM learned to search over schedule transformations \cite{tvm9}; Ansor
+searches over tensor-computation factorizations \cite{ansor10}. These systems already treat program transformation as the
 unit of optimization work. Two lessons follow.
 
 First, the idea is not new, and any novelty claim must rest on the LLM interface, not on the existence of a
@@ -764,14 +764,14 @@ protocol could only ever rank variants of itself. Section 4.2 answers it structu
 **Brute-search** (enumeration plus learned cost model, no LLM), and Section 4.3 adds its reading row: if
 Structured-action is statistically indistinguishable from Brute-search, the systems community already owns this
 problem and this programme should be re-targeted or withdrawn. Note that this is a test we expect to be *hard to
-win*: a competent Ansor-style search over a well-specified schedule space is a formidable baseline [10], and an LLM
+win*: a competent Ansor-style search over a well-specified schedule space is a formidable baseline \cite{ansor10}, and an LLM
 earns nothing here by being more expressive.
 
 There is a deeper asymmetry that the compiler analogy conceals, and it is the thesis's weakest joint.
 Between assembly, IR and a high-level language sit compilers: relations that are effectively total functions, so an
 abstraction layer can be *deleted* and re-derived with confidence. Sul and Ré's own version of the retirement
 argument depends on exactly this, and they name the deal honestly — "we took that deal because the compiler was right
-more often than we were" [36]. Between a named transformation and its code, however, sits an LLM, and the relation
+more often than we were" \cite{retire36}. Between a named transformation and its code, however, sits an LLM, and the relation
 $a \to \Delta P$ is a stochastic map, not a function. Everything in this paper that treats a transformation as an object —
 including the credit assignment that motivated it — inherits that gap. Two consequences follow: realizing a chosen
 action is a *first-class failure mode* rather than an implementation detail (which is why Section 4.5 control 3
@@ -783,7 +783,7 @@ how well the vocabulary fits, and that is exactly the outcome Section 4.3's Orac
 
 A related debate concerns the long natural-language instruction files (skills) attached to coding agents. Systems
 exist that force a model to emit a structured intermediate representation — a hierarchical graph with declared
-persistent state and annotated data edges — before writing code, then have a deterministic auditor check it [28],
+persistent state and annotated data edges — before writing code, then have a deterministic auditor check it \cite{flashrt28},
 and ship very large hand-maintained instruction files alongside the method.
 
 Two observations from Section 3 transpose to that design, and neither has been measured. First,
@@ -799,15 +799,15 @@ instead of assuming it.
 ### 5.5 Verification is a prerequisite, not an appendix
 
 Every experiment in Section 4 requires a trustworthy correctness-and-timing oracle, and this is not a solved problem
-in GPU kernel benchmarks. Reported failures include kernels that are numerically wrong yet pass the checker [20],
-benchmark oracles that are themselves weak under mutation testing [24], and results that do not survive verification
-against real workloads or against PyTorch under stricter measurement [22,23,25]. Adversarial hardening work closes
+in GPU kernel benchmarks. Reported failures include kernels that are numerically wrong yet pass the checker \cite{the20},
+benchmark oracles that are themselves weak under mutation testing \cite{measuring24}, and results that do not survive verification
+against real workloads or against PyTorch under stricter measurement \cite{kernelbenchverified22,are23,how25}. Adversarial hardening work closes
 the loop from the other side. The hacker-fixer loop alternates three agents — a hacker that tries to pass the
 verifier without solving the task, a fixer that patches the verifier to reject each discovered exploit, and a solver
 that confirms the patched verifier still admits legitimate solutions. Auditing 1,968 tasks across five terminal-agent
 benchmarks, it finds 323 (16%) hackable by frontier models given only the task description; on KernelBench it drives
 attack success from 62% to 0% on a held-out corpus of publicly reported exploits, and a *weaker* model running the
-loop defends against substantially stronger hackers (76% and 61% attack rates reduced to 0%) [19].
+loop defends against substantially stronger hackers (76% and 61% attack rates reduced to 0%) \cite{hardening19}.
 
 It follows directly from that setup that if
 candidate selection scores proposals by raw measured speedup, a spurious 100x exploit numerically dwarfs a legitimate
@@ -815,7 +815,7 @@ candidate selection scores proposals by raw measured speedup, a spurious 100x ex
 categorizing the reward is therefore not benchmark hygiene but a structural precondition for transformation-level
 credit assignment — otherwise a value function indexed on actions will learn to prefer transformations that are
 structurally unsound but numerically loud, and the abstraction will have imported the vulnerability rather than
-fixed it. The quantised reward of [1] already addresses part of this from the other direction — it is designed so
+fixed it. The quantised reward of \cite{cuda1} already addresses part of this from the other direction — it is designed so
 that tasks with large headroom do not dominate selection — which is a reason to treat reward shaping as settled
 infrastructure and the choice of action unit as the open question.
 
@@ -824,7 +824,7 @@ infrastructure and the choice of action unit as the open question.
 Finally, the framing here suggests a different reading of the instability literature around long-horizon agentic RL.
 The published record contains a tension worth naming. On one hand, CUDA Agent states that despite strong general
 programming performance, LLMs remain uncompetitive with `torch.compile` for kernel generation, and motivates
-large-scale RL to close that gap [1]. On the other hand, most tokens in a CUDA kernel are ordinary programming
+large-scale RL to close that gap \cite{cuda1}. On the other hand, most tokens in a CUDA kernel are ordinary programming
 tokens — `for`, `if`, `float`, `int`, `*`, `[]`, `+` — with only a small, highly patterned minority that is
 CUDA-specific, so a corpus-frequency account of why token-level training should be *unusually* unstable in this
 domain is hard to sustain on first principles. And the account is not domain-specific in the way that would make it
@@ -835,10 +835,10 @@ low-probability-tail blowups are more plausibly a
 train–inference mismatch and out-of-distribution-context problem of long multi-turn tool use — swallowing compile
 errors, profiler dumps, and odd intermediate program states — than a statement about learning theory for CUDA
 syntax, which is consistent with the general finding that training-inference mismatch, not domain rarity, is what
-destabilizes LLM reinforcement training [26,27].
+destabilizes LLM reinforcement training \cite{rethinking26,score27}.
 
 The specific base-model accuracy figures that circulate around this debate are not asserted here: the primary
-source does not report them, and its training-time observables are not released [1]. The argument above is
+source does not report them, and its training-time observables are not released \cite{cuda1}. The argument above is
 therefore a *framing* claim — that the token-level interface is
 a plausible common cause of both the instability and the credit problem, because it forces one policy to model program
 structure and tool noise in the same sequence — not an empirical one.
@@ -850,52 +850,52 @@ structure and tool noise in the same sequence — not an empirical one.
 Positioning against each cluster is argued in Sections 1.1 and 5.1-5.6; this section records only which work belongs
 to which cluster and what we take from it.
 
-**Agentic RL and CUDA generation.** KernelBench [2]; CUDA Agent, the system this framing is aimed at: it trains a
+**Agentic RL and CUDA generation.** KernelBench \cite{kernelbench2}; CUDA Agent, the system this framing is aimed at: it trains a
 token-level PPO policy inside a tool-defined environment
 whose action space is Edit/MultiEdit-class operations, and it ships a priority-ranked named optimization checklist in
-its skill file [1]; CUDA-L1 (contrastive ranking over execution feedback) [16]; Dr. Kernel (reward design for
-Triton) [17]; CudaPerf (structural rewards from coalescing, occupancy, arithmetic intensity and synchronization,
-still at token level) [15]; NKI-Agent (the CUDA-Agent recipe on AWS Trainium, with a negative GRPO result) [18];
-Kevin (multi-turn RL, turn-level reward attribution) [32].
+its skill file \cite{cuda1}; CUDA-L1 (contrastive ranking over execution feedback) \cite{cudal16}; Dr. Kernel (reward design for
+Triton) \cite{dr17}; CudaPerf (structural rewards from coalescing, occupancy, arithmetic intensity and synchronization,
+still at token level) \cite{multiturn15}; NKI-Agent (the CUDA-Agent recipe on AWS Trainium, with a negative GRPO result) \cite{nkiagent18};
+Kevin (multi-turn RL, turn-level reward attribution) \cite{kevin32}.
 
 **Credit assignment below the trajectory.** A 69-paper survey corpus organised by credit granularity — trajectory,
 segment, step, token — with an identification analysis showing that text-only histories can leave even the *sign* of
-credit unidentified [35]. This is the cluster our Section 1.2 must be read against: the field reweights credit at finer
+credit unidentified \cite{from35}. This is the cluster our Section 1.2 must be read against: the field reweights credit at finer
 granularity while keeping the action unit at the token.
 
 **Action representation in LLM agents.** CodeAct consolidates an agent's actions into executable Python as a unified
-action space and reports up to 20% higher success rates [33]; ReCode unifies planning and acting recursively, with
-plans as placeholder functions expanded to primitive actions under dynamic granularity control [34]; Voyager persists
-acquired skills as reusable code [14]. These are the strongest general evidence that the coordinate system is not
+action space and reports up to 20% higher success rates \cite{executable33}; ReCode unifies planning and acting recursively, with
+plans as placeholder functions expanded to primitive actions under dynamic granularity control \cite{recode34}; Voyager persists
+acquired skills as reusable code \cite{voyager14}. These are the strongest general evidence that the coordinate system is not
 neutral, and the closest generic analogues to our structured-action condition (Section 5.1).
 
 **Transformation- and edit-level search over programs.** The cluster that constrains our novelty claim most:
 K-Search, which explicitly decouples algorithmic planning from program instantiation and reports $2.10\times$ average,
-up to $14.3\times$ over evolutionary baselines on FlashInfer kernels [29]; CuAsmRL, an RL agent over an explicit
-SASS schedule-mutation action space, which also surfaces optimization moves automatically [30]; RAS/AEGIS, beam
-search with retrieved slow→fast examples and reusable *atomic edits* [31]; performance-improving code edits curated
-from 77k C++ submission pairs and evaluated in a full-system simulator to control timing noise [4]; neural models of
-edit sequences [5]; RL on software evolution [7]; and the finding that the emitted edit format is not cost-neutral [6].
+up to $14.3\times$ over evolutionary baselines on FlashInfer kernels \cite{ksearch29}; CuAsmRL, an RL agent over an explicit
+SASS schedule-mutation action space, which also surfaces optimization moves automatically \cite{cuasmrl30}; RAS/AEGIS, beam
+search with retrieved slow→fast examples and reusable *atomic edits* \cite{llm31}; performance-improving code edits curated
+from 77k C++ submission pairs and evaluated in a full-system simulator to control timing noise \cite{learning4}; neural models of
+edit sequences \cite{neural5}; RL on software evolution \cite{swerl7}; and the finding that the emitted edit format is not cost-neutral \cite{to6}.
 Section 5.1 states the residual difference.
 
-**Compiler search spaces.** Halide separates schedule from computation [8]; TVM learns over schedule
-transformations [9]; Ansor searches tensor factorizations [10]. Section 5.3 explains why this lineage is both our
+**Compiler search spaces.** Halide separates schedule from computation \cite{halide8}; TVM learns over schedule
+transformations \cite{tvm9}; Ansor searches tensor factorizations \cite{ansor10}. Section 5.3 explains why this lineage is both our
 ancestry and our strongest objection.
 
-**Hierarchical RL and skill discovery.** Options [11], option-critic [12], reported option pathologies — policy
-necrosis and redundant coverage [13] — and LLM skill libraries [14]. Our $a = (\tau, \ell, \theta)$ is a parameterized
+**Hierarchical RL and skill discovery.** Options \cite{between11}, option-critic \cite{the12}, reported option pathologies — policy
+necrosis and redundant coverage \cite{when13} — and LLM skill libraries \cite{voyager14}. Our $a = (\tau, \ell, \theta)$ is a parameterized
 option (Section 5.2).
 
-**Benchmark integrity.** Correctness illusion [20], mutation analysis of kernel-benchmark oracles [24], adversarial
-hacker-fixer verifier hardening [19], contract-grade verification [21], and stricter verification against real
-workloads or against PyTorch [22,23,25]. These bound any Section-4 experiment more than any other part of this paper
+**Benchmark integrity.** Correctness illusion \cite{the20}, mutation analysis of kernel-benchmark oracles \cite{measuring24}, adversarial
+hacker-fixer verifier hardening \cite{hardening19}, contract-grade verification \cite{a21}, and stricter verification against real
+workloads or against PyTorch \cite{kernelbenchverified22,are23,how25}. These bound any Section-4 experiment more than any other part of this paper
 (Section 5.5).
 
 **Agent harnesses and skills.** Structured intermediate representations emitted before code and audited
-deterministically, shipped with very large instruction files [28] (Section 5.4).
+deterministically, shipped with very large instruction files \cite{flashrt28} (Section 5.4).
 
 **Trajectory data.** AdaExplore, a failure-driven diversity-preserving search method that releases its parent-child
-trees [3]. Used here as data about optimization behaviour; no search baseline of any kind was run in this paper.
+trees \cite{adaexplore3}. Used here as data about optimization behaviour; no search baseline of any kind was run in this paper.
 
 ---
 
@@ -983,7 +983,7 @@ expose exactly this, and its neutral outcome is the pre-registered end of this r
 
 The annotated 55 edges are a multi-hunk-enriched biased sample and cannot estimate population label frequencies.
 **The eligibility gate itself is inherited from the corpus: every edge is conditioned on the benchmark's own
-`correctness == true`, and two of the papers we cite argue that this oracle admits false passes [20,24]. Sections
+`correctness == true`, and two of the papers we cite argue that this oracle admits false passes \cite{the20,measuring24}. Sections
 3.4-3.6 therefore rest on a filter we have shown reason to distrust, and a mutation-hardened oracle could change
 which edges count as successes at all.** Related measurement gaps: the ">5% faster" threshold has no noise floor
 because timing was taken from corpus metadata and never re-measured; `fast_p`'s baseline convention is not audited;
@@ -1043,8 +1043,8 @@ Appendix B.
 
 **The question remains open, and now has a sharper shape.** Observational evidence cannot decide a claim about
 interventions, and the interface-level question has already been partly answered by systems that got there before
-us: K-Search decouples planning from instantiation and reports $2.10\times$--$14.3\times$ gains [29]; CuAsmRL trains directly over
-an explicit schedule-mutation action space [30]; Kevin attributes reward per agent turn [32]. Section 4 therefore
+us: K-Search decouples planning from instantiation and reports $2.10\times$--$14.3\times$ gains \cite{ksearch29}; CuAsmRL trains directly over
+an explicit schedule-mutation action space \cite{cuasmrl30}; Kevin attributes reward per agent turn \cite{kevin32}. Section 4 therefore
 specifies a five-condition protocol — Direct, Free-plan, Structured-action, Oracle-action, and a Brute-search arm
 with a learned cost model and no LLM in the loop — with a reading tree whose neutral, inverted, and
 *indeterminate* branches are fixed in advance, including the branch that withdraws the direction if an LLM choosing
@@ -1069,46 +1069,6 @@ asked to question a method.
 
 ---
 
-## References
-
-1. W. Dai, H. Wu, Q. Yu, et al. **CUDA Agent: Large-Scale Agentic RL for High-Performance CUDA Kernel Generation.** arXiv:2602.24286, 2026.
-2. A. Ouyang, S. Guo, S. Arora, A. L. Zhang, W. Hu, C. Ré, A. Mirhoseini. **KernelBench: Can LLMs Write Efficient GPU Kernels?** arXiv:2502.10517, 2025.
-3. W. Du, J. Zhuo, Y. Dong, A. W. He, W. Sun, Z. Zheng, M. Karunaratne, I. Fox, T. Dettmers, T. Chen, Y. Yang, S. Welleck. **AdaExplore: Failure-Driven Adaptation and Diversity-Preserving Search for Efficient Kernel Generation.** arXiv:2604.16625, 2026.
-4. A. Shypula, A. Madaan, Y. Zeng, U. Alon, J. Gardner, M. Hashemi, G. Neubig, P. Ranganathan, O. Bastani, A. Yazdanbakhsh. **Learning Performance-Improving Code Edits.** ICLR 2024 (Spotlight). arXiv:2302.07867.
-5. R. Zhao, D. Bieber, K. Swersky, D. Tarlow. **Neural Networks for Modeling Source Code Edits.** ICLR 2019. arXiv:1904.02818.
-6. W. Cheng, Y. Cao, C. Shen, B. Li, J. Chen, Y. Li, W. Hu. **To Diff or Not to Diff? Structure-Aware and Adaptive Output Formats for Efficient LLM-based Code Editing.** Findings of ACL 2026. arXiv:2604.27296.
-7. **SWE-RL: Advancing LLM Reasoning via Reinforcement Learning on Open Software Evolution.** arXiv:2502.18449, 2025.
-8. J. Ragan-Kelley, C. Barnes, A. Adams, S. Paris, F. Durand, S. Amarasinghe. **Halide: a language and compiler for optimizing parallelism, locality, and recomputation in image processing pipelines.** PLDI 2013, pp. 519-530; reproduced in ACM SIGPLAN Notices 48(6). doi:10.1145/2499370.2462176.
-9. **TVM: An Automated End-to-End Optimizing Compiler for Deep Learning.** OSDI 2018. arXiv:1802.04799.
-10. **Ansor: Generating High-Performance Tensor Programs for Deep Learning.** OSDI 2020. arXiv:2006.06762.
-11. R. S. Sutton, D. Precup, S. Singh. **Between MDPs and Semi-MDPs: A Framework for Temporal Abstraction in Reinforcement Learning.** Artificial Intelligence 112(1-2):181-211, 1999. doi:10.1016/S0004-3702(99)00052-1.
-12. P.-L. Bacon, J. Harb, D. Precup. **The Option-Critic Architecture.** AAAI 2017. arXiv:1609.05140.
-13. **When Do Options Help? Policy Necrosis and Redundant Coverage in Option-Critic.** arXiv:2609.05508, 2026.
-14. G. Wang, Y. Xie, Y. Jiang, A. Mandlekar, C. Xiao, Y. Zhu, L. Fan, A. Anandkumar. **Voyager: An Open-Ended Embodied Agent with Large Language Models.** arXiv:2305.16291, 2023.
-15. Q. I. Mahmud, N. K. Ahmed, A. Jannesari. **Multi-turn RL with Structural and Performance Aware Rewards for CUDA Kernel Generation.** (method name: CudaPerf). arXiv:2607.20908, 2026.
-16. **CUDA-L1: Improving CUDA Optimization via Contrastive Reinforcement Learning.** arXiv:2507.14111, 2025.
-17. **Dr. Kernel: Reinforcement Learning Done Right for Triton Kernel Generations.** arXiv:2602.05885, 2026.
-18. J. Tang, J. Huan, H. Zhou, Y. Zhang, L. Wang. **NKI-Agent: Domain-Specific Fine-Tuning and Agentic Tool Use for Neuron Kernel Generation.** DL4C @ ICML 2026. arXiv:2607.04395.
-19. **Hardening Agent Benchmarks with Adversarial Hacker-Fixer Loops.** arXiv:2606.08960, 2026.
-20. **The Correctness Illusion in LLM-Generated GPU Kernels.** arXiv:2606.20128, 2026.
-21. **A Contract-Grade Verifier for LLM-Generated GPU Kernels, and a Native Blackwell Backward for the Gated-Linear-Recurrence Family.** arXiv:2608.12700, 2026.
-22. **KernelBench-Verified: Do LLM-Generated Kernels Actually Beat PyTorch?** arXiv:2607.16241, 2026.
-23. **Are LLM-Generated GPU Kernels Production-Ready? A Trace-Driven Benchmark and Optimization Agent (Atrex-Bench).** arXiv:2607.14541, 2026.
-24. **Measuring the Checker: Mutation Analysis for GPU-Kernel Benchmark Oracles.** arXiv:2609.22220, 2026.
-25. **How Much of a Real Workload Can LLM-Generated GPU Kernels Actually Reach?** arXiv:2609.21058, 2026.
-26. **Rethinking Training-Inference Mismatch in LLM Reinforcement Learning: Where It Arises and How to Correct It.** arXiv:2609.32444, 2026.
-27. **Score Centering Stabilizes Off-policy Reinforcement Learning.** arXiv:2609.20807, 2026.
-28. **FlashRT: Agent Harness for Guiding Agents to Deploy Real-Time Multimodal Applications.** arXiv:2607.18171, 2026.
-29. S. Cao, Z. Mao, J. E. Gonzalez, I. Stoica. **K-Search: LLM Kernel Generation via Co-Evolving Intrinsic World Model.** arXiv:2602.19128, 2026. *Abstract states: "explicitly decouples high-level algorithmic planning from low-level program instantiation"; targets kernels "requiring coordinated, multi-step structural transformations"; average $2.10\times$ over state-of-the-art evolutionary search, up to $14.3\times$ on complex MoE kernels.*
-30. G. He, E. Yoneki. **CuAsmRL: Optimizing GPU SASS Schedules via Deep Reinforcement Learning.** CGO 2025. arXiv:2501.08071. *RL agents apply mutation actions to SASS schedules; also used to reveal optimization moves automatically.*
-31. S. Anupam, A. Shypula, O. Bastani. **LLM Program Optimization via Retrieval Augmented Search (RAS / AEGIS).** ACL 2026 Findings. arXiv:2501.18916. *Decomposes slow→fast training pairs into reusable "atomic edits".*
-32. C. Baronio, P. Marsella, B. Pan, S. Guo, S. Alberti. **Kevin: Multi-Turn RL for Generating CUDA Kernels.** arXiv:2507.11948, 2025. *Turn-level reward attribution for kernel generation; correctness 56%→82%, mean speedup 0.53x→1.10x.*
-33. X. Wang, Y. Chen, L. Yuan, Y. Zhang, Y. Li, H. Peng, H. Ji. **Executable Code Actions Elicit Better LLM Agents (CodeAct).** ICML 2024. arXiv:2402.01030. *Consolidates agent actions into executable Python as a unified action space; up to 20% higher success rate over text/JSON action formats across 17 models.*
-34. Z. Yu, J. Zhang, H. Su, Y. Zhao, Y. Wu, M. Deng, J. Xiang, Y. Lin, L. Tang, Y. Luo, B. Liu, C. Wu. **ReCode: Unify Plan and Action for Universal Granularity Control.** arXiv:2510.23564, 2025. *High-level plans as placeholder functions recursively decomposed into primitive actions; dissolves the plan/action boundary.*
-35. C. Zhang. **From Reasoning to Agentic: Credit Assignment in Reinforcement Learning for Large Language Models.** arXiv:2604.09459, 2026. *69-paper corpus (56 core methods) organised by credit granularity; six-diagnostic identification framework.*
-36. S. Sul, C. Ré. **Retire the Abstractions.** Hazy Research blog, 5 August 2026. url:https://hazyresearch.stanford.edu/blog/2026-08-05-retire-the-abstractions — *non-archival; included because it is the source of the determinism-asymmetry and abstraction-contract arguments used in Sections 2.3 and 5.3.*
-
----
 
 ## Appendix A — Reproducibility
 
@@ -1120,7 +1080,7 @@ python scripts/analyze_entropy.py        # annotations -> entropy, reuse, red li
 python scripts/calibrate_informativeness.py  # cardinality-matched permutation calibration
 ```
 
-Random seed 20261002; no GPU required; input is the public AdaExplore archive [3]. Vocabulary and annotation
+Random seed 20261002; no GPU required; input is the public AdaExplore archive \cite{adaexplore3}. Vocabulary and annotation
 protocol are frozen in `VOCABULARY_FROZEN.md` and `ANNOTATION_GUIDE.md`. Per-edge unified diffs are in
 `data/edges/`, annotations in `data/annotations.json`, calibration in `data/informativeness_calibration.json`.
 No classifier, locator, or AST pipeline was written for this study, by design; the only automated statistics are
@@ -1171,7 +1131,7 @@ itself part of what we want on the record.
 **(3) A five-seat panel from one model family is one reviewer, not five.** Sul and Ré's blog carries an aside that
 reads as a prediction about this paper's own quality gate: a multi-agent "three-way review" is a sensible
 architecture, but nothing guarantees the three reviewers are checking different things, and they may converge on the
-same blind spot [36]. Our Stage 3 panel has exactly that shape — five distinct mandates, one cognitive family — and
+same blind spot \cite{retire36}. Our Stage 3 panel has exactly that shape — five distinct mandates, one cognitive family — and
 we observed both the benefit and the failure. Two reviewers independently found the statistical error that four
 earlier stages of self-checking had certified, which is corroboration a single reviewer could not have supplied, and
 that alone justified the panel. But panel diversity of *persona* is not diversity of *origin*: on the evidence of
