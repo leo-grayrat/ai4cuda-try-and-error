@@ -1,4 +1,0 @@
-{
-  "status": "compile-error",
-  "diagnosticsText": "Canvas local image could not be read. Copy it next to the Canvas file and check the path."
-}
