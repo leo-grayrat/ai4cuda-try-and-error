@@ -15,15 +15,14 @@ wrong *coordinate system*: the action unit. We formalize a candidate action as a
 conflates: description, search efficiency, learning efficiency. On public AdaExplore trajectories (2,510 successful
 parent→child edges; 55 annotated over 45 tasks) a frozen 12-category vocabulary covers 90.9% of edges using 10
 categories, and under symmetric permutation calibration the semantic label predicts realised speedup beyond its own
-granularity (p = 0.0005) while coarse diff structure (p = 0.752) and hunk count (p = 0.436) do not. Three
-qualifications are reported rather than buried: two supporting statistics are withdrawn as an identity and a
-sampling artefact (our 117-assertion harness missed the error that reversed this headline); cross-task recurrence
-sits at chance; and relabelling without the category definitions leaves the headline insignificant (p = 0.106,
+granularity (p = 0.0005) while coarse diff structure (p = 0.752) and hunk count (p = 0.436) do not. Three limitations bound
+the result: two supporting statistics are withdrawn, one as an identity and one as a sampling artefact; cross-task
+recurrence sits at chance; and relabelling without the category definitions leaves the headline insignificant (p = 0.106,
 kappa = 0.687). K-Search, CuAsmRL, CodeAct and CUDA Agent's own skill checklist already occupy parts of the
 proposed interface, narrowing our contribution to measurement and protocol. Search and learning stay untested; we
 specify the five-condition experiment that decides them, including the branch that kills the direction.
 
-*(250 words, measured by `scripts/audit_spec_coverage.py`)*
+*(241 words, measured by `scripts/audit_spec_coverage.py`)*
 
 ---
 
@@ -47,11 +46,10 @@ stability. Each step is a sensible response to a symptom of the training substra
 the material we could verify*, is forced by memory hierarchies, warp semantics, coalescing, or shared-memory bank
 conflicts.
 
-Two qualifications are necessary, and the first one is not a hedge we chose but a distinction the system itself
-makes.
+Two qualifications are necessary.
 
-* **That paper uses "action" for two different things at two different layers, and we must say which one we are
-  attacking.** In its reinforcement-learning formulation the action is explicitly the token: its clipped PPO
+* **That paper uses "action" for two different things at two different layers, and the distinction is its own, not
+  ours.** In its reinforcement-learning formulation the action is explicitly the token: its clipped PPO
   objective defines $a_t$ as "the action (i.e., token) taken at position $t$" [1, Sec. 5.2]. But its environment
   is separately described in these terms: a toolset of Bash, Read/Write, Edit/MultiEdit, Glob, Grep,
   NotebookEdit, BashOutput and KillBash, where "*these tools define the action space of the agent* and serve as the
@@ -65,11 +63,11 @@ makes.
   reports that GRPO with a binary compilation reward *fails to improve on supervised fine-tuning* [18]. That is a
   failed transfer of the reinforcement-learning component, not a successful transfer of the recipe, and citing it
   as evidence that "the recipe moves untouched" would be self-contradictory. What it does support is narrower and
-  still uncomfortable for the field: the training recipe is under-specified enough that reproducing it on new
+  still worth taking seriously: the training recipe is under-specified enough that reproducing it on new
   hardware changes which parts survive, and the reinforcement-learning part is not the portable core.
 
-Unlike our earlier draft, we are not arguing from the abstract alone. The arXiv LaTeX source of [1] is retrievable
-as an 18 MB e-print bundle and we read it, so the design choices we call generic can be quoted rather than
+The arXiv LaTeX source of [1] is retrievable as an 18 MB
+e-print bundle and we read it, so the design choices we call generic can be quoted rather than
 characterised: the reward is a four-level quantised function $r \in \{-1, 1, 2, 3\}$ keyed to correctness and to a
 >5% margin over the eager and `torch.compile` baselines, explicitly because "operators vary substantially in
 optimization difficulty, making raw speedup an unreliable proxy for code quality"; the PPO clip is asymmetric with
@@ -490,13 +488,13 @@ holding the descriptor fixed and permuting the outcome (20,000 permutations, see
 | coarse diff structure | 24 | 0.937 bits | 0.792 bits | 0.990 | 0.085 | 0.752 |
 | hunk count alone | 9 | 0.367 bits | 0.276 bits | 0.361 | 0.071 | 0.436 |
 
-This reverses the first draft's finding, and the reversal is not a matter of which bias formula one prefers: under
-the formula-free permutation test, the semantic label sits far above its own null ($p = 0.0005$), while the coarse
-descriptor's observed mutual information is *below* its own null mean (0.937 vs 0.990) — its apparently superior raw
-number is over-fitting to 24 cells, 11 of which hold a single edge. We also report the honest counterweight: the
-paired bootstrap difference $\mathrm{MI}_{\text{label}} - \mathrm{MI}_{\text{coarse}}$ is $-0.361$ bits with a
-95% CI of $[-0.689,\,-0.034]$. In uncalibrated terms coarse structure still wins, and we argue below that uncalibrated comparison is the wrong
-test; the figure is given so the disagreement can be checked directly.
+This reverses the first draft's finding, and the reversal does not hinge on a choice of bias formula: the permutation
+test needs no correction at all, and under it the semantic label sits far above its own null ($p = 0.0005$), while the
+coarse descriptor's observed mutual information is *below* its own null mean (0.937 vs 0.990) — its apparently superior raw
+number is over-fitting to 24 cells, 11 of which hold a single edge. The paired bootstrap difference
+$\mathrm{MI}_{\text{label}} - \mathrm{MI}_{\text{coarse}}$ is $-0.361$ bits with a 95% CI of $[-0.689,\,-0.034]$: on raw,
+uncalibrated levels coarse structure still wins. Which comparison is the informative one is exactly what the
+permutation calibration settles, and the calibrated reading is given above so the disagreement can be checked directly.
 
 **So what does this buy the thesis?** Less than it appears to. A label that predicts the outcome beyond its own
 granularity is a real result about this corpus: the semantic description of what a successful edge did carries
@@ -950,7 +948,7 @@ entity that decides whether the data fits it. This execution substituted an auto
 unavoidable: the labelling procedure and the category system come from the same model family, so a `Fuse` judgement
 may be a statement about the annotator's habits of description rather than about the code.
 
-Declaring this, as our first draft did, is not a control. We state the acceptance criteria that would make it one,
+A declaration of this is not a control. We state the acceptance criteria that would make it one,
 so that the gap is measurable rather than rhetorical:
 
 1. **Independent blind human annotation** of the same 55 edges by at least two annotators who did not author the
@@ -1046,6 +1044,14 @@ It is pinned to the abstraction level of whatever the model is asked to emit, an
 three levels (CUDA C++, Triton, high-level framework graph) with different natural vocabularies at each. Any
 transfer claim must be intra-level unless a mapping between levels is specified.
 
+### 7.5 What this paper does not show
+
+No search experiments. No training. No new model. No measured improvement in any metric. Section 3 is a calibrated
+existence-and-non-sufficiency result about description; Section 4 is a protocol that has not been run. The title is
+deliberately a question, and Section 3.6 is deliberately a correction of our own answer to it.
+
+---
+
 ## 8. Conclusion
 
 We asked whether the token-level action space used by agentic reinforcement-learning systems for GPU kernel
@@ -1073,14 +1079,9 @@ second was cross-task recurrence, which sits at chance under a label-permutation
 Section 2.5 is therefore unsupported by this data, and the cross-site coordination property that motivates the whole
 formalism is *unidentifiable* here, since no edge carries a single label.
 
-Neither withdrawal is a hedge. The first draft of this paper reported the opposite conclusion to Section 3.6 — that
-semantic labels were *less* informative than surface structure — and treated it as a prized act of self-falsification.
-That conclusion was produced by applying a marginal Miller–Madow term to a mutual information, and it reversed once
-the arithmetic was fixed. A 69-assertion reconciliation harness passed every check around the bug and certified the
-section as reproducible, because it verified transcription rather than method. We report the corrected positive result
-alongside the fact that we had it backwards, and we treat both the verification blindness and a reviewer-supplied
-quotation we could not reproduce (Appendix B) as findings about automated research pipelines rather than as
-embarrassing footnotes; they are, if anything, the most transferable content in this paper.
+Neither withdrawal softens the other. The corrected reading replaces an earlier version of
+Section 3.6 whose conclusion was the opposite; why the error survived every automated check,
+and what that says about self-verification in pipelines like this one, is recorded in Appendix B.
 
 **The question remains open, and now has a sharper shape.** Observational evidence cannot decide a claim about
 interventions, and the interface-level question has already been partly answered by systems that got there before
@@ -1220,10 +1221,3 @@ incident (2), a fabricated citation from one seat is a fabricated citation from 
 labeling inside a single model family substitutes for an outside reviewer. We keep the five-mandate structure because
 it found real problems, and we refuse to describe it as independent review.
 
-### 7.6 What this paper does not show
-
-No search experiments. No training. No new model. No measured improvement in any metric. Section 3 is a calibrated
-existence-and-non-sufficiency result about description; Section 4 is a protocol that has not been run. The title is
-deliberately a question, and Section 3.6 is deliberately a correction of our own answer to it.
-
----
