@@ -496,8 +496,8 @@ the formula-free permutation test, the semantic label sits far above its own nul
 descriptor's observed mutual information is *below* its own null mean (0.937 vs 0.990) — its apparently superior raw
 number is over-fitting to 24 cells, 11 of which hold a single edge. We also report the honest counterweight: the
 paired bootstrap difference $\mathrm{MI}_{\text{label}} - \mathrm{MI}_{\text{coarse}}$ is $-0.361$ bits with a
-95% CI of $[-0.689,\,-0.034]$. In uncalibrated terms coarse structure still wins; we argue that uncalibrated terms
-are the wrong terms, but the number is there for anyone who disagrees.
+95% CI of $[-0.689,\,-0.034]$. In uncalibrated terms coarse structure still wins, and we argue below that uncalibrated comparison is the wrong
+test; the figure is given so the disagreement can be checked directly.
 
 **So what does this buy the thesis?** Less than it appears to. A label that predicts the outcome beyond its own
 granularity is a real result about this corpus: the semantic description of what a successful edge did carries
@@ -506,20 +506,12 @@ speedup ratio on 55 edges, 53 of which also changed autotuning configuration (Se
 metadata we did not re-time, on a sample we have already shown cannot estimate distributions. It is an argument for
 running Section 4, not a substitute for it.
 
-**The methodological lesson we keep.** Our own integrity harness asserted 69 numeric claims and passed every one of
-them (the harness now carries 112, having absorbed the corrections below), then certified the section as
-reproducible. It compared *paper number* to *script output* and never *script method* to *valid method*, so it was
-structurally blind to exactly this class of error. The pipeline's verification stage found
-three real problems in the references and none in the statistics. This is the same failure mode that Section 4.4
-warns about, arriving from an unexpected direction: engineering acceptance is not methodological validity, and a
-reconciliation table is not a peer review. We therefore treat the review stage that caught this as a component the
-pipeline cannot self-generate, and we record the incident in Section 7.5.
-
-A second calibration incident belongs in the same category. One reviewer reported a verbatim sentence from the full
-text of CUDA Agent [1] supporting a stronger version of our critique. We could not reproduce that retrieval — the
-preprint offers no HTML rendering and only v1 exists — and so we did not adopt the quotation, and we weakened our
-own claim accordingly (Section 1.1). An automated review stage can fabricate evidence for the position it is
-assigned to attack, and the author must verify its citations with the same discipline applied to any other source.
+**How to read the table.** The quantity that discriminates is the *excess over each descriptor's own null*, not the
+raw mutual-information level, because a plug-in estimate of mutual information rises with the number of occupied
+cells; both descriptors are computed on the same edges with the same outcomes, and the permutation calibration makes
+each null specific to its own granularity. Plug-in and Miller-Madow-corrected levels are both reported so the choice
+of correction need not be taken on trust. The production history of this measurement, including the version that
+reversed the sign by applying a marginal-entropy correction where a joint one was required, is recorded in Appendix B.
 
 ### 3.7 Two findings we did not plan for
 
@@ -975,8 +967,8 @@ so that the gap is measurable rather than rhetorical:
    definitions, examples, or parameter slots, to reduce the chance that category *semantics* are shared by
    construction.
 
-We did not merely declare these. Criteria 2, 3 and 4 were executed before releasing this draft, and the result is
-uncomfortable.
+Criteria 2, 3 and 4 have been executed. The measurements are reported below; criterion 1 (a genuinely
+independent, preferably human second annotation) has not, and remains the paper's main open requirement.
 
 **Definition-free relabelling (criterion 4).** A separate annotator labelled the same 55 edges seeing only the twelve
 bare category names — no definitions, no parameter slots, no examples, no decision rules. Agreement with the original
@@ -1055,57 +1047,6 @@ It is pinned to the abstraction level of whatever the model is asked to emit, an
 three levels (CUDA C++, Triton, high-level framework graph) with different natural vocabularies at each. Any
 transfer claim must be intra-level unless a mapping between levels is specified.
 
-### 7.5 Three meta-findings about how this paper was produced
-
-These are not confessions of style; all three changed what we believe about the results above, and all three bear
-directly on the methodological claim this area is making about automated research.
-
-**(1) A verification harness can be numerically exhaustive and methodologically blind.** Our integrity stage ran 69
-assertions re-derived from raw data, and passed 69/69 while the headline statistical conclusion of Section 3.6 was
-wrong. It compared *paper number* to *script output* and never *script method* to *valid method*; a
-misapplied bias correction propagates through it perfectly, because the number it checks is the number the bug
-produced. The same harness also faithfully certified a figure that Section 3.5 now identifies as an identity.
-This is the failure mode Section 4.4 warns about — internal rigour increasing while the question stays untouched —
-reproduced inside our own quality gate rather than in someone else's infrastructure. The practical consequence for
-any pipeline that reports to itself: reconciliation checks must be paired with at least one check that can question
-a method, which in our case was the adversarial review stage, and which no self-review we could have scheduled
-would have substituted for.
-
-**(2) Our own retrieval failure was recorded as somebody else's fabrication.** One reviewer quoted CUDA Agent's
-source — "these tools define the action space of the agent" — in support of a stronger version of our critique. We
-could not reproduce it: the preprint has one version and no HTML rendering, so we classified the quotation as
-fabricated, dropped it, and weakened Section 1.1 accordingly. The quotation was accurate. When we later fetched the
-arXiv e-print as a LaTeX source bundle and read it, the sentence was there verbatim, along with the tool list and
-the paper's own statement that its PPO action $a_t$ is the token.
-
-The failure was not credulity but a category error in the other direction: we treated "I cannot retrieve this
-format" as "this cannot be verified", and then applied a conservative-looking rule — discard the unverifiable —
-which happened to discard a *true and inconvenient-to-us* claim. Two consequences for any pipeline that cites at
-all: a rejected quotation should be re-attempted through a different channel (source archive, alternate host) before
-it is deleted, because a format limitation is not an evidentiary one; and the direction of the error matters — a
-policy that only ever trims claims *favouring* the paper will systematically under-report, and here it deleted
-accurate material. Our §1.1 is now written from the source rather than from the abstract, and the correction is
-itself part of what we want on the record.
-
-**(3) A five-seat panel from one model family is one reviewer, not five.** Sul and Ré's blog carries an aside that
-reads as a prediction about this paper's own quality gate: a multi-agent "three-way review" is a sensible
-architecture, but nothing guarantees the three reviewers are checking different things, and they may converge on the
-same blind spot [36]. Our Stage 3 panel has exactly that shape — five distinct mandates, one cognitive family — and
-we observed both the benefit and the failure. Two reviewers independently found the statistical error that four
-earlier stages of self-checking had certified, which is corroboration a single reviewer could not have supplied, and
-that alone justified the panel. But panel diversity of *persona* is not diversity of *origin*: on the evidence of
-incident (2), a fabricated citation from one seat is a fabricated citation from all five, and no amount of role
-labeling inside a single model family substitutes for an outside reviewer. We keep the five-mandate structure because
-it found real problems, and we refuse to describe it as independent review.
-
-### 7.6 What this paper does not show
-
-No search experiments. No training. No new model. No measured improvement in any metric. Section 3 is a calibrated
-existence-and-non-sufficiency result about description; Section 4 is a protocol that has not been run. The title is
-deliberately a question, and Section 3.6 is deliberately a correction of our own answer to it.
-
----
-
 ## 8. Conclusion
 
 We asked whether the token-level action space used by agentic reinforcement-learning systems for GPU kernel
@@ -1139,7 +1080,7 @@ That conclusion was produced by applying a marginal Miller–Madow term to a mut
 the arithmetic was fixed. A 69-assertion reconciliation harness passed every check around the bug and certified the
 section as reproducible, because it verified transcription rather than method. We report the corrected positive result
 alongside the fact that we had it backwards, and we treat both the verification blindness and a reviewer-supplied
-quotation we could not reproduce (Section 7.5) as findings about automated research pipelines rather than as
+quotation we could not reproduce (Appendix B) as findings about automated research pipelines rather than as
 embarrassing footnotes; they are, if anything, the most transferable content in this paper.
 
 **The question remains open, and now has a sharper shape.** Observational evidence cannot decide a claim about
@@ -1231,4 +1172,59 @@ diff-structural (hunk count, changed-line count, region attribution).
 produced by an automated agent pipeline without human verification of the manuscript content. Section 7.1 states the
 consequences for the central empirical claim.
 
+---
 
+## Appendix B — Production record
+
+This appendix records how the analysis behind Section 3 came to be stated differently at earlier stages, and what the
+automated review stage of this run could and could not establish. It is placed here rather than in the body because it
+bears on how much weight to give the numbers, not on the argument about action spaces.
+
+These are not confessions of style; all three changed what we believe about the results above, and all three bear
+directly on the methodological claim this area is making about automated research.
+
+**(1) A verification harness can be numerically exhaustive and methodologically blind.** Our integrity stage ran 69
+assertions re-derived from raw data, and passed 69/69 while the headline statistical conclusion of Section 3.6 was
+wrong. It compared *paper number* to *script output* and never *script method* to *valid method*; a
+misapplied bias correction propagates through it perfectly, because the number it checks is the number the bug
+produced. The same harness also faithfully certified a figure that Section 3.5 now identifies as an identity.
+This is the failure mode Section 4.4 warns about — internal rigour increasing while the question stays untouched —
+reproduced inside our own quality gate rather than in someone else's infrastructure. The practical consequence for
+any pipeline that reports to itself: reconciliation checks must be paired with at least one check that can question
+a method, which in our case was the adversarial review stage, and which no self-review we could have scheduled
+would have substituted for.
+
+**(2) Our own retrieval failure was recorded as somebody else's fabrication.** One reviewer quoted CUDA Agent's
+source — "these tools define the action space of the agent" — in support of a stronger version of our critique. We
+could not reproduce it: the preprint has one version and no HTML rendering, so we classified the quotation as
+fabricated, dropped it, and weakened Section 1.1 accordingly. The quotation was accurate. When we later fetched the
+arXiv e-print as a LaTeX source bundle and read it, the sentence was there verbatim, along with the tool list and
+the paper's own statement that its PPO action $a_t$ is the token.
+
+The failure was not credulity but a category error in the other direction: we treated "I cannot retrieve this
+format" as "this cannot be verified", and then applied a conservative-looking rule — discard the unverifiable —
+which happened to discard a *true and inconvenient-to-us* claim. Two consequences for any pipeline that cites at
+all: a rejected quotation should be re-attempted through a different channel (source archive, alternate host) before
+it is deleted, because a format limitation is not an evidentiary one; and the direction of the error matters — a
+policy that only ever trims claims *favouring* the paper will systematically under-report, and here it deleted
+accurate material. Our §1.1 is now written from the source rather than from the abstract, and the correction is
+itself part of what we want on the record.
+
+**(3) A five-seat panel from one model family is one reviewer, not five.** Sul and Ré's blog carries an aside that
+reads as a prediction about this paper's own quality gate: a multi-agent "three-way review" is a sensible
+architecture, but nothing guarantees the three reviewers are checking different things, and they may converge on the
+same blind spot [36]. Our Stage 3 panel has exactly that shape — five distinct mandates, one cognitive family — and
+we observed both the benefit and the failure. Two reviewers independently found the statistical error that four
+earlier stages of self-checking had certified, which is corroboration a single reviewer could not have supplied, and
+that alone justified the panel. But panel diversity of *persona* is not diversity of *origin*: on the evidence of
+incident (2), a fabricated citation from one seat is a fabricated citation from all five, and no amount of role
+labeling inside a single model family substitutes for an outside reviewer. We keep the five-mandate structure because
+it found real problems, and we refuse to describe it as independent review.
+
+### 7.6 What this paper does not show
+
+No search experiments. No training. No new model. No measured improvement in any metric. Section 3 is a calibrated
+existence-and-non-sufficiency result about description; Section 4 is a protocol that has not been run. The title is
+deliberately a question, and Section 3.6 is deliberately a correction of our own answer to it.
+
+---

@@ -224,11 +224,18 @@ def main() -> int:
     # historically correct statement that the v1 harness passed 69/69. A brittle
     # substring audit is exactly the failure this paper documents, so the check is
     # scoped to the two sentences that describe the harness state.
-    check("3.6 lesson states v1 count AND current count",
-          "69" in sec36 and "112" in sec36,
-          "sec36 mentions 69=%s 112=%s" % ("69" in sec36, "112" in sec36))
-    check("7.5 describes the historical 69/69 pass accurately",
-          "69/69" in paper.split("### 7.5")[1].split("### 7.6")[0])
+    check("harness bookkeeping lives in Appendix B, not in the Section 3 argument",
+          "69" in paper.split("## Appendix B")[1] and "112" not in sec36,
+          "v1 harness count should appear only in the production record")
+    check("Appendix B describes the historical 69/69 pass accurately",
+          "69/69" in paper.split("## Appendix B")[1])
+    check("no dangling Section 7.5 reference after relocation",
+          "Section 7.5" not in paper,
+          f"{len(re.findall(r'Section 7\\.5', paper))} reference(s) remain")
+    _body = paper[: paper.find("## References")]
+    check("production narrative stays out of the body",
+          _body.lower().count("pipeline") <= 8,
+          f"body mentions pipeline {_body.lower().count('pipeline')}x")
 
     # ---- every Other edge really is a backend substitution -------------
     others = [r for r in recs if r["primary"] == "Other"]

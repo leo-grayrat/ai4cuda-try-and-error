@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (MiKTeX 26.2) (preloaded format=xelatex 2026.6.8)  2 OCT 2026 11:36
+This is XeTeX, Version 3.141592653-2.6-0.999998 (MiKTeX 26.2) (preloaded format=xelatex 2026.6.8)  2 OCT 2026 12:43
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1552,10 +1552,9 @@ Overfull \hbox (86.97795pt too wide) in alignment at lines 463--468
  [] [] [] [] [] [] [] 
  []
 
-[13]
 LaTeX Font Info:    Font shape `TU/DejaVuSansMono(0)/b/n' will be
-(Font)              scaled to size 10.3926pt on input line 481.
- [14]
+(Font)              scaled to size 10.3926pt on input line 479.
+[13] [14]
 File: figures/fig1_entropy_comparison.png Graphic file (type bmp)
 <figures/fig1_entropy_comparison.png>
 File: figures/fig2_label_distribution.png Graphic file (type bmp)
@@ -1566,71 +1565,71 @@ File: figures/fig4_speedup_by_label.png Graphic file (type bmp)
 <figures/fig4_speedup_by_label.png>
 File: figures/fig5_permutation_calibration.png Graphic file (type bmp)
 <figures/fig5_permutation_calibration.png>
- [15] [16] [17] [18] [19] [20]
-ignored: Infinite glue shrinkage found in box being split 
+ [15]
+ignored: Infinite glue shrinkage found in box being split [16] [17] [18] [19] [20] 
 [21] [22] [23] [24] [25] [26] [27]
-[28] [29] [30] [31] [32] [33] [34]
-Underfull \hbox (badness 1436) in paragraph at lines 845--847
+[28] [29] [30] [31] [32] [33]
+Underfull \hbox (badness 1436) in paragraph at lines 823--825
 \TU/DejaVuSerif(0)/m/n/10.95 P. Ranganathan, O. Bastani, A. Yazdanbakhsh. \TU/D
 ejaVuSerif(0)/b/n/10.95 Learning Performance-
  []
 
-[35]
-Overfull \hbox (7.73973pt too wide) in paragraph at lines 877--879
+
+Overfull \hbox (7.73973pt too wide) in paragraph at lines 855--857
 []\TU/DejaVuSerif(0)/b/n/10.95 The Correctness Illusion in LLM-Generated GPU Ke
 rnels. \TU/DejaVuSerif(0)/m/n/10.95 arXiv:2606.20128,
  []
 
 
-Underfull \hbox (badness 1852) in paragraph at lines 879--881
+Underfull \hbox (badness 1852) in paragraph at lines 857--859
 []\TU/DejaVuSerif(0)/b/n/10.95 A Contract-Grade Verifier for LLM-Generated GPU 
 Kernels, and a
  []
 
-[36]
-Overfull \hbox (40.45018pt too wide) in paragraph at lines 891--893
+[34]
+Overfull \hbox (40.45018pt too wide) in paragraph at lines 869--871
 []\TU/DejaVuSerif(0)/b/n/10.95 Score Centering Stabilizes Off-policy Reinforcem
 ent Learning. \TU/DejaVuSerif(0)/m/n/10.95 arXiv:2609.20807,
  []
 
 
-Underfull \hbox (badness 1590) in paragraph at lines 909--910
+Underfull \hbox (badness 1590) in paragraph at lines 887--888
 []\TU/DejaVuSerif(0)/m/n/10.95 S. Sul, C. Ré. \TU/DejaVuSerif(0)/b/n/10.95 Reti
 re the Abstractions. \TU/DejaVuSerif(0)/m/n/10.95 Hazy Research blog, 5 Au-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 909--910
+Underfull \hbox (badness 10000) in paragraph at lines 887--888
 \TU/DejaVuSerif(0)/m/n/10.95 gust 2026. url:https://hazyresearch.stanford.edu/b
 log/2026-08-05-retire-
  []
 
 
-Underfull \hbox (badness 1038) in paragraph at lines 909--910
+Underfull \hbox (badness 1038) in paragraph at lines 887--888
 \TU/DejaVuSerif(0)/m/n/10.95 the-abstractions — \TU/DejaVuSerif(0)/m/it/10.95 n
 on-archival; included because it is the source of the
  []
 
-[37]
-Overfull \hbox (72.507pt too wide) in paragraph at lines 923--923
+[35]
+Overfull \hbox (72.507pt too wide) in paragraph at lines 901--901
 []\TU/DejaVuSansMono(0)/m/n/10.95 python scripts/analyze_entropy.py        # an
 notations -> entropy, reuse, red lines, figures[] 
  []
 
 
-Overfull \hbox (80.84947pt too wide) in paragraph at lines 923--923
+Overfull \hbox (80.84947pt too wide) in paragraph at lines 901--901
 []\TU/DejaVuSansMono(0)/m/n/10.95 python scripts/calibrate_informativeness.py  
 # cardinality-matched permutation calibration[] 
  []
 
 
-Underfull \hbox (badness 5374) in paragraph at lines 925--926
+Underfull \hbox (badness 5374) in paragraph at lines 903--904
 \TU/DejaVuSansMono(0)/m/n/10.95 data/annotations.json\TU/DejaVuSerif(0)/m/n/10.
 95 , calibration in \TU/DejaVuSansMono(0)/m/n/10.95 data/informativeness_calibr
 ation.json\TU/DejaVuSerif(0)/m/n/10.95 .
  []
 
-[38] (main.aux)
+[36] [37] (main.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
@@ -1638,11 +1637,11 @@ L3 programming layer <2026-01-19>
  ) 
 Here is how much of TeX's memory you used:
  19246 strings out of 402983
- 351608 string characters out of 5448483
- 972057 words of memory out of 5000000
+ 351583 string characters out of 5448483
+ 974032 words of memory out of 5000000
  47692 multiletter control sequences out of 15000+600000
  635354 words of font info for 127 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 90i,9n,116p,1865b,495s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 90i,9n,116p,1842b,515s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on main.pdf (38 pages).
+Output written on main.pdf (37 pages).
