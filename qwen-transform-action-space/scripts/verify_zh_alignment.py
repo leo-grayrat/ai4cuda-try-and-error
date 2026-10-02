@@ -118,21 +118,39 @@ def main() -> int:
     absent = [c for c in set(critical) if c in en and c not in zh]
     print(f"critical statistics present in EN but missing in ZH: {len(absent)} {absent}")
 
-    # 4. symbol parity. Numeric multisets cannot see notation drift: an interpreter
-    # may legally render `φ : ΔP → a` as `phi : \Delta P \to a` and every digit still
-    # matches. These forms must be identical across the two documents.
+    # 4. notation form. Numeric multisets cannot see notation drift, so this checks the
+    # typography itself. The invariant is not "Unicode must be present" (an earlier version
+    # asserted that and thereby rewarded the wrong fix) but: the formalism lives in math
+    # mode. Concretely — no romanised ASCII notation, no TeX macros stranded inside code
+    # spans, no bare Unicode math glyphs in running text, and the same count of real math
+    # spans on both sides.
+    CODE = re.compile(r"`[^`\n]+`")
+    MATH = re.compile(r"\$\$.+?\$\$|\$[^$\n]+\$", re.S)
+    BARE_MATH_UNICODE = "τℓθφΔ₁₂₃₀⇒≈"
+
     sym_fail = []
-    for name, needle in [
-        ("ascii action triple", "a = (tau, l, theta)"),
-        ("latex phi form", "phi : \\Delta P"),
-        ("latex arrow form", "a \\to \\Delta P"),
-    ]:
-        for doc, text in (("en", en), ("zh", zh)):
-            if needle in text:
-                sym_fail.append(f"{doc} still contains {name}")
-    n_en, n_zh = en.count("φ"), zh.count("φ")
-    print(f"symbol parity: phi count en={n_en} zh={n_zh} | offenders={sym_fail}")
-    sym_ok = not sym_fail and n_en == n_zh and n_en > 0
+    math_counts = {}
+    for doc, text in (("en", en), ("zh", zh)):
+        outside = MATH.sub(" ", CODE.sub(" ", text))
+        if "a = (tau, l, theta)" in text:
+            sym_fail.append(f"{doc}: romanised ASCII notation present")
+        if re.search(r"\\(?:varphi|phi|Delta)\b", "".join(CODE.findall(text))):
+            sym_fail.append(f"{doc}: TeX macro inside a code span (prints literally)")
+        stray = [c for c in BARE_MATH_UNICODE if c in outside]
+        if stray:
+            sym_fail.append(f"{doc}: bare math glyphs outside math mode {stray}")
+        math_counts[doc] = len(re.findall(r"\\(?:varphi|Delta|to|ell|tau|theta)\b", text))
+    if math_counts["en"] != math_counts["zh"]:
+        sym_fail.append(f"math span count differs: en={math_counts['en']} zh={math_counts['zh']}")
+    if math_counts["en"] == 0:
+        sym_fail.append("no math-mode notation found at all; the formalism is not typeset")
+
+    print(
+        "notation: math spans en={} zh={} | offenders={}".format(
+            math_counts["en"], math_counts["zh"], sym_fail
+        )
+    )
+    sym_ok = not sym_fail
 
     ok = ref_ok and not missing_r and not extra_r and not absent and sym_ok
     print()

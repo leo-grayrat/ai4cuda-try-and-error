@@ -10,14 +10,14 @@ Agentic reinforcement-learning systems now write GPU kernels that beat compiler 
 over sampled text and attach one execution-level reward at the end of thousands of decisions. Performance, however,
 belongs to a handful of program design decisions — fuse two passes, stop materializing an intermediate, change the
 per-thread workload — each realized across many tokens and several separated code sites. We ask whether this is the
-wrong *coordinate system*: the action unit. We formalize a candidate action as a typed program transformation `a = (τ, ℓ, θ)`, and separate three claims the literature
+wrong *coordinate system*: the action unit. We formalize a candidate action as a typed program transformation $a = (\tau, \ell, \theta)$, and separate three claims the literature
 conflates: description, search efficiency, learning efficiency. On public AdaExplore trajectories (2,510 successful
 parent→child edges; 55 annotated over 45 tasks) a frozen 12-category vocabulary covers 90.9% of edges, using 10 of its 12
 categories, and under symmetric permutation calibration the semantic label predicts realised speedup beyond its own
-granularity (p = 0.0005) while coarse diff structure (p = 0.752) and hunk count (p = 0.436) do not. Three limitations bound
+granularity ($p = 0.0005$) while coarse diff structure ($p = 0.752$) and hunk count ($p = 0.436$) do not. Three limitations bound
 the result: two supporting statistics are withdrawn, one as an identity and one as a sampling artefact; cross-task
-recurrence sits at chance; and relabelling without the category definitions leaves the headline insignificant (p = 0.106,
-kappa = 0.687). K-Search, CuAsmRL, CodeAct and CUDA Agent's own skill checklist already occupy parts of the
+recurrence sits at chance; and relabelling without the category definitions leaves the headline insignificant ($p = 0.106,
+$\kappa = 0.687$). K-Search, CuAsmRL, CodeAct and CUDA Agent's own skill checklist already occupy parts of the
 proposed interface, narrowing our contribution to measurement and protocol. Search and learning stay untested; we
 specify the five-condition experiment that decides them, including the branch that kills the direction.
 
@@ -125,9 +125,7 @@ efficiency?
 
 We write the candidate action as
 
-```
-a = (τ, ℓ, θ)
-```
+$$a = (\tau, \ell, \theta)$$
 
 transformation *type*, *location*, *parameters*. The load-bearing structure is a many-to-many relation:
 
@@ -198,10 +196,10 @@ Any optimization loop over programs must decide what counts as one action. Three
 
 | Cut | Action unit | Credit lands on | Failure mode |
 |----------------|-----------------|---------------------|-----------------------------------|
-| Token | one sampled token | GAE/value estimates over ~10³–10⁴ steps | decision unit invisible; credit is statistical guesswork |
+| Token | one sampled token | GAE/value estimates over $\sim 10^{3}$--$10^{4}$ steps | decision unit invisible; credit is statistical guesswork |
 | Edit span / code block | a contiguous diff region | the span | decisions are *not* contiguous; spans overlap and split arbitrarily |
 | Turn / tool call | one agent step in a multi-turn loop | the turn | coarser, but a turn still bundles several independent decisions (cf. multi-turn kernel RL [32]) |
-| Transformation | typed `(τ, ℓ, θ)` | the selected transformation | granularity is a design choice; realization may be the real bottleneck |
+| Transformation | typed $(\tau, \ell, \theta)$ | the selected transformation | granularity is a design choice; realization may be the real bottleneck |
 
 The turn row is not decoration. Recent multi-turn kernel RL work attributes reward at the turn level and reports
 that this matters [32], which means the field has already partly moved up from tokens — just not onto a typed
@@ -220,20 +218,16 @@ text-comparison routine.
 
 ### 2.2 Formal shape
 
-Let `P` be a program, `ΔP` a change, and
+Let $P$ be a program, $\Delta P$ a change, and
 
-```
-φ : ΔP → a
-```
+$$\varphi : \Delta P \to a$$
 
-a mapping from realized diffs to action objects. The research question is whether a *simple* `φ` exists whose range
+a mapping from realized diffs to action objects. The research question is whether a *simple* $\varphi$ exists whose range
 is small, stable across tasks, and faithful to what actually caused the performance change.
 
 An action is realized by a set of distributed edits, not a location:
 
-```
-a → { e₁, e₂, e₃, ... }
-```
+$$a \to \{ e_1, e_2, e_3, \dots \}$$
 
 This single observation retro-explains the locator failure from Section 1.2: the search for "the optimization code"
 was a search for a contiguous region carrying a non-contiguous decision.
@@ -246,8 +240,7 @@ The action space is only useful between two failure poles.
   realization obligation follows.
 * **Too fine** — `change line 172 from i to i+stride`. This is a diff; entropy collapses back onto the text.
 
-A good action is more abstract than a token edit yet concrete enough to *constrain implementation*. `work_per_thread
-: 1 → 2` qualifies: definite semantics, direct hardware consequence, recurs across kernels, obliges coordinated
+A good action is more abstract than a token edit yet concrete enough to *constrain implementation*. $\mathit{work\_per\_thread} : 1 \to 2$ qualifies: definite semantics, direct hardware consequence, recurs across kernels, obliges coordinated
 change at several sites, and is far more specific than "improve ILP".
 
 We therefore expect the eventual object to be a small typed DSL rather than a list of nouns:
@@ -279,8 +272,8 @@ plan-first:      P → free-text reasoning → P'
 transformation:  P_t --a_t--> P_{t+1},   a_t ∈ A, reusable, comparable, statable, recurring across tasks
 ```
 
-Free-text reasoning has no learnable structure. A typed action set does: it supports `Q(P, a)` instead of
-`Q(P, one particular token string)`. Any experimental claim must therefore include a free-plan control, or it
+Free-text reasoning has no learnable structure. A typed action set does: it supports $Q(P, a)$ instead of
+$Q(P, \text{one particular token string})$. Any experimental claim must therefore include a free-plan control, or it
 proves nothing. Section 4 builds that control in.
 
 ### 2.5 What "transferable" should mean here
@@ -291,18 +284,16 @@ demanding cross-vendor generality confuses a hardware claim with a modelling cla
 
 The transfer we care about is *within* one target platform, across kernels:
 
-```
-code_A ≠ code_B   but   a_A = a_B = WarpReduce
-```
+$\mathit{code}_A \neq \mathit{code}_B$ but $a_A = a_B = \mathrm{WarpReduce}$
 
 so that experience collected on reduction A can be indexed by action rather than by surface code and reused on
-reduction B, turning `Q(P, token string)` into `Q(P, a)`.
+reduction B, turning $Q(P, \text{token string})$ into $Q(P, a)$.
 
 This is the version of "transferable" that the thesis needs, and it must be flagged immediately: the evidence
 for it is not in this paper's data. Section 3.5 shows that cross-task recurrence of the transformation
 labels sits at chance under a label-permutation null, because our sampling caps edges per task. The transferability
 reading of the thesis is therefore **not supported by our data** — it is a hypothesis that Section 4 would have to
-earn, and `Q(P, a)` is stated here as the object of a future experiment rather than as a finding.
+earn, and $Q(P, a)$ is stated here as the object of a future experiment rather than as a finding.
 
 ---
 
@@ -357,7 +348,7 @@ realizations (CUDA C++ / Triton), because Section 4.1 shows the data contains no
 The twelve: `Fuse`, `EliminateMaterialization`, `Tile`, `IncreaseWorkPerThread`, `Vectorize`, `ChangeLaunchConfig`,
 `WarpReduce`, `SharedMemoryTransform`, `PrecisionChange`, `LoopTransform`, `HostDeviceOverlap`, `Other`.
 
-Labeling is multi-label with one designated primary, an argument field `θ` where recoverable, a list of code regions
+Labeling is multi-label with one designated primary, an argument field $\theta$ where recoverable, a list of code regions
 the action lands on, and a free-text justification that must quote concrete changed lines. `Other` requires an
 explicit account of why each of the eleven specific categories was rejected.
 
@@ -372,8 +363,8 @@ Two pre-committed diagnostic thresholds, reported whether or not they are comfor
 
 | Condition | Threshold | Observed | Fired? |
 |-------------------------------------------------------|---------|-------------------|-----|
-| Any single category > 40% of edges ⇒ vocabulary too coarse | 40% | `Fuse` 30.9% (17/55) | **no** |
-| `Other` > 25% ⇒ the conjecture may be false | 25% | 9.1% (5/55) | **no** |
+| Any single category $>$40\% of edges $\Rightarrow$ vocabulary too coarse | 40% | `Fuse` 30.9% (17/55) | **no** |
+| `Other` $>$25\% $\Rightarrow$ the conjecture may be false | 25% | 9.1% (5/55) | **no** |
 
 Neither threshold fired *numerically*. Both are weaker than they look, for two reasons.
 
@@ -419,7 +410,7 @@ each; `SharedMemoryTransform` never appears at all.
 **What survives.** Two things, and they are the load-bearing ones.
 
 * **Compression relative to a faithful description.** Against the joint coarse descriptor of the same 55 diffs
-  (hunk count × changed-line bucket, 24 cells), the label distribution costs 2.67 bits versus 4.26 — a factor of
+  (hunk count $\times$ changed-line bucket, 24 cells), the label distribution costs 2.67 bits versus 4.26 — a factor of
   1.6 — while using only 10 categories to name what the program did. Single low-cardinality summaries are cheaper
   still (hunk count alone: 2.49 bits) but they are not *descriptions* of the change; they are one projection of it,
   and Section 3.6 shows they carry no information beyond their own granularity.
@@ -432,7 +423,7 @@ each; `SharedMemoryTransform` never appears at all.
 examine realizations directly. All edges carrying one category, with the structural facts of each realization, are in
 the exemplar record accompanying this paper; an excerpt:
 
-| edge | task | lvl | ×vs parent | hunks | changed lines | regions |
+| edge | task | lvl | $\times$ vs parent | hunks | changed lines | regions |
 |----------------------|----|----|--------------------|-----|----------------------------|-------|
 | `L2_2_11_167_168` | 2_11 | L2 | 1.06 | 3 | 141 | 3 |
 | `L2_2_48_29_30` | 2_48 | L2 | 1.57 | 1 | 107 | 1 |
@@ -512,7 +503,7 @@ of correction need not be taken on trust.
 **(a) `Other` is a single systematic hole, not noise.** All five `Other` edges are the same decision: stop
 implementing the operation yourself and delegate it to a library backend — `x.matmul` / cuBLAS,
 `F.scaled_dot_product_attention`, `F.mish`, `F.linear`. They include the two largest realized speedups in the sample
-(327× and 69× versus parent). The frozen vocabulary describes *how to restructure a program* and has no slot for
+($327\times$ and $69\times$ versus parent). The frozen vocabulary describes *how to restructure a program* and has no slot for
 *whether to implement it at all*.
 
 We should be careful not to over-sell this. Choosing a library call over a hand-written kernel is not an obscure
@@ -570,7 +561,7 @@ optional.
 
 ### 3.9 Figures
 
-![Description length per edge. The rightmost bar is identically log2(n) and carries no evidential content; the comparison that matters is against the 24-cell coarse structure.](../figures/fig1_entropy_comparison.png)
+![Description length per edge. The rightmost bar is identically $\log_{2} n$ and carries no evidential content; the comparison that matters is against the 24-cell coarse structure.](../figures/fig1_entropy_comparison.png)
 
 ![Observed distribution over the frozen 12-category vocabulary, primary versus secondary labels, with the 40% red line.](../figures/fig2_label_distribution.png)
 
@@ -597,7 +588,7 @@ should not be run, because its positive outcome will be misread.
 |------------------|--------------------------------------|---------------------------------|
 | **Direct** | generate the optimized whole kernel | baseline |
 | **Free-plan** | write a free-text plan, then generate the kernel | the value of planning itself, and of any implicit abstraction the model already performs |
-| **Structured-action** | select parameterized transformations from a frozen `A`, then realize them | the value of the *externalized structure*, net of planning |
+| **Structured-action** | select parameterized transformations from a frozen $A$, then realize them | the value of the *externalized structure*, net of planning |
 | **Oracle-action** | the correct transformation is supplied; the model only realizes it | whether strategy or realization is the binding constraint |
 | **Brute-search** | enumerate a known transformation space and rank candidates with a learned cost model, no LLM in the loop | whether an LLM choosing transformations adds anything autotuning already had |
 
@@ -610,7 +601,7 @@ only ever compare variants of *LLM-in-the-loop* interfaces to each other.
 
 Two prior systems occupy positions this table claims to distinguish, and the protocol must be read accordingly.
 K-Search already *"explicitly decouples high-level algorithmic planning from low-level program instantiation"* and
-reports an average 2.10x over state-of-the-art evolutionary search on FlashInfer kernels, up to 14.3x on complex MoE
+reports an average $2.10\times$ over state-of-the-art evolutionary search on FlashInfer kernels, up to $14.3\times$ on complex MoE
 kernels [29] — that is a realized Structured-action condition with a positive result. CuAsmRL trains a reinforcement
 agent over an explicit action space of SASS schedule mutations, and separates autotuning from schedule search by
 construction [30]. So Section 4 is not a proposal for a system; it is an instrument for *independently falsifying*
@@ -627,19 +618,19 @@ and search cost (rollouts, tokens, wall-clock to first valid-and-faster kernel) 
 
 | Observation | Conclusion | Consequence |
 |---------------------------|----------------------|---------------------------------------|
-| Free-plan ~ Structured-action > Direct | planning helps; structure adds nothing | **no paper here**; drop the abstraction claim |
+| $\mathrm{Free\text{-}plan} \sim \mathrm{Structured\text{-}action} > \mathrm{Direct}$ | planning helps; structure adds nothing | **no paper here**; drop the abstraction claim |
 | Structured-action > Free-plan > Direct | the typed action space supplies extra inductive bias | core positive result; proceed to learning-level experiments |
-| Structured-action > Direct but ~ turn-level decomposition | the gain is hierarchy, not typing | re-aim at credit assignment over agent turns [32] rather than at a vocabulary |
-| Oracle-action >> Structured-action | abstraction is useful, but *selection* is the bottleneck | reformulate as a policy-over-actions problem; `Q(P, a)` becomes the object of study |
-| Oracle-action ~ Direct | telling the model what to do does not help | **direction is dead**: strategy/realization separation buys nothing, so no action space can help |
+| $\mathrm{Structured\text{-}action} > \mathrm{Direct}$ but $\sim$ turn-level decomposition | the gain is hierarchy, not typing | re-aim at credit assignment over agent turns [32] rather than at a vocabulary |
+| $\mathrm{Oracle\text{-}action} \gg \mathrm{Structured\text{-}action}$ | abstraction is useful, but *selection* is the bottleneck | reformulate as a policy-over-actions problem; $Q(P, a)$ becomes the object of study |
+| $\mathrm{Oracle\text{-}action} \sim \mathrm{Direct}$ | telling the model what to do does not help | **direction is dead**: strategy/realization separation buys nothing, so no action space can help |
 | Structured-action < Free-plan | the imposed granularity is actively harmful | investigate coupling: good optimizations may not decompose |
-| Structured-action ~ Brute-search | an LLM adds nothing over enumeration with a cost model | **the systems community already owns this problem**; re-target or withdraw |
-| Oracle-action not runnable | `φ` cannot be constructed for this task family | **indeterminate — do not read as a null result** (see below) |
+| $\mathrm{Structured\text{-}action} \sim \mathrm{Brute\text{-}search}$ | an LLM adds nothing over enumeration with a cost model | **the systems community already owns this problem**; re-target or withdraw |
+| Oracle-action not runnable | $\varphi$ cannot be constructed for this task family | **indeterminate — do not read as a null result** (see below) |
 
-Oracle-action and the realization obligation of Section 4.5 both require `φ : ΔP → a`, the map that recovers the
+Oracle-action and the realization obligation of Section 4.5 both require $\varphi : \Delta P \to a$, the map that recovers the
 intended transformation from a change; Section 7.3 admits we never constructed it. A protocol whose decisive branch
 depends on an object we have not built would report "direction is dead" whenever that object is unavailable, which is
-a false negative dressed as rigour. Oracle-action therefore carries an explicit precondition: a `φ` validated on a
+a false negative dressed as rigour. Oracle-action therefore carries an explicit precondition: a $\varphi$ validated on a
 held-out set, or a human-supplied oracle standing in for it with the substitution recorded. If neither is available,
 the branch is *not evaluated*, and the paper's conclusion must say so.
 
@@ -741,7 +732,7 @@ What is actually distinguishable, stated at its real strength:
   Structured-action condition of Section 4. Neither is about GPU kernels, neither freezes a typed transformation
   vocabulary, neither reports whether such a vocabulary covers real successful optimizations, and — crucially —
   neither runs a Free-plan control of the kind Section 4.1 insists on. The honest reading is that our Section 4.3
-  branch `Free-plan ≈ Structured-action ⇒ no paper` is a live risk that adjacent fields have not resolved either,
+  branch $\mathrm{Free\text{-}plan} \approx \mathrm{Structured\text{-}action} \Rightarrow \text{no paper}$ is a live risk that adjacent fields have not resolved either,
   and our novelty narrows to: the descriptive measurement in Section 3, the falsification discipline, and the
   kernel-specific confound controls that only this domain forces (autotune isolation, backend substitution).
 
@@ -771,7 +762,7 @@ dangerous — a performance model is exactly what an LLM is worst at being assum
 ### 5.2 Hierarchical RL has a name for this, and a warning
 
 Temporal abstraction is old technology: options [11], the option-critic architecture [12], and skill libraries in
-LLM agents such as Voyager [14]. Our `a = (τ, ℓ, θ)` is an option with parameters. That lineage brings two
+LLM agents such as Voyager [14]. Our $a = (\tau, \ell, \theta)$ is an option with parameters. That lineage brings two
 things we should inherit rather than re-derive: the formal machinery for policies over sub-policies, and a candid
 literature on *when higher-level actions fail to help*. Recent work on option-critic pathologies reports policy
 necrosis and redundant coverage - learned options that are never used or that overlap so much that the hierarchy
@@ -809,10 +800,10 @@ Between assembly, IR and a high-level language sit compilers: relations that are
 abstraction layer can be *deleted* and re-derived with confidence. Sul and Ré's own version of the retirement
 argument depends on exactly this, and they name the deal honestly — "we took that deal because the compiler was right
 more often than we were" [36]. Between a named transformation and its code, however, sits an LLM, and the relation
-`a → ΔP` is a stochastic map, not a function. Everything in this paper that treats a transformation as an object —
+$a \to \Delta P$ is a stochastic map, not a function. Everything in this paper that treats a transformation as an object —
 including the credit assignment that motivated it — inherits that gap. Two consequences follow: realizing a chosen
 action is a *first-class failure mode* rather than an implementation detail (which is why Section 4.5 control 3
-requires reporting it separately), and the abstract's `φ : ΔP → a` in the reverse direction is no more guaranteed to
+requires reporting it separately), and the abstract's $\varphi : \Delta P \to a$ in the reverse direction is no more guaranteed to
 exist than the forward one. If realizers are unreliable, a transformation-level action space buys nothing no matter
 how well the vocabulary fits, and that is exactly the outcome Section 4.3's Oracle-action branch is designed to catch.
 
@@ -905,8 +896,8 @@ acquired skills as reusable code [14]. These are the strongest general evidence 
 neutral, and the closest generic analogues to our structured-action condition (Section 5.1).
 
 **Transformation- and edit-level search over programs.** The cluster that constrains our novelty claim most:
-K-Search, which explicitly decouples algorithmic planning from program instantiation and reports 2.10x average,
-up to 14.3x over evolutionary baselines on FlashInfer kernels [29]; CuAsmRL, an RL agent over an explicit
+K-Search, which explicitly decouples algorithmic planning from program instantiation and reports $2.10\times$ average,
+up to $14.3\times$ over evolutionary baselines on FlashInfer kernels [29]; CuAsmRL, an RL agent over an explicit
 SASS schedule-mutation action space, which also surfaces optimization moves automatically [30]; RAS/AEGIS, beam
 search with retrieved slow→fast examples and reusable *atomic edits* [31]; performance-improving code edits curated
 from 77k C++ submission pairs and evaluated in a full-system simulator to control timing noise [4]; neural models of
@@ -918,7 +909,7 @@ transformations [9]; Ansor searches tensor factorizations [10]. Section 5.3 expl
 ancestry and our strongest objection.
 
 **Hierarchical RL and skill discovery.** Options [11], option-critic [12], reported option pathologies — policy
-necrosis and redundant coverage [13] — and LLM skill libraries [14]. Our `a = (τ, ℓ, θ)` is a parameterized
+necrosis and redundant coverage [13] — and LLM skill libraries [14]. Our $a = (\tau, \ell, \theta)$ is a parameterized
 option (Section 5.2).
 
 **Benchmark integrity.** Correctness illusion [20], mutation analysis of kernel-benchmark oracles [24], adversarial
@@ -1008,7 +999,7 @@ selection, and if not, is the decomposition the right level at all? (Section 4.5
 **(2) The model may already do this abstraction privately.** If a large language model internally represents
 "use a warp reduction" without being told to, then externalizing the action may only *print* reasoning that was
 already happening, reducing nothing. This is precisely why the Free-plan control exists, and why a result of the form
-`Free-plan ~ Structured-action > Direct` must be reported as a null. We have no way to settle it observationally.
+$\mathrm{Free\text{-}plan} \sim \mathrm{Structured\text{-}action} > \mathrm{Direct}$ must be reported as a null. We have no way to settle it observationally.
 
 **(3) Selection may be easy and realization may be the bottleneck.** Telling a model "use warp-level reduction" may
 still leave it unable to write a correct, fast implementation. If that is the common case, high-level actions are not
@@ -1023,11 +1014,11 @@ The annotated 55 edges are a multi-hunk-enriched biased sample and cannot estima
 3.4-3.6 therefore rest on a filter we have shown reason to distrust, and a mutation-hardened oracle could change
 which edges count as successes at all.** Related measurement gaps: the ">5% faster" threshold has no noise floor
 because timing was taken from corpus metadata and never re-measured; `fast_p`'s baseline convention is not audited;
-9 of 55 edges show >10× gains over parent, at least two of which had parents already near reference speed, so some
+9 of 55 edges show $> 10\times$ gains over parent, at least two of which had parents already near reference speed, so some
 realized-speedup values used as the Section 3.6 outcome are plausibly timing artefacts; 53 of 55 edges change
 autotuning alongside structure, so per-action attribution in Sections 3.5-3.7 is confounded by construction. The
 trajectory corpus was produced by a *search* procedure rather than by a policy learning from a reward, so the
-visited-program distribution is not the on-policy distribution a Section-4 experiment would face. Finally, `φ` is
+visited-program distribution is not the on-policy distribution a Section-4 experiment would face. Finally, $\varphi$ is
 never constructed here — we assert that the diffs have labels, not that a mechanical map from diff to label exists —
 and the gap between those two is a separate research question (automatic action recognition) that we deliberately did
 not open.
@@ -1052,7 +1043,7 @@ deliberately a question, and Section 3.6 is deliberately a correction of our own
 
 We asked whether the token-level action space used by agentic reinforcement-learning systems for GPU kernel
 optimization is the wrong coordinate system, and whether parameterized program transformations
-`a = (τ, ℓ, θ)` are a more natural unit for both search and learning. The answer is: the premise holds, two of the
+$a = (\tau, \ell, \theta)$ are a more natural unit for both search and learning. The answer is: the premise holds, two of the
 arguments we built for it do not, and the question remains experimentally open.
 
 **The premise holds.** Public successful optimization trajectories compress onto a small recurring typed vocabulary.
@@ -1079,13 +1070,13 @@ Appendix B.
 
 **The question remains open, and now has a sharper shape.** Observational evidence cannot decide a claim about
 interventions, and the interface-level question has already been partly answered by systems that got there before
-us: K-Search decouples planning from instantiation and reports 2.10x–14.3x gains [29]; CuAsmRL trains directly over
+us: K-Search decouples planning from instantiation and reports $2.10\times$--$14.3\times$ gains [29]; CuAsmRL trains directly over
 an explicit schedule-mutation action space [30]; Kevin attributes reward per agent turn [32]. Section 4 therefore
 specifies a five-condition protocol — Direct, Free-plan, Structured-action, Oracle-action, and a Brute-search arm
 with a learned cost model and no LLM in the loop — with a reading tree whose neutral, inverted, and
 *indeterminate* branches are fixed in advance, including the branch that withdraws the direction if an LLM choosing
 transformations cannot beat enumeration, and the precondition that protects a false negative from being reported as a
-null when `φ` cannot be constructed.
+null when $\varphi$ cannot be constructed.
 
 Two further findings from trying to falsify ourselves should travel beyond this specific topic. First, every edge we
 could not classify was the same uncategorized decision: stop implementing this yourself and call a library. An action
@@ -1135,7 +1126,7 @@ asked to question a method.
 26. **Rethinking Training-Inference Mismatch in LLM Reinforcement Learning: Where It Arises and How to Correct It.** arXiv:2609.32444, 2026.
 27. **Score Centering Stabilizes Off-policy Reinforcement Learning.** arXiv:2609.20807, 2026.
 28. **FlashRT: Agent Harness for Guiding Agents to Deploy Real-Time Multimodal Applications.** arXiv:2607.18171, 2026.
-29. S. Cao, Z. Mao, J. E. Gonzalez, I. Stoica. **K-Search: LLM Kernel Generation via Co-Evolving Intrinsic World Model.** arXiv:2602.19128, 2026. *Abstract states: "explicitly decouples high-level algorithmic planning from low-level program instantiation"; targets kernels "requiring coordinated, multi-step structural transformations"; average 2.10x over state-of-the-art evolutionary search, up to 14.3x on complex MoE kernels.*
+29. S. Cao, Z. Mao, J. E. Gonzalez, I. Stoica. **K-Search: LLM Kernel Generation via Co-Evolving Intrinsic World Model.** arXiv:2602.19128, 2026. *Abstract states: "explicitly decouples high-level algorithmic planning from low-level program instantiation"; targets kernels "requiring coordinated, multi-step structural transformations"; average $2.10\times$ over state-of-the-art evolutionary search, up to $14.3\times$ on complex MoE kernels.*
 30. G. He, E. Yoneki. **CuAsmRL: Optimizing GPU SASS Schedules via Deep Reinforcement Learning.** CGO 2025. arXiv:2501.08071. *RL agents apply mutation actions to SASS schedules; also used to reveal optimization moves automatically.*
 31. S. Anupam, A. Shypula, O. Bastani. **LLM Program Optimization via Retrieval Augmented Search (RAS / AEGIS).** ACL 2026 Findings. arXiv:2501.18916. *Decomposes slow→fast training pairs into reusable "atomic edits".*
 32. C. Baronio, P. Marsella, B. Pan, S. Guo, S. Alberti. **Kevin: Multi-Turn RL for Generating CUDA Kernels.** arXiv:2507.11948, 2025. *Turn-level reward attribution for kernel generation; correctness 56%→82%, mean speedup 0.53x→1.10x.*
