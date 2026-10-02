@@ -208,8 +208,9 @@ def main() -> int:
         check(f"retracted claim confined to 3.5 withdrawal list: '{stale[:28]}'",
               stale not in outside_35, stale)
     sec25 = paper.split("### 2.5")[1].split("## 3.")[0] if "### 2.5" in paper else ""
-    check("2.5 flags transferability as unsupported",
-          "not supported by our data" in sec25 or "withdrawn" in sec25.lower(), sec25[:80])
+    check("2.5 states transferability is unsupported by this data",
+          "not supported by this data" in sec25 or "not supported by our data" in sec25,
+          sec25[:80])
     check("2.1 table includes the turn/tool-call cut", "Turn / tool call" in paper)
     check("Section 4 defines the Brute-search arm", "Brute-search" in paper)
 
@@ -218,7 +219,8 @@ def main() -> int:
     sec52 = paper.split("### 5.2")[1].split("### 5.3")[0] if "### 5.2" in paper else ""
     check("5.2 no longer asserts labels 'do not out-predict' surface structure",
           "do not out-predict" not in sec52, "stale reversed claim survives")
-    check("5.2 records the reversal explicitly", "reversed" in sec52.lower() or "wrongly read" in sec52)
+    check("5.2 states the hierarchy is neither confirmed nor redundant",
+          "neither confirmed nor shown redundant" in sec52, sec52[:80])
     check("7.3 discloses the oracle false-pass dependency",
           "[20,24]" in paper or "false pass" in paper.lower() or "admits false passes" in paper.lower())
     # NEW-2 targeted check, replacing an earlier generic line scan that flagged any
