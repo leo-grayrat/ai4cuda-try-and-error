@@ -1,0 +1,275 @@
+@@ -15,102 +15,115 @@
+     out_ptr,           # pointer to output tensor flattened
+     N, C, H, W,        # input dims
+     out_H, out_W,      # output spatial dims after pooling
+-    BLOCK_W: tl.constexpr
++    BLOCK_W: tl.constexpr,
++    BLOCK_H: tl.constexpr
+ ):
+     """
+-    Each program processes one (n, c, h_out) row and a chunk of out_W columns (BLOCK_W lanes).
+-    For each lane we load the 4 elements of the 2x2 input window (if valid),
+-    apply HardSwish, compute the max across the 2x2 window, then apply Mish (stable formulation),
+-    and write the result.
++    Each program processes a small tile of outputs: BLOCK_H x BLOCK_W.
++    pid0 indexes tiles over (N * C * ceil(out_H / BLOCK_H))
++    pid1 indexes width chunks.
++    For each local h in [0, BLOCK_H) we compute the 2x2 max-pool of the corresponding
++    output row and apply HardSwish then Mish. This increases per-launch work and
++    improves memory reuse / occupancy.
++    """
++    pid0 = tl.program_id(0)   # tile index over (N * C * out_H_tiles)
++    pid1 = tl.program_id(1)   # chunk index along out_W
+ 
+-    Note: scalar subtract is expected to be folded into the conv bias (done in ModelNew.__init__),
+-    so this kernel does not perform any per-element subtraction anymore.
+-    """
+-    pid0 = tl.program_id(0)   # row index over (N * C * out_H)
+-    pid1 = tl.program_id(1)   # chunk index along out_W
++    # compute tile layout
++    out_H_tiles = (out_H + BLOCK_H - 1) // BLOCK_H
++
++    # decode pid0 -> (n, c, h_tile)
++    idx = pid0
++    h_tile = idx % out_H_tiles
++    idx = idx // out_H_tiles
++    c = idx % C
++    n = idx // C
+ 
+     w_start = pid1 * BLOCK_W
+     offs_w = w_start + tl.arange(0, BLOCK_W)           # vector of w_out indices
+     mask_w = offs_w < out_W                            # per-lane mask for w bounds
+ 
+-    # decode pid0 -> (n, c, h_out)
+-    idx = pid0
+-    h_out = idx % out_H
+-    idx = idx // out_H
+-    c = idx % C
+-    n = idx // C
+-
+-    # input coords for pooling top-left (stride=2, kernel=2)
+-    h_in = h_out * 2
+-    w_in = offs_w * 2
+-
+     # flattened strides
+     c_stride = H * W
+     n_stride = C * c_stride
+ 
+-    # base addresses for the top-left element of each 2x2 window
+-    base = n * n_stride + c * c_stride + h_in * W + w_in   # vector (BLOCK_W,)
+-
+-    # validity masks for the four window positions
+-    valid_out_slot = (n < N) & (c < C) & (h_out < out_H)   # scalar
+-    m00 = valid_out_slot & (w_in < W) & mask_w
+-    m01 = valid_out_slot & ((w_in + 1) < W) & mask_w
+-    m10 = valid_out_slot & ((h_in + 1) < H) & (w_in < W) & mask_w
+-    m11 = valid_out_slot & ((h_in + 1) < H) & ((w_in + 1) < W) & mask_w
+-
+     neg_inf = tl.constexpr(-1e9)
+ 
+-    # Vector loads for the 4 elements of each 2x2 window
+-    v00 = tl.load(inp_ptr + base, mask=m00, other=neg_inf)
+-    v01 = tl.load(inp_ptr + base + 1, mask=m01, other=neg_inf)
+-    v10 = tl.load(inp_ptr + base + W, mask=m10, other=neg_inf)
+-    v11 = tl.load(inp_ptr + base + W + 1, mask=m11, other=neg_inf)
++    # base column input indices (for w) reused across local h
++    w_in_base = offs_w * 2
+ 
+-    # HardSwish: x * clamp(x + 3, 0, 6) / 6
+-    t00 = v00 + 3.0
+-    t00 = tl.maximum(t00, 0.0)
+-    t00 = tl.minimum(t00, 6.0)
+-    v00 = v00 * (t00 * (1.0 / 6.0))
++    # iterate over local output rows in the tile (constexpr unrolled)
++    h_base = h_tile * BLOCK_H
++    for li in range(BLOCK_H):
++        h_out = h_base + li
+ 
+-    t01 = v01 + 3.0
+-    t01 = tl.maximum(t01, 0.0)
+-    t01 = tl.minimum(t01, 6.0)
+-    v01 = v01 * (t01 * (1.0 / 6.0))
++        # masks and coordinates for this local h_out
++        valid_out_slot = (n < N) & (c < C) & (h_out < out_H)
++        h_in = h_out * 2
++        w_in = w_in_base
+ 
+-    t10 = v10 + 3.0
+-    t10 = tl.maximum(t10, 0.0)
+-    t10 = tl.minimum(t10, 6.0)
+-    v10 = v10 * (t10 * (1.0 / 6.0))
++        # base addresses for the top-left element of each 2x2 window for this h_out
++        base = n * n_stride + c * c_stride + h_in * W + w_in   # vector (BLOCK_W,)
+ 
+-    t11 = v11 + 3.0
+-    t11 = tl.maximum(t11, 0.0)
+-    t11 = tl.minimum(t11, 6.0)
+-    v11 = v11 * (t11 * (1.0 / 6.0))
++        # validity masks for the four window positions
++        m00 = valid_out_slot & (w_in < W) & mask_w
++        m01 = valid_out_slot & ((w_in + 1) < W) & mask_w
++        m10 = valid_out_slot & ((h_in + 1) < H) & (w_in < W) & mask_w
++        m11 = valid_out_slot & ((h_in + 1) < H) & ((w_in + 1) < W) & mask_w
+ 
+-    # Max reduction across 2x2 window
+-    m0 = tl.maximum(v00, v01)
+-    m1 = tl.maximum(v10, v11)
+-    mout = tl.maximum(m0, m1)
++        # Vector loads for the 4 elements of each 2x2 window
++        v00 = tl.load(inp_ptr + base, mask=m00, other=neg_inf)
++        v01 = tl.load(inp_ptr + base + 1, mask=m01, other=neg_inf)
++        v10 = tl.load(inp_ptr + base + W, mask=m10, other=neg_inf)
++        v11 = tl.load(inp_ptr + base + W + 1, mask=m11, other=neg_inf)
+ 
+-    # Apply Mish in-register using a stable formulation:
+-    # sp = softplus(mout) = log(1 + exp(mout))
+-    # tanh(sp) = (1 - exp(-2*sp)) / (1 + exp(-2*sp))
+-    sp = tl.log(1.0 + tl.exp(mout))
+-    e = tl.exp(-2.0 * sp)
+-    tanh_sp = (1.0 - e) / (1.0 + e)
+-    mout = mout * tanh_sp
++        # HardSwish: x * clamp(x + 3, 0, 6) / 6
++        t00 = v00 + 3.0
++        t00 = tl.maximum(t00, 0.0)
++        t00 = tl.minimum(t00, 6.0)
++        v00 = v00 * (t00 * (1.0 / 6.0))
+ 
+-    # Flattened output base per lane and store (with mask)
+-    out_base = n * (C * out_H * out_W) + c * (out_H * out_W) + h_out * out_W + offs_w
+-    out_mask = mask_w & valid_out_slot
+-    tl.store(out_ptr + out_base, mout, mask=out_mask)
++        t01 = v01 + 3.0
++        t01 = tl.maximum(t01, 0.0)
++        t01 = tl.minimum(t01, 6.0)
++        v01 = v01 * (t01 * (1.0 / 6.0))
++
++        t10 = v10 + 3.0
++        t10 = tl.maximum(t10, 0.0)
++        t10 = tl.minimum(t10, 6.0)
++        v10 = v10 * (t10 * (1.0 / 6.0))
++
++        t11 = v11 + 3.0
++        t11 = tl.maximum(t11, 0.0)
++        t11 = tl.minimum(t11, 6.0)
++        v11 = v11 * (t11 * (1.0 / 6.0))
++
++        # Max reduction across 2x2 window
++        m0 = tl.maximum(v00, v01)
++        m1 = tl.maximum(v10, v11)
++        mout = tl.maximum(m0, m1)
++
++        # Apply Mish in-register using a stable formulation:
++        # sp = softplus(mout) = log(1 + exp(mout))
++        # tanh(sp) = (1 - exp(-2*sp)) / (1 + exp(-2*sp))
++        sp = tl.log(1.0 + tl.exp(mout))
++        e = tl.exp(-2.0 * sp)
++        tanh_sp = (1.0 - e) / (1.0 + e)
++        mout = mout * tanh_sp
++
++        # Flattened output base per lane and store (with mask)
++        out_base = n * (C * out_H * out_W) + c * (out_H * out_W) + h_out * out_W + offs_w
++        out_mask = mask_w & valid_out_slot
++        tl.store(out_ptr + out_base, mout, mask=out_mask)
+ 
+ 
+ def triton_pool_hardswish_maxpool2x2(x: torch.Tensor, subtract_value: float):
+     """
+-    Fused HardSwish + 2x2 maxpool (stride 2) + Mish Triton kernel driver with a small autotuner.
++    Fused HardSwish + 2x2 maxpool (stride 2) + Mish Triton kernel driver.
++    Autotuning is removed from the hot-path: we use a sensible Ampere default and
++    cache the chosen configuration per-device+shape to avoid repeated tuning.
+     The scalar subtract_value is expected to be folded into the conv bias in ModelNew.__init__,
+-    so it is not passed to the kernel (kept here for API compatibility).
++    so it is not used inside the kernel (kept here for API compatibility).
+     """
+     assert x.is_cuda, "Input must be on CUDA"
+     assert x.dtype == torch.float32, "Only float32 supported"
+@@ -130,66 +143,37 @@
+     if n_rows == 0 or out_W == 0:
+         return out
+ 
+-    # Autotune small search over BLOCK_W / num_warps / num_stages
+-    candidates = []
+-    for blk in (32, 64, 128):
+-        for warps in (2, 4, 8):
+-            for stages in (2, 3):
+-                candidates.append((blk, warps, stages))
++    # Simple cache stored on the function object to avoid repeated autotuning.
++    if not hasattr(triton_pool_hardswish_maxpool2x2, "_best_cfg_cache"):
++        triton_pool_hardswish_maxpool2x2._best_cfg_cache = {}
+ 
+-    best_time = float('inf')
+-    best_cfg = (BLOCK_W, 4, 2)
+-    # prepare an output buffer for timing runs (reuse)
+-    # We time only a small number of iterations to limit tuning overhead.
+-    timed_runs = 3
+-    warmup_runs = 2
++    dev_idx = x.device.index if hasattr(x.device, "index") else int(x.device)
++    cache_key = (dev_idx, N, C, H, W)
+ 
+-    # Use CUDA events for timing
+-    for blk, warps, stages in candidates:
+-        chunks_w = (out_W + blk - 1) // blk
+-        if chunks_w == 0:
+-            continue
+-        grid = (n_rows, chunks_w)
+-        # warmup
+-        for _ in range(warmup_runs):
+-            _pool_hs_kernel[grid](
+-                x_contig, out,
+-                N, C, H, W,
+-                out_H, out_W,
+-                BLOCK_W=blk,
+-                num_warps=warps,
+-                num_stages=stages
+-            )
+-        # timed runs
+-        torch.cuda.synchronize()
+-        start = torch.cuda.Event(enable_timing=True)
+-        end = torch.cuda.Event(enable_timing=True)
+-        start.record()
+-        for _ in range(timed_runs):
+-            _pool_hs_kernel[grid](
+-                x_contig, out,
+-                N, C, H, W,
+-                out_H, out_W,
+-                BLOCK_W=blk,
+-                num_warps=warps,
+-                num_stages=stages
+-            )
+-        end.record()
+-        torch.cuda.synchronize()
+-        elapsed_ms = start.elapsed_time(end)  # milliseconds for timed_runs runs
+-        if elapsed_ms < best_time:
+-            best_time = elapsed_ms
+-            best_cfg = (blk, warps, stages)
++    if cache_key in triton_pool_hardswish_maxpool2x2._best_cfg_cache:
++        best_blk, best_warps, best_stages, best_blk_h = triton_pool_hardswish_maxpool2x2._best_cfg_cache[cache_key]
++    else:
++        # Reasonable defaults for Ampere: moderate tile width, 2 rows per tile
++        best_blk = 64
++        best_blk_h = 2
++        best_warps = 4
++        best_stages = 2
++        triton_pool_hardswish_maxpool2x2._best_cfg_cache[cache_key] = (best_blk, best_warps, best_stages, best_blk_h)
+ 
+-    # Launch the kernel with the best-found configuration for the real run
+-    best_blk, best_warps, best_stages = best_cfg
++    # compute tiles for h direction
++    out_H_tiles = (out_H + best_blk_h - 1) // best_blk_h
++    n_rows_tiles = N * C * out_H_tiles
++
+     chunks_w = (out_W + best_blk - 1) // best_blk
+-    grid = (n_rows, chunks_w)
++    grid = (n_rows_tiles, chunks_w)
++
++    # Launch kernel: note we pass BLOCK_W and BLOCK_H as constexpr kwargs
+     _pool_hs_kernel[grid](
+         x_contig, out,
+         N, C, H, W,
+         out_H, out_W,
+         BLOCK_W=best_blk,
++        BLOCK_H=best_blk_h,
+         num_warps=best_warps,
+         num_stages=best_stages
+     )

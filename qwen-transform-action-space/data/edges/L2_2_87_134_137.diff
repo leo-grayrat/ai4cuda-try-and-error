@@ -1,0 +1,130 @@
+@@ -1,111 +1,34 @@
+ import torch
+ import torch.nn as nn
+-import triton
+-import triton.language as tl
+ 
+-
+-@triton.jit
+-def _fused_sub_mish_kernel(
+-    x_ptr,           # input pointer
+-    out_ptr,         # output pointer
+-    n_elements,      # total number of elements
+-    subtract_val,    # scalar to subtract (fp32)
+-    BLOCK: tl.constexpr,  # block size
+-):
+-    pid = tl.program_id(0)
+-    block_start = pid * BLOCK
+-    offsets = block_start + tl.arange(0, BLOCK)
+-    mask = offsets < n_elements
+-
+-    # Load input with mask; provide other=0.0 to satisfy masked loads
+-    x = tl.load(x_ptr + offsets, mask=mask, other=0.0)
+-
+-    # fused subtracts (we've folded both subtract values into one scalar)
+-    z = x - subtract_val
+-
+-    # Stable softplus using the identity:
+-    # softplus(z) = max(z, 0) + log(1 + exp(-abs(z)))
+-    # This uses a single exp and avoids branching on z > 0
+-    abs_z = tl.abs(z)
+-    exp_neg_abs = tl.exp(-abs_z)
+-    sp = tl.maximum(z, 0.0) + tl.log(1.0 + exp_neg_abs)
+-
+-    # Clamp softplus to avoid large exponents; tighter clamp improves numerical stability.
+-    s_clamped = tl.minimum(sp, 10.0)
+-
+-    # Compute tanh(s) via exp(-2*s): tanh(s) = (1 - exp(-2s)) / (1 + exp(-2s))
+-    # This uses one exp and is numerically stable for positive s.
+-    exp_neg_2s = tl.exp(-2.0 * s_clamped)
+-    tanh_sp = (1.0 - exp_neg_2s) / (1.0 + exp_neg_2s)
+-
+-    # Mish: z * tanh(softplus(z))
+-    out = z * tanh_sp
+-
+-    tl.store(out_ptr + offsets, out, mask=mask)
+-
+-
+-def triton_sub_mish(x: torch.Tensor, subtract_val: float):
+-    """
+-    Apply (x - subtract_val) then Mish activation elementwise using a Triton kernel.
+-    A small autotune over BLOCK sizes is performed during the warm-up phase to pick
+-    a good block size for the device/memory subsystem.
+-    """
+-    assert x.is_cuda, "Input must be on CUDA"
+-    x_contig = x.contiguous()
+-    out = torch.empty_like(x_contig)
+-
+-    n = x_contig.numel()
+-
+-    # Candidate block sizes (powers of two). These are reasonable starting points
+-    # for elementwise kernels on Ampere-class GPUs.
+-    candidate_blocks = [256, 512, 1024, 2048]
+-
+-    best_block = candidate_blocks[0]
+-    best_time_ms = float("inf")
+-
+-    # Lightweight autotune: for each BLOCK try a couple warmups and a few timed launches.
+-    # This is intended to be run in the warm-up phase so it doesn't pollute measured runs.
+-    for BLOCK in candidate_blocks:
+-        grid = lambda meta: ((n + meta["BLOCK"] - 1) // meta["BLOCK"],)
+-        # quick warmup
+-        for _ in range(2):
+-            _fused_sub_mish_kernel[grid](x_contig, out, n, float(subtract_val), BLOCK=BLOCK)
+-        torch.cuda.synchronize()
+-
+-        # timed mini-benchmark (average over a few launches)
+-        start_evt = torch.cuda.Event(enable_timing=True)
+-        end_evt = torch.cuda.Event(enable_timing=True)
+-        start_evt.record()
+-        for _ in range(3):
+-            _fused_sub_mish_kernel[grid](x_contig, out, n, float(subtract_val), BLOCK=BLOCK)
+-        end_evt.record()
+-        torch.cuda.synchronize()
+-        elapsed_ms = start_evt.elapsed_time(end_evt) / 3.0
+-
+-        if elapsed_ms < best_time_ms:
+-            best_time_ms = elapsed_ms
+-            best_block = BLOCK
+-
+-    # Final launch with chosen block size
+-    grid = lambda meta: ((n + meta["BLOCK"] - 1) // meta["BLOCK"],)
+-    _fused_sub_mish_kernel[grid](x_contig, out, n, float(subtract_val), BLOCK=best_block)
+-    return out
++# Triton-based elementwise kernel removed.
++# We fold the scalar subtractions into the convolution bias (see ModelNew below),
++# so there is no need for a separate custom kernel or autotuning at runtime.
+ 
+ 
+ class ModelNew(nn.Module):
+     """
+-    Optimized model that keeps PyTorch convolution but fuses the two scalar subtractions
+-    and Mish activation into a single Triton kernel for improved throughput.
++    Optimized model that folds the two scalar subtractions into the convolution bias
++    and uses PyTorch's vectorized Mish. This removes the need for a custom Triton kernel.
+     """
+     def __init__(self, in_channels, out_channels, kernel_size, subtract_value_1, subtract_value_2):
+         super(ModelNew, self).__init__()
+         # Keep the same convolution layer (uses highly-optimized CuDNN/cuBLAS under the hood)
+         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size)
+-        # Fold the two scalar subtractions into a single scalar to reduce work
+-        self.total_subtract = float(subtract_value_1) + float(subtract_value_2)
++        # Fold the two scalar subtractions into the conv bias to avoid an extra kernel launch:
++        total = float(subtract_value_1) + float(subtract_value_2)
++        if self.conv.bias is None:
++            # initialize bias such that conv(x) + bias == conv(x) - total
++            device = self.conv.weight.device
++            dtype = self.conv.weight.dtype
++            self.conv.bias = nn.Parameter(torch.full((out_channels,), -total, device=device, dtype=dtype))
++        else:
++            # modify bias in-place without tracking grads
++            with torch.no_grad():
++                self.conv.bias.data = self.conv.bias.data - total
+ 
+     def forward(self, x):
+         x = self.conv(x)
+-        # Apply fused subtract + mish via Triton
+-        x = triton_sub_mish(x, self.total_subtract)
++        # Use PyTorch's vectorized Mish activation
++        x = torch.nn.functional.mish(x)
+         return x

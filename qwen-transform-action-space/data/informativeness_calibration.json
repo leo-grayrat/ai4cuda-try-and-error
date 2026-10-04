@@ -1,0 +1,183 @@
+{
+  "schema_version": 2,
+  "revision_note": "v1 applied the marginal Miller-Madow term (k_X-1)/2n to a conditional entropy and permuted only the semantic descriptor. Both defects are corrected here; the headline comparison reverses.",
+  "n_edges": 55,
+  "outcome": {
+    "definition": "quartile of log2(speedup vs MCTS parent)",
+    "entropy_bits": 1.9993,
+    "cells": 4
+  },
+  "descriptors": [
+    {
+      "descriptor": "primary semantic label",
+      "cells": 10,
+      "mi_plugin_bits": 0.697,
+      "mi_miller_madow_bits": 0.6243,
+      "mi_bias_term_bits": 0.2455,
+      "permutation_test": {
+        "observed_mi_plugin_bits": 0.697,
+        "null_mean_bits": 0.397,
+        "null_sd_bits": 0.0724,
+        "p_value_one_sided": 0.0005,
+        "n_permutations": 20000
+      },
+      "cardinality_matched_null": {
+        "cells": 10,
+        "null_mi_mean_bits": 0.4486,
+        "null_mi_p95_bits": 0.6118,
+        "n_permutations": 2000
+      }
+    },
+    {
+      "descriptor": "coarse diff structure",
+      "cells": 24,
+      "mi_plugin_bits": 0.9373,
+      "mi_miller_madow_bits": 0.7919,
+      "mi_bias_term_bits": 0.6273,
+      "permutation_test": {
+        "observed_mi_plugin_bits": 0.9373,
+        "null_mean_bits": 0.99,
+        "null_sd_bits": 0.0847,
+        "p_value_one_sided": 0.752412,
+        "n_permutations": 20000
+      },
+      "cardinality_matched_null": {
+        "cells": 24,
+        "null_mi_mean_bits": 1.0945,
+        "null_mi_p95_bits": 1.2397,
+        "n_permutations": 2000
+      }
+    },
+    {
+      "descriptor": "hunk count alone",
+      "cells": 9,
+      "mi_plugin_bits": 0.3668,
+      "mi_miller_madow_bits": 0.2759,
+      "mi_bias_term_bits": 0.2182,
+      "permutation_test": {
+        "observed_mi_plugin_bits": 0.3668,
+        "null_mean_bits": 0.3612,
+        "null_sd_bits": 0.0705,
+        "p_value_one_sided": 0.436178,
+        "n_permutations": 20000
+      },
+      "cardinality_matched_null": {
+        "cells": 9,
+        "null_mi_mean_bits": 0.3939,
+        "null_mi_p95_bits": 0.5593,
+        "n_permutations": 2000
+      }
+    }
+  ],
+  "bootstrap_label_minus_coarse": {
+    "n_bootstrap": 4000,
+    "mean_diff_bits": -0.3609,
+    "ci95_low_bits": -0.6894,
+    "ci95_high_bits": -0.0339,
+    "prob_label_ahead": 0.0175
+  },
+  "normalized_entropies": {
+    "primary_label": {
+      "cells": 10,
+      "entropy_bits": 2.6748,
+      "max_bits": 3.3219,
+      "normalized": 0.8052
+    },
+    "coarse_structure": {
+      "cells": 24,
+      "entropy_bits": 4.2556,
+      "max_bits": 4.585,
+      "normalized": 0.9282
+    },
+    "diff_fingerprint": {
+      "cells": 55,
+      "entropy_bits": 5.7814,
+      "max_bits": 5.7814,
+      "normalized": 1.0
+    }
+  },
+  "diversity_null_models": {
+    "identity_audit": {
+      "n_edges": 55,
+      "n_distinct_fingerprints": 55,
+      "all_unique": true,
+      "consequence": "if every edge has a distinct fingerprint, then for ANY label assignment distinct_diffs(label) == occurrences(label) by identity, so the column cannot discriminate hypotheses"
+    },
+    "distinct_tasks_vs_label_permutation": {
+      "n_permutations": 4000,
+      "per_label": {
+        "Fuse": {
+          "observed_distinct_tasks": 16,
+          "null_mean": 16.027,
+          "null_median": 16,
+          "percentile": 66.8,
+          "clusters_within_task": false
+        },
+        "PrecisionChange": {
+          "observed_distinct_tasks": 13,
+          "null_mean": 14.257,
+          "null_median": 14,
+          "percentile": 15.5,
+          "clusters_within_task": false
+        },
+        "Other": {
+          "observed_distinct_tasks": 5,
+          "null_mean": 4.924,
+          "null_median": 5,
+          "percentile": 100.0,
+          "clusters_within_task": false
+        },
+        "ChangeLaunchConfig": {
+          "observed_distinct_tasks": 3,
+          "null_mean": 2.978,
+          "null_median": 3,
+          "percentile": 100.0,
+          "clusters_within_task": false
+        },
+        "HostDeviceOverlap": {
+          "observed_distinct_tasks": 7,
+          "null_mean": 6.849,
+          "null_median": 7,
+          "percentile": 100.0,
+          "clusters_within_task": false
+        },
+        "LoopTransform": {
+          "observed_distinct_tasks": 1,
+          "null_mean": 1.0,
+          "null_median": 1,
+          "percentile": 100.0,
+          "clusters_within_task": false
+        },
+        "Vectorize": {
+          "observed_distinct_tasks": 3,
+          "null_mean": 2.979,
+          "null_median": 3,
+          "percentile": 100.0,
+          "clusters_within_task": false
+        },
+        "EliminateMaterialization": {
+          "observed_distinct_tasks": 2,
+          "null_mean": 1.993,
+          "null_median": 2,
+          "percentile": 100.0,
+          "clusters_within_task": false
+        },
+        "Tile": {
+          "observed_distinct_tasks": 1,
+          "null_mean": 1.0,
+          "null_median": 1,
+          "percentile": 100.0,
+          "clusters_within_task": false
+        },
+        "IncreaseWorkPerThread": {
+          "observed_distinct_tasks": 1,
+          "null_mean": 1.0,
+          "null_median": 1,
+          "percentile": 100.0,
+          "clusters_within_task": false
+        }
+      }
+    }
+  },
+  "interpretation": "Under a symmetric permutation test the semantic label is significantly informative about the realised-speedup quartile while the coarse diff structure is not, and the v1 finding (coarse beats semantic) is an artefact of an under-corrected Miller-Madow term. The corrected result still does not establish the coordinate-system thesis: it is observational, on a biased multi-hunk-enriched sample, with the autotune confound unremoved."
+}

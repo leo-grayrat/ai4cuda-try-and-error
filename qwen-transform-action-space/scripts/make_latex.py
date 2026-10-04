@@ -1,0 +1,382 @@
+#!/usr/bin/env python3
+"""Build the LaTeX deliverable and, when an engine exists, the PDF.
+
+Steps:
+  1. regenerate references.bib mechanically from the verified reference list
+  2. build a LaTeX-only copy of the manuscript with its leading H1 removed
+     (pandoc's metadata title is kept; deleting the \\title block instead leaves
+     \\maketitle with nothing to typeset and the engine aborts)
+  3. copy the figure PNGs beside the .tex and rewrite paths so the project is portable
+  4. locate a TeX engine and compile the PDF
+  5. write BUILD.md recording which engine was used, or the concrete absence of one
+
+Engine discovery deliberately does not trust the sandbox PATH: an interactive shell
+(or an IDE) can have a TeX distribution that this process cannot see on PATH, so the
+usual install roots are probed as well. Claiming "no TeX engine is installed" after
+checking only PATH is how the previous version of this script produced a false
+statement in the README and the run report.
+
+Integrity policy: a PDF is only ever compiled from LaTeX. No HTML-to-PDF route.
+
+Usage: python scripts/make_latex.py
+Exit 0 only if the LaTeX build succeeds; PDF status is reported separately.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+PAPER = ROOT / "paper"
+LATEX = PAPER / "latex"
+FIGSRC = ROOT / "figures"
+
+ENGINE_CANDIDATES = [
+    ("latexmk", "-pdfxe"),    # runs the bibtex passes that a bare engine invocation skips
+    ("xelatex", "-pdfxe"),
+    ("lualatex", "-pdf"),
+    ("pdflatex", "-pdf"),
+]
+
+EXTRA_ROOTS = [
+    r"C:\texlive",
+    r"C:\Users\34788\AppData\Local\Programs\MiKTeX\miktex\bin\x64",
+    r"C:\Program Files\MiKTeX\miktex\bin\x64",
+    r"C:\Program Files\texlive",
+    str(Path.home() / "AppData" / "Local" / "Programs" / "MiKTeX" / "miktex" / "bin" / "x64"),
+]
+
+
+def citation_map() -> dict[int, str]:
+    """Map the manuscript's bracket numbers to BibTeX keys.
+
+    make_bib.py names each entry `<slug><n>` where n is its position in the verified
+    reference list, so the trailing integer is the mapping back to `[n]`.
+    """
+    bib = (LATEX / "references.bib").read_text(encoding="utf-8")
+    out: dict[int, str] = {}
+    for key in re.findall(r"^@\w+\{([^,]+),", bib, re.M):
+        m = re.search(r"(\d+)$", key)
+        if m:
+            out[int(m.group(1))] = key
+    return out
+
+
+CITE = re.compile(r"(?<!\!)\[(\d{1,2}(?:[^\[\]\n]{0,60}))\]")
+
+
+def cite_by_bib(md: str) -> str:
+    r"""Rewrite [n], [n,m] and [n, Sec. 5.2] into \cite commands."""
+    num2key = citation_map()
+    converted = 0
+
+    def repl(m: re.Match[str]) -> str:
+        nonlocal converted
+        parts = [p.strip() for p in m.group(1).split(",")]
+        keys, notes = [], []
+        for p in parts:
+            if p.isdigit() and int(p) in num2key:
+                keys.append(num2key[int(p)])
+            elif p:
+                notes.append(p)
+        if not keys:
+            return m.group(0)
+        converted += 1
+        # a literal " inside a LaTeX optional argument is an umlaut accent command
+        note = ", ".join(notes).replace('"', "").replace("&", "and")
+        if note:
+            note = note.replace("Sec.", "Sec.~").replace("App.", "App.~")
+            return "\\cite[" + note + "]{" + ",".join(keys) + "}"
+        return "\\cite{" + ",".join(keys) + "}"
+
+    out = CITE.sub(repl, md)
+    print(f"citations converted to \\cite: {converted}; unresolved brackets kept: "
+          f"{len(re.findall(CITE, out))}")
+    return out
+
+
+def find_engine() -> tuple[str | None, str, str]:
+    """Return (engine, latexmk flag, resolved path)."""
+    for name, flag in ENGINE_CANDIDATES:
+        p = shutil.which(name)
+        if p:
+            return name, flag, p
+    for root in EXTRA_ROOTS:
+        rp = Path(root)
+        if not rp.is_dir():
+            continue
+        for name, flag in ENGINE_CANDIDATES:
+            hit = next(iter(sorted(rp.rglob(f"{name}.exe"))), None)
+            if hit:
+                return name, flag, str(hit)
+    return None, "", ""
+
+
+def main() -> int:
+    # this process writes to a cp936 console on Windows; diagnostics contain Unicode
+    # codepoint names, which would crash the print itself and hide the real report
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
+    LATEX.mkdir(parents=True, exist_ok=True)
+
+    # 1. bibliography
+    r = subprocess.run([sys.executable, str(ROOT / "scripts" / "make_bib.py")],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    print(r.stdout.strip() or r.stderr.strip())
+
+    # 2. build-only markdown without the duplicate leading H1
+    src = (PAPER / "main.md").read_text(encoding="utf-8")
+    body = re.sub(r"\A\s*#\s.+?\n", "", src, count=1)
+
+    # The reference list is generated by BibTeX from references.bib, so the hand-typed
+    # list is dropped from the build copy and every bracketed numeric citation becomes a
+    # \cite command. hyperref then makes citations clickable, and numbering is owned by
+    # the bibliography style instead of by hand-counted brackets.
+    body = cite_by_bib(body)
+    # the appendix heading carries an em-dash suffix ("## Appendix A — Reproducibility"),
+    # so matching a trailing newline here never fired and the hand-typed list was left in
+    # alongside the generated one, printing every reference twice
+    body = re.sub(r"\n## References\n.*?(?=\n## Appendix A)", "\n", body, flags=re.S)
+    (LATEX / "main.src.md").write_text(body, encoding="utf-8")
+
+    cmd = [
+        "pandoc", "main.src.md", "-o", "main.tex",
+        # tex_math_single_backslash is what makes \\( ... \\) parse as math. Without it
+        # every inline formula becomes literal text, so `_` inside \(\log_2 55\) aborts
+        # the run under -halt-on-error and yields a silently truncated PDF.
+        "--from", "markdown+tex_math_single_backslash+pipe_tables+yaml_metadata_block",
+        "--standalone", "--wrap=none",
+        "--natbib",
+        "--variable", "bibliography=references",
+        "--variable", "biblio-style=unsrtnat",
+        # natbib defaults to author-year, which rendered citations as "Sul and Ré [2026]"
+        # and left the numeric bibliography unlabelled; the manuscript's citation style is
+        # numbered, so ask for it explicitly
+        "--variable", "natbiboptions=numbers,sort&compress",
+        "--variable", "geometry:margin=1in",
+        "--variable", "fontsize=11pt",
+        "--variable", "colorlinks=true",
+        "--metadata",
+        "title=Is Token-Level the Wrong Coordinate System? Program Transformation "
+        "as the Action Space for LLM-Driven Kernel Optimization",
+        # a literal \\and inside the author field is not a title-page construct in the
+        # article class and typeset as the characters "\and"; keep the title block short —
+        # the machine-generated disclosure lives in Appendix A (AI usage), not on the title
+        "--metadata",
+        "author=Preprint draft — see Appendix A for provenance and AI usage",
+        "--metadata", "date=2 October 2026",
+    ]
+    r = subprocess.run(cmd, cwd=LATEX, capture_output=True, text=True,
+                       encoding="utf-8", errors="replace")
+    if r.returncode != 0:
+        print("pandoc FAILED:\n" + r.stderr, file=sys.stderr)
+        return 1
+
+    # 3. self-contained figures
+    (LATEX / "figures").mkdir(exist_ok=True)
+    copied = []
+    for png in sorted(FIGSRC.glob("*.png")):
+        shutil.copy2(png, LATEX / "figures" / png.name)
+        copied.append(png.name)
+
+    tex_path = LATEX / "main.tex"
+    tex = tex_path.read_text(encoding="utf-8").replace("../figures/", "figures/")
+
+    # Font coverage, not content rewriting: the manuscript legitimately uses Unicode in
+    # code spans and prose (τ, ℓ, θ, φ, →, ×, ₁, ⁵). Latin Modern's text fonts lack them,
+    # which surfaced as "Missing character" glyph losses. DejaVu Serif / DejaVu Sans Mono
+    # are installed here and cover them, so the Markdown source stays readable.
+    FONT_PREAMBLE = (
+        "% font coverage for Unicode used in code spans and prose\n"
+        "\\usepackage{fontspec}\n"
+        "\\setmainfont{DejaVu Serif}\n"
+        "\\setsansfont{DejaVu Sans}\n"
+        "\\setmonofont{DejaVu Sans Mono}\n"
+        "% U+2113 SCRIPT SMALL L is absent from the DejaVu coverage; map it to the\n"
+        "% math letter instead of altering the Markdown source\n"
+        "\\usepackage{newunicodechar}\n"
+        "\\newunicodechar{\u2113}{\\ensuremath{\\ell}}\n"
+    )
+    if "\\setmainfont" not in tex:
+        if "\\usepackage{fontspec}" in tex:
+            tex = tex.replace("\\usepackage{fontspec}", "", 1)
+        tex = tex.replace(
+            "\\begin{document}", FONT_PREAMBLE + "\\begin{document}", 1
+        )
+
+    if "\\usepackage{graphicx}" not in tex:
+        tex = tex.replace(
+            "\\begin{document}",
+            "\\usepackage{graphicx}\n\\graphicspath{{figures/}}\n\\begin{document}",
+            1,
+        )
+    elif "\\graphicspath" not in tex:
+        tex = tex.replace(
+            "\\usepackage{graphicx}",
+            "\\usepackage{graphicx}\n\\graphicspath{{figures/}}",
+            1,
+        )
+
+    # Layout fixes that the rendered PDF demanded:
+    #  - code blocks ran past the right margin and were clipped, so verbatim breaks lines
+    #  - wide tables overprinted their neighbours: smaller type and tighter columns
+    #  - figures floated far from the text that cites them, leaving half-empty pages
+    LAYOUT = (
+        "% layout: break long verbatim instead of clipping it at the margin\n"
+        "\\usepackage{fvextra}\n"
+        "\\RecustomVerbatimEnvironment{verbatim}{Verbatim}{breaklines=true,"
+        "breakanywhere=false,fontsize=\\small,frame=none}\n"
+        "% wide tables: smaller type, tighter columns, full text width\n"
+        "\\usepackage{etoolbox}\n"
+        "\\setlength{\\tabcolsep}{4pt}\n"
+        "\\BeforeBeginEnvironment{longtable}{\\small}\n"
+        "\\AfterEndEnvironment{longtable}{\\normalsize}\n"
+        "% keep figures where they are discussed\n"
+        "\\usepackage{float}\n"
+        "\\usepackage{placeins}\n"
+    )
+    if "fvextra" not in tex:
+        tex = tex.replace("\\begin{document}", LAYOUT + "\\begin{document}", 1)
+    # pandoc emits floats as [ht]; force them in place.
+    # The replacement must be a raw string: in an ordinary string "\\begin" decodes to a
+    # backspace followed by "egin", which silently corrupted every figure environment and
+    # produced "\caption outside float" plus "Text line contains an invalid character".
+    tex = re.sub(r"\\begin\{figure\}(?:\[[^\]]*\])?", r"\\begin{figure}[H]", tex)
+
+    tex_path.write_text(tex, encoding="utf-8")
+
+    # 4. compile
+    engine, flag, engine_path = find_engine()
+    pdf = LATEX / "main.pdf"
+    compile_tail = ""
+    compiled = False
+    if engine:
+        # no -halt-on-error: an aborted run still leaves a partial PDF, which is how a
+        # truncated 8-page build was previously reported as success
+        if engine == "latexmk":
+            build = [engine_path, flag, "-interaction=nonstopmode", "main.tex"]
+        else:
+            build = [engine_path, "-interaction=nonstopmode", "main.tex"]
+        env = dict(os.environ)
+        env["PATH"] = str(Path(engine_path).parent) + os.pathsep + env.get("PATH", "")
+        # run the engine twice so cross-references settle. xelatex and MiKTeX emit UTF-8;
+        # text=True alone makes Windows decode the pipe with the locale codec (cp936 here)
+        # and the reader thread dies on any non-ASCII byte in engine output
+        for _ in range(2):
+            out = subprocess.run(build, cwd=LATEX, capture_output=True, text=True,
+                                 encoding="utf-8", errors="replace", env=env)
+            compile_tail = (out.stdout or "") + (out.stderr or "")
+
+        # structural verification: a PDF exists proves nothing about completeness.
+        # Assert the tail sections, the page count, the embedded figure count, and that
+        # no glyph silently dropped out of the fonts.
+        pdf_ok = pdf.exists()
+        problems: list[str] = []
+        pages = 0
+        imgs = 0
+        log_txt = ""
+        if pdf_ok:
+            try:
+                import pypdf
+
+                reader = pypdf.PdfReader(pdf)
+                pages = len(reader.pages)
+                body = "".join((pg.extract_text() or "") for pg in reader.pages)
+                for probe in ("References", "Appendix", "Conclusion", "Related Work"):
+                    if probe not in body:
+                        problems.append(f"section missing from PDF: {probe}")
+                # a generated bibliography that silently produced nothing still leaves a
+                # "References" heading behind, so count entries and check for the
+                # unresolved-citation marker bibtex emits
+                if "References" in body:
+                    tail = body[body.rfind("References"):]
+                    entries = len(re.findall(r"\b20\d{2}\b", tail))
+                    if entries < 20:
+                        problems.append(
+                            f"bibliography looks unpopulated: only {entries} year-like "
+                            "tokens after the References heading"
+                        )
+                if "[?]" in body:
+                    problems.append("unresolved citations present in PDF (bibtex pass failed)")
+                expect_pages = max(6, int(len(src.split()) / 450))
+                if pages < expect_pages * 0.8:
+                    problems.append(
+                        f"PDF looks truncated: {pages} pages vs ~{expect_pages} expected"
+                    )
+                imgs = sum(
+                    len((pg.get("/Resources") or {}).get("/XObject", {}).keys())
+                    if isinstance((pg.get("/Resources") or {}).get("/XObject", {}), dict)
+                    else 0
+                    for pg in reader.pages
+                )
+            except Exception as e:  # noqa: BLE001
+                problems.append(f"could not inspect PDF: {type(e).__name__}: {e}")
+            log_path = LATEX / "main.log"
+            if log_path.exists():
+                log_txt = log_path.read_text(encoding="utf-8", errors="replace")
+            missing = sorted(set(re.findall(r"There is no (.) in font", log_txt)))
+            if missing:
+                problems.append(f"glyphs still missing from fonts: {missing}")
+            hard = re.findall(r"^! .*$", log_txt, re.M)
+            if hard:
+                problems.append(f"LaTeX errors: {hard[:2]}")
+        else:
+            problems.append("no PDF emitted")
+
+        compiled = pdf_ok and not problems
+        print(f"engine={engine} pages={pages} xobjects~{imgs} pdf_verified={compiled}")
+        for p in problems:
+            print("  PROBLEM:", p)
+        if not compiled:
+            print(compile_tail[-1200:])
+    else:
+        print("engine=NONE (PATH and common install roots probed)")
+
+    # 5. build note
+    note = LATEX / "BUILD.md"
+    note.write_text(
+        f"""# LaTeX build
+
+Generated by `scripts/make_latex.py`. Single source of truth is `paper/main.md`;
+edit that and re-run this script rather than editing `main.tex`.
+
+| file | origin |
+|------|--------|
+| `main.src.md` | `paper/main.md` with its leading H1 removed (pandoc supplies the title) |
+| `main.tex` | pandoc `--standalone` |
+| `references.bib` | generated from the verified reference list by `scripts/make_bib.py` |
+| `figures/*.png` | copies of `../../figures/` ({len(copied)} files) |
+
+## Compilation status
+
+Engine found: **{engine_path or 'NONE'}**
+PDF produced: **{'yes — main.pdf' if compiled else 'no'}**
+
+{"Built with " + engine + "; run twice so references settle." if compiled else '''This machine exposes no TeX engine to this process
+after probing PATH and the usual install roots. No PDF was produced, and no
+HTML-to-PDF substitute was used: the pipeline compiles PDFs from LaTeX only, so a
+document that does not correspond to the .tex source would be worse than none.'''}
+
+Reproduce:
+
+```
+python scripts/make_latex.py
+```
+""",
+        encoding="utf-8",
+    )
+    print(f"wrote {tex_path} ({len(tex)} chars), {len(copied)} figures, pdf={'yes' if compiled else 'no'}")
+    return 0 if compiled or not engine else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

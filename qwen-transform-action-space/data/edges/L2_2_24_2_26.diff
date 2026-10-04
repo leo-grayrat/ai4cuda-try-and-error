@@ -1,0 +1,102 @@
+@@ -70,8 +70,8 @@
+ 
+     n_elements = B * C * H * W
+ 
+-    # Choose a block size (constexpr). 256 is a reasonable choice for many GPUs.
+-    BLOCK = 256
++    # Choose a block size (constexpr). Increase to better utilize Ampere GPUs.
++    BLOCK = 1024
+     grid = ( (n_elements + BLOCK - 1) // BLOCK, )
+ 
+     # Launch the kernel
+@@ -100,81 +100,16 @@
+         """
+         x: (batch_size, in_channels, D, H, W)
+         returns: (batch_size, out_channels, H, W)
+-
+-        Fused implementation: compute conv3d outputs slice-by-slice along the depth dimension
+-        using 2D convs and maintain a running minimum over the D_out dimension, avoiding materializing
+-        the full (B, C, D_out, H_out, W_out) tensor.
+         """
+-        # keep original input
+-        inp = x
+-        B, _, D, H, W = inp.shape
+-
+-        # Get conv3d params and weights
+-        w = self.conv.weight  # shape: (out_ch, in_ch, kd, kh, kw)
+-        bias = self.conv.bias
+-        out_ch, in_ch, kd, kh, kw = w.shape
+-
+-        # conv3d parameters (stride/padding/dilation are triples). Map spatial parts to conv2d args.
+-        # handle the common case where attributes are tuples
+-        stride_d, stride_h, stride_w = self.conv.stride
+-        pad_d, pad_h, pad_w = self.conv.padding
+-        dil_d, dil_h, dil_w = self.conv.dilation
+-
+-        # output spatial sizes (for no additional padding beyond conv config)
+-        # compute output spatial sizes consistent with conv2d applied with provided spatial pad/stride/dilation
+-        H_out = (H + 2 * pad_h - dil_h * (kh - 1) - 1) // stride_h + 1
+-        W_out = (W + 2 * pad_w - dil_w * (kw - 1) - 1) // stride_w + 1
+-        D_out = (D + 2 * pad_d - dil_d * (kd - 1) - 1) // stride_d + 1
+-
+-        device = inp.device
+-        dtype = inp.dtype
+-
+-        # Initialize min accumulator with large positive values
+-        min_acc = torch.full((B, out_ch, H_out, W_out), float('inf'), device=device, dtype=dtype)
+-
+-        # For each output depth position, compute the conv3d output slice and update running min
+-        # We compute the output at depth index d_out by summing conv2d of the input depth slices
+-        # covered by the kernel's depth dimension.
+-        for d_out in range(D_out):
+-            # For this output depth, accumulate contributions from kernel depth slices
+-            # Start from zeros
+-            acc = torch.zeros((B, out_ch, H_out, W_out), device=device, dtype=dtype)
+-
+-            # The corresponding input depth index for kernel depth k is:
+-            # in_d = d_out * stride_d + k * dilation_d - pad_d  (but because typical conv3d uses implicit sliding, and since
+-            # we follow the conv3d arithmetic, we compute the input slice index as the position the conv3d would use)
+-            # For typical stride_d=1 and pad_d=0 this reduces to d_out + k.
+-            for k in range(kd):
+-                in_d = d_out * stride_d + k * dil_d - pad_d
+-                # Only process valid input slices
+-                if in_d < 0 or in_d + 1 > D:
+-                    # out-of-bounds slice contributes nothing (equivalent to zero-padded input)
+-                    continue
+-                # extract input slice at depth in_d
+-                inp_slice = inp[:, :, in_d, :, :]  # (B, in_ch, H, W)
+-                # kernel slice for this depth
+-                w_k = w[:, :, k, :, :]  # (out_ch, in_ch, kh, kw)
+-
+-                # perform 2D convolution for this kernel depth slice
+-                conv2d_res = F.conv2d(
+-                    inp_slice,
+-                    w_k,
+-                    bias=None,
+-                    stride=(stride_h, stride_w),
+-                    padding=(pad_h, pad_w),
+-                    dilation=(dil_h, dil_w),
+-                )
+-                acc = acc + conv2d_res
+-
+-            # add bias if present
+-            if bias is not None:
+-                acc = acc + bias.view(1, -1, 1, 1)
+-
+-            # update running minimum
+-            min_acc = torch.minimum(min_acc, acc)
+-
+-        # softmax along channel dimension (dim=1)
+-        out = torch.softmax(min_acc, dim=1)
++        # Compute the full conv3d output once, then reduce along depth.
++        out_full = self.conv(x)  # (B, C, D_out, H_out, W_out)
++        if self.dim == 2:
++            # Use Triton min-reduction over depth (D_out)
++            x_min = triton_min_reduce_d(out_full)
++        else:
++            # Fallback for other dims
++            x_min = torch.min(out_full, dim=self.dim)[0]
++        out = torch.softmax(x_min, dim=1)
+         return out
+ 
+ 

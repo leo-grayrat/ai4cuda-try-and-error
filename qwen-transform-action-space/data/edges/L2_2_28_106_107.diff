@@ -1,0 +1,85 @@
+@@ -2,6 +2,10 @@
+ import torch.nn as nn
+ import triton
+ import triton.language as tl
++
++# Enable TF32 paths for faster GEMM on Ampere (optional speedup for the Linear layer)
++torch.backends.cuda.matmul.allow_tf32 = True
++torch.backends.cudnn.allow_tf32 = True
+ 
+ # Autotune configs for the elementwise square kernel
+ AUTOTUNE_SQUARE = [
+@@ -28,6 +32,32 @@
+     tl.store(out_ptr + offsets, out, mask=mask)
+ 
+ 
++# Autotune configs for the fused add+mul kernel
++AUTOTUNE_FUSED = [
++    triton.Config({"BLOCK": 256},  num_warps=4, num_stages=2),
++    triton.Config({"BLOCK": 512},  num_warps=4, num_stages=2),
++    triton.Config({"BLOCK": 1024}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK": 2048}, num_warps=8, num_stages=4),
++]
++
++@triton.autotune(configs=AUTOTUNE_FUSED, key=['n_elements'])
++@triton.jit
++def fused_add_mul_kernel(a_ptr, y_ptr, out_ptr, n_elements, BLOCK: tl.constexpr):
++    """
++    Fused kernel that computes out[i] = (a[i] + y[i]) * y[i] for flattened tensors.
++    Each program handles a contiguous BLOCK of elements to minimize memory traffic.
++    """
++    pid = tl.program_id(0)
++    start = pid * BLOCK
++    offsets = start + tl.arange(0, BLOCK)
++    mask = offsets < n_elements
++
++    a = tl.load(a_ptr + offsets, mask=mask, other=0.0)
++    yv = tl.load(y_ptr + offsets, mask=mask, other=0.0)
++    out = (a + yv) * yv
++    tl.store(out_ptr + offsets, out, mask=mask)
++
++
+ def triton_square(x: torch.Tensor) -> torch.Tensor:
+     """
+     Wrapper to launch the Triton square kernel.
+@@ -48,7 +78,8 @@
+ class ModelNew(nn.Module):
+     """
+     Model that preserves the original modules for compatibility and performs
+-    the same operations as the reference Model to ensure correct outputs.
++    the same operations as the reference Model but fuses the final elementwise
++    add+mul into a single Triton kernel on CUDA to reduce memory traffic.
+     """
+     def __init__(self, in_features, out_features, eps=1e-5, momentum=0.1):
+         super(ModelNew, self).__init__()
+@@ -57,12 +88,26 @@
+         self.instance_norm = nn.InstanceNorm2d(out_features, eps=eps, momentum=momentum)
+ 
+     def forward(self, x, y):
+-        # Perform the same computation as the reference Model to guarantee correctness.
++        # Compute the heavy Linear + InstanceNorm using PyTorch (leveraging TF32 if available)
+         x = self.bmm(x)
+         x = self.instance_norm(x.unsqueeze(1).unsqueeze(1)).squeeze(1).squeeze(1)
+-        x = x + y
+-        x = x * y
+-        return x
++
++        # On CPU fallback to the original two-step ops to preserve behavior
++        if not x.is_cuda:
++            x = x + y
++            x = x * y
++            return x
++
++        # Ensure contiguous memory for efficient Triton loads/stores
++        x = x.contiguous()
++        y = y.contiguous()
++        out = torch.empty_like(x)
++
++        # Launch fused Triton kernel to compute (x + y) * y in one pass
++        n_elements = x.numel()
++        grid = lambda meta: ((n_elements + meta["BLOCK"] - 1) // meta["BLOCK"],)
++        fused_add_mul_kernel[grid](x, y, out, n_elements)
++        return out
+ 
+ 
+ # Keep input helpers for compatibility with the evaluation harness

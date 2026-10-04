@@ -1,0 +1,1342 @@
+{
+  "meta": {
+    "annotator": "AI (Qwen session), batched subagents",
+    "protocol": "ANNOTATION_GUIDE.md + VOCABULARY_FROZEN.md",
+    "vocabulary_frozen_before_any_diff_read": true,
+    "edge_selection": "MCTS parent_node_id, both correct, >5% faster",
+    "n_candidate_edges_in_corpus": 2510
+  },
+  "statistics": {
+    "n_edges": 55,
+    "n_tasks": 45,
+    "vocabulary_size": 12,
+    "vocabulary_used": 10,
+    "reuse_rate_V_over_E": 0.1818,
+    "coverage_pct": 90.9,
+    "entropy_primary_bits": 2.6748,
+    "entropy_primary_max_bits": 5.7814,
+    "entropy_all_labels_bits": 3.0683,
+    "entropy_all_labels_max_bits": 7.3663,
+    "entropy_diff_fingerprint_bits": 5.7814,
+    "entropy_hunkcount_bits": 2.4915,
+    "entropy_changedline_bucket_bits": 2.4049,
+    "distinct_diff_fingerprints": 55,
+    "label_counts_primary": {
+      "Fuse": 17,
+      "PrecisionChange": 15,
+      "Other": 5,
+      "ChangeLaunchConfig": 3,
+      "HostDeviceOverlap": 7,
+      "LoopTransform": 1,
+      "Vectorize": 3,
+      "EliminateMaterialization": 2,
+      "Tile": 1,
+      "IncreaseWorkPerThread": 1
+    },
+    "label_counts_any": {
+      "ChangeLaunchConfig": 34,
+      "EliminateMaterialization": 32,
+      "Fuse": 25,
+      "PrecisionChange": 22,
+      "Other": 5,
+      "WarpReduce": 6,
+      "Tile": 14,
+      "HostDeviceOverlap": 14,
+      "LoopTransform": 4,
+      "IncreaseWorkPerThread": 3,
+      "Vectorize": 6
+    },
+    "redline_class_over_40pct": false,
+    "redline_top_class": "Fuse",
+    "redline_top_share": 0.3091,
+    "redline_other_over_25pct": false,
+    "redline_other_share": 0.0909,
+    "edges_spanning_multiple_loci": 30,
+    "edges_spanning_multiple_loci_pct": 54.5,
+    "confidence_dist": {
+      "low": 3,
+      "high": 14,
+      "medium": 38
+    },
+    "edges_with_autotuner_change": 53,
+    "edges_with_suspicious_parent_speedup": 9,
+    "within_label_diversity": {
+      "ChangeLaunchConfig": {
+        "occurrences": 34,
+        "distinct_diffs": 34,
+        "distinct_tasks": 30,
+        "distinct_region_sets": 33
+      },
+      "EliminateMaterialization": {
+        "occurrences": 32,
+        "distinct_diffs": 32,
+        "distinct_tasks": 29,
+        "distinct_region_sets": 29
+      },
+      "Fuse": {
+        "occurrences": 25,
+        "distinct_diffs": 25,
+        "distinct_tasks": 22,
+        "distinct_region_sets": 23
+      },
+      "PrecisionChange": {
+        "occurrences": 22,
+        "distinct_diffs": 22,
+        "distinct_tasks": 18,
+        "distinct_region_sets": 20
+      },
+      "Other": {
+        "occurrences": 5,
+        "distinct_diffs": 5,
+        "distinct_tasks": 5,
+        "distinct_region_sets": 5
+      },
+      "WarpReduce": {
+        "occurrences": 6,
+        "distinct_diffs": 6,
+        "distinct_tasks": 6,
+        "distinct_region_sets": 6
+      },
+      "Tile": {
+        "occurrences": 14,
+        "distinct_diffs": 14,
+        "distinct_tasks": 13,
+        "distinct_region_sets": 14
+      },
+      "HostDeviceOverlap": {
+        "occurrences": 14,
+        "distinct_diffs": 14,
+        "distinct_tasks": 12,
+        "distinct_region_sets": 14
+      },
+      "LoopTransform": {
+        "occurrences": 4,
+        "distinct_diffs": 4,
+        "distinct_tasks": 4,
+        "distinct_region_sets": 4
+      },
+      "IncreaseWorkPerThread": {
+        "occurrences": 3,
+        "distinct_diffs": 3,
+        "distinct_tasks": 3,
+        "distinct_region_sets": 3
+      },
+      "Vectorize": {
+        "occurrences": 6,
+        "distinct_diffs": 6,
+        "distinct_tasks": 5,
+        "distinct_region_sets": 6
+      }
+    },
+    "caveat_within_label_diversity": "distinct_diffs equals occurrences by identity whenever every edge diff is unique; see data/informativeness_calibration.json identity_audit. The distinct_tasks column must be read against the label-permutation null in that file, not as raw evidence of cross-task reuse."
+  },
+  "annotations": [
+    {
+      "edge_id": "L2_2_11_167_168",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "BatchNorm_affine(running stats)",
+        "consumer": "MaxPool2d(2x2)"
+      },
+      "secondary": [
+        "ChangeLaunchConfig",
+        "EliminateMaterialization"
+      ],
+      "sites": [
+        "_pool_tanh_kernel",
+        "triton_pool_tanh",
+        "forward"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "child 的 Triton kernel 从 `-def _pool_tanh_kernel(` 改名为 `+def _bn_maxpool_kernel(`，新增形参 `+    a_ptr,      # per-channel affine scale (C,)`、`+    b_ptr,      # per-channel affine bias (C,)`，并在 kernel 里加入 `+    a = tl.load(a_ptr + c)` 与 `+    v00 = v00 * a + b`（对四个 pool 窗口元素逐一带仿射），把原先靠父端注释 `- BN folded into conv weights on host` 隐含的 BN 拉回 kernel 内与 MaxPool 合为一趟；同时删掉了父 kernel 内的 `-    two_x = m * 2.0` / `-    e = tl.exp(two_x)` / `-    tanh_val = (e - 1.0) / (e + 1.0)` 一段 exp-tanh，改由 launcher 外部发起 `+            x = torch.tanh(x)`。BLOCK_W 也从 `-    BLOCK_W = 64` 提到 `+    BLOCK_W = 256`（secondary=ChangeLaunchConfig）。训练分支的 forward 还把 `-x = torch.tanh(x)` 与 `-x = self.max_pool(x)` 的顺序互换为 `+x = self.max_pool(x)` 与 `+x = torch.tanh(x)`（注释写 `# pool before tanh reduces activation count`），属于对参与计算的算子数量做消除。",
+      "confidence": "low",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.0631，多改动混杂且加速几乎不可归因，confidence=low；无 @triton.autotune。"
+    },
+    {
+      "edge_id": "L2_2_12_1_37",
+      "primary": "PrecisionChange",
+      "primary_args": {
+        "source": "fp32 matmul + fp32 elementwise",
+        "target": "fp16 Tensor-Core matmul + fp16 in-place bias/LeakyReLU + tf32 high precision"
+      },
+      "secondary": [
+        "Fuse",
+        "EliminateMaterialization"
+      ],
+      "sites": [
+        "_mul_leakyrelu_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父端 forward 走 `-        x = self.gemm(x)` 后再调 `-        x = triton_mul_leakyrelu(x, self.multiplier, self.negative_slope)`；子端删除整段 `@triton.autotune` 的 `_mul_leakyrelu_kernel`，在文件顶部新增 `+torch.set_float32_matmul_precision(\"high\")`，同时 `__init__` 里加入 `+            self.gemm.weight.data.mul_(m)` / `+        self.register_buffer(\"weight_T_half\", self.weight_T.half())` / `+            self.register_buffer(\"bias_half\", self.gemm.bias.data.half())`；forward 主路径改为 `+            x_half = x.half()` → `+            torch.matmul(x_half, self.weight_T_half, out=out_half)` → `+                out_half.add_(self.bias_half)` → `+            F.leaky_relu_(out_half, negative_slope=self.negative_slope)` → `+            return out_half.float()`，即整条 Linear→bias→LeakyReLU 都跑在 fp16 上以吃到 Ampere Tensor Core。fold multiplier 与 in-place LeakyReLU 属于 secondary 的 Fuse/EliminateMaterialization，但主导 4.67x 加速的关键动作是精度切换。",
+      "confidence": "high",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=4.6711；父端 `@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['n_elements'])` 被整体移除（非引入），因此不写 introduced autotuner。"
+    },
+    {
+      "edge_id": "L2_2_14_86_87",
+      "primary": "Other",
+      "primary_args": {
+        "description": "Backend library swap：matvec 从自研 Triton GEMV kernel 切到 torch.matmul (cuBLAS)；缓存的 weight-row 归约从 torch 的 .sum(dim=0) 切到新的 autotuned Triton _sum_rows_kernel。"
+      },
+      "secondary": [
+        "WarpReduce",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "_gemv_kernel",
+        "forward"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "`_MatVecSumScaleFn.forward` 里父版 `-        out = triton_gemv(x, s_scaled)  # (M,)` 被替换为子版 `+        out = x.matmul(s_scaled)`（走 cuBLAS 原生 matvec）；父端 `-_gemv_kernel`（`-    acc = tl.zeros((BLOCK_M,), dtype=tl.float32)`、`-        prod = x_block * s_block[None, :]`、`-        acc = acc + tl.sum(prod, axis=1)`）被 `+def _sum_rows_kernel(`（`+    acc = tl.zeros((BLOCK_N,), dtype=tl.float32)`、`+        acc = acc + tl.sum(w_block, 0)`）取代；`ModelNew._refresh_cache_if_needed` 相应把 `-                self.s.copy_(self.weight.sum(dim=0))` 改为 `+                tmp_s = triton_sum_rows(self.weight)`，且 forward 尾行也从 `-        out = _MatVecSumScaleFn.apply(x, self.` 变成 `+        out = _MatVecSumScaleFn.apply(x.contiguous(), self.s_scaled.contiguous(), self.weight, self.alpha)`。整体动作是把 matvec 交给 cuBLAS、把归约交给 Triton，两侧都是「换实现后端」而不是任何 11 类里的语义变换。",
+      "confidence": "medium",
+      "why_not_existing": [
+        "Fuse: 两个 kernel 并未合成一趟；反而把原本 triton 单 kernel 的 matvec 拆到 cuBLAS，另把归约另立为独立 triton kernel，是后端分派而非合一。",
+        "EliminateMaterialization: s 与 s_scaled 依然作为 register_buffer 物化，中间量并未减少。",
+        "Tile: BLOCK_M/BLOCK_N 换成 BLOCK_N/BLOCK_H 只是不同 kernel 的等价 constexpr，块到 program 的映射语义（沿 batch 分块）没有本质变化。",
+        "IncreaseWorkPerThread: 每 program 处理量随 autotune 候选一起变，不是这条边的核心动作。",
+        "Vectorize: 未出现 float4/tl.multiple_of/max_contiguous 等宽事务提示。",
+        "ChangeLaunchConfig: forward 与归约的算法体（谁调用 cuBLAS、谁调用 Triton）确实变了，不是纯参数调整。",
+        "WarpReduce: 归约仍是 block 内 tl.sum(w_block, 0)，未引入跨 lane 分级或 atomic 分段（此项作为最贴近的 secondary 保留）。",
+        "SharedMemoryTransform: Triton 隐式 shared memory，diff 未显式改动暂存策略。",
+        "PrecisionChange: 全程 fp32，`assert x.dtype == torch.float32` 未变。",
+        "LoopTransform: 循环从 `for it in range(n_iters)` 变成 `while row_start < H` 只是不同 kernel 的形态，不属于 unroll/swap/hoist/边界处理的语义变换。",
+        "HostDeviceOverlap: host 侧反而在 _refresh_cache_if_needed 里多了 `+                tmp_s = triton_sum_rows(self.weight)` 的额外 launch 与 `+                self.s.copy_(tmp_s)` 拷贝。"
+      ],
+      "notes": "speedup_vs_parent=10.2083 (>10，必须标 suspicious_parent_speedup)；parent_fast_p=8.40、child_fast_p=85.76，说明 parent 的 Triton GEMV 相对 cuBLAS matvec 明显次优；子版本首次在新 `_sum_rows_kernel` 上挂 `+@triton.autotune(configs=SUM_ROW_AUTOTUNE, key=['N', 'H'])`（父端旧 autotune 挂在 `_gemv_kernel`），记 introduced autotuner。"
+    },
+    {
+      "edge_id": "L2_2_17_148_150",
+      "primary": "ChangeLaunchConfig",
+      "primary_args": {
+        "dim": "ROWS|BLOCK",
+        "value": "16->1 | 512->256"
+      },
+      "secondary": [
+        "Tile"
+      ],
+      "sites": [
+        "triton_instance_norm_divide"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "diff 只有 `triton_instance_norm_divide` 里两行常量发生变化：`-    ROWS = 16` → `+    ROWS = 1`、`-    BLOCK = 512` → `+    BLOCK = 256`；kernel 本体、grid 表达式 `     grid = ( (n_ch + ROWS - 1) // ROWS, )` 以及 `_fused_instancenorm_divide_kernel[grid](...)` 调用形态都保持原样，属于纯启动/分块常量调整，因此判 primary=ChangeLaunchConfig 而非 Tile（Tile 作为 secondary 反映 BLOCK 尺寸对分块的连带影响）。",
+      "confidence": "high",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.1065；单 hunk、单 region；无 @triton.autotune。"
+    },
+    {
+      "edge_id": "L2_2_18_67_70",
+      "primary": "ChangeLaunchConfig",
+      "primary_args": {
+        "dim": "BLOCK_SIZE|BLOCK_M|num_warps|num_stages",
+        "value": "hardcoded(1024,128) -> autotune{ (1024,8),(2048,8),(2048,16) } with num_warps=8, num_stages=3-4"
+      },
+      "secondary": [
+        "Tile"
+      ],
+      "sites": [
+        "fused_batched_dot_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父端在 launcher 里写死 `-    BLOCK_SIZE = 1024   # chunk over N (divides 8192)` 与 `-    BLOCK_M = 128       # rows per program`，并用 `-    num_programs = (M + BLOCK_M - 1) // BLOCK_M` 手动组 grid；子端删除这三行、在 kernel 上首次挂 `+@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['N', 'M'])`（`+    triton.Config({\"BLOCK_SIZE\": 1024, \"BLOCK_M\": 8},  num_warps=8, num_stages=3)` 等三档），grid 改回 `+    grid = lambda meta: ((M + meta[\"BLOCK_M\"] - 1) // meta[\"BLOCK_M\"],)`。kernel 内的 `prod = x_vals * w_vals[None, :]` 与 `acc += tl.sum(prod, axis=1)` 语义等价、forward 主逻辑未动。属于规则 4 所述「@triton.autotune 被新增」。",
+      "confidence": "high",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=13.2673 (>10，标 suspicious_parent_speedup)；introduced autotuner；parent BLOCK_M=128 时 grid 只有 M/128=8 个 program，明显欠占用；hunk 2 落在 ModelNew.__init__ 内但仅新增注释（`+        # Precompute and cache sums as buffers ...`），不视为独立 action 位置。"
+    },
+    {
+      "edge_id": "L2_2_20_60_72",
+      "primary": "HostDeviceOverlap",
+      "primary_args": {
+        "action": "remove per-forward inline timing loop and torch.cuda.synchronize in launcher; replace 2D grid launch with 1D flattened launch"
+      },
+      "secondary": [
+        "Tile",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "_fused_residual_bias_kernel",
+        "triton_fused_residual_bias"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父端 launcher 每次 forward 都跑一段手写 autotune：`-    BLOCK_CANDIDATES = [128, 256, 512, 1024]`、`-        torch.cuda.synchronize()`、`-        out_tmp = torch.empty_like(out)`、`-        for blk in cand:` 里 3 次 warmup + 6 次 timed launches（`-                _fused_residual_bias_kernel[grid](x, orig, bias1, out_tmp, B, C, spatial_size, same_buffer, BLOCK=blk)`），子端把这些整段替换成一次字典命中：`+    if key in triton_fused_residual_bias._blk_cache:` → `+        BLOCK = triton_fused_residual_bias._blk_cache[key]` 或 `+        BLOCK = 256` 缓存，热路径不再有任何 synchronize 或额外 launch，只保留一次 `+    _fused_residual_bias_kernel[grid](x, orig, bias1, out, B, C, spatial_size, total_elems, same_buffer, BLOCK=BLOCK)`。同时 kernel 索引从 `-    bc = tl.program_id(0)` / `-    tile_idx = tl.program_id(1)` 改成扁平 `+    pid = tl.program_id(0)` 与 `+    offs = start + tl.arange(0, BLOCK)`，grid 从 `-    grid = (B * C, tiles)` 改为 `+    grid = lambda meta: ((total_elems + meta['BLOCK'] - 1) // meta['BLOCK'],)`（secondary=Tile/ChangeLaunchConfig）。",
+      "confidence": "high",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=5.4884；parent_fast_p=0.3023 说明 parent 因每次 forward 都跑内联 tuning 循环而严重退化；本边未新增 @triton.autotune（父端手写 autotune 被删除，非装饰器）。"
+    },
+    {
+      "edge_id": "L2_2_23_26_76",
+      "primary": "HostDeviceOverlap",
+      "primary_args": {
+        "action": "drop device->host sync (torch.allclose) and cache moved 0-d scalar across forwards"
+      },
+      "secondary": [
+        "EliminateMaterialization"
+      ],
+      "sites": [
+        "ModelNew"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父端 forward 每次都执行 `-        weight_is_trivial = (weight is None) or torch.allclose(weight, torch.ones_like(weight))`（`torch.allclose` 返回 Python bool，触发 device→host 同步），随后 `-            bias_mean = gn.bias.mean().to(device=x.device, dtype=x.dtype)` 每次重新计算并搬运；子端把这段换成基于指针的缓存：`+            if ptr != self._bias_ptr or self._bias_mean is None:` 里 `+                self._bias_mean = bias.detach().mean()`，并新增 `+                    self._bias_mean_moved = self._bias_mean.to(device=x.device, dtype=x.dtype)` 复用 moved copy（`+                scalar = self._bias_mean_moved`），最后 `+            return scalar.expand(batch_size)`。热路径不再有 allclose 同步与 `.to()/.mean()` 重复分配。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=9.6465；parent_fast_p=19.79、child_fast_p=190.9，两版本都走「mean(GN(x))≡mean(bias)」的代数捷径，child 只是省掉 D2H 同步与重复搬运。子版本还放宽了 shortcut 触发条件（不再要求 weight≈ones），可视为语义正确性收紧，但性能贡献主要来自 host 侧同步/冗余分配消除。"
+    },
+    {
+      "edge_id": "L2_2_24_2_26",
+      "primary": "HostDeviceOverlap",
+      "primary_args": {
+        "action": "replace per-depth Python loop of conv2d launches with one native conv3d launch + one triton reduce; bump BLOCK 256->1024"
+      },
+      "secondary": [
+        "ChangeLaunchConfig",
+        "Tile"
+      ],
+      "sites": [
+        "triton_min_reduce_d",
+        "forward"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父端 forward 用 Python 双重循环：`-        for d_out in range(D_out):` 内嵌 `-            for k in range(kd):`，每次调 `-                conv2d_res = F.conv2d(inp_slice, w_k, bias=None, stride=(stride_h, stride_w), padding=(pad_h, pad_w), dilation=(dil_h, dil_w))`，再做 `-                acc = acc + conv2d_res` 与 `-            min_acc = torch.minimum(min_acc, acc)`，累计 D_out×kd 次 kernel launch；子端 forward 压缩为 `+        out_full = self.conv(x)  # (B, C, D_out, H_out, W_out)` 与 `+            x_min = triton_min_reduce_d(out_full)`，一次 cuDNN conv3d + 一次 Triton 归约搞定。此外 hunk 1 里 `-    # Choose a block size (constexpr). 256 is a reasonable choice for many GPUs.` / `-    BLOCK = 256` 变成 `+    # Choose a block size (constexpr). Increase to better utilize Ampere GPUs.` / `+    BLOCK = 1024`（secondary=ChangeLaunchConfig）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=3.2222；parent_fast_p=0.3230 表明父版比 reference 还慢（Python loop + 大量小 launch 是主因），child_fast_p=1.0407 恢复到参考速度。"
+    },
+    {
+      "edge_id": "L2_2_25_163_170",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "min_over_channels",
+        "consumer": "tanh∘tanh"
+      },
+      "secondary": [
+        "EliminateMaterialization",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "_min_channel_kernel",
+        "forward"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父端 forward 分三步：`-        reduced = triton_min_over_channels(conv_out)  # shape: (N, 1, H, W)`、`-        out = torch.tanh(reduced)`、`-        out = torch.tanh(out)`；子端把两次 tanh 塞进 kernel 尾部（`+def _min_double_tanh_kernel(` 内 `+    e1 = tl.exp(min_vals * 2.0)`、`+    tanh1 = (e1 - 1.0) / (e1 + 1.0)`、`+    e2 = tl.exp(tanh1 * 2.0)`、`+    tanh2 = (e2 - 1.0) / (e2 + 1.0)`、`+    tl.store(out_ptr + out_addr, tanh2, mask=mask)`），forward 只剩 `+        out = triton_min_double_tanh(conv_out) # (N, 1, H, W)`。同时子端删掉了父版里 `-    x_perm = x.permute(0, 2, 3, 1).contiguous()  # shape: (N, H, W, C)` 与 `-    x_flat = x_perm.view(-1)  # length M * C`，直接按 NCHW 计算地址 `+    base_n = n * (C * S)`（secondary=EliminateMaterialization）；`AUTOTUNE_CONFIGS` 候选也被重写为 `+    triton.Config({\"BLOCK\": 512},  num_warps=4, num_stages=2)`、`+    triton.Config({\"BLOCK\": 4096}, num_warps=8, num_stages=3)` 等（secondary=ChangeLaunchConfig，规则 4 触发）。",
+      "confidence": "high",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=5.3204；introduced autotuner（`@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['M', 'C'])` 的配置列表被修改，按规则 4 记账）；parent_fast_p=0.1911（父版比 reference 还慢），child_fast_p=1.0166。"
+    },
+    {
+      "edge_id": "L2_2_27_148_156",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "HardSwish (elementwise)",
+        "consumer": "spatial sum & sum-of-squares reduce"
+      },
+      "secondary": [
+        "EliminateMaterialization",
+        "WarpReduce"
+      ],
+      "sites": [
+        "_gn_mean_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父端 forward 先物化整块激活 `-        x_act = F.hardswish(x)  # (B, C, D, H, W)`，再走 torch 归约 `-        S_c = x_act.sum(dim=spatial_dims)` 与 `-        SS_c = (x_act * x_act).sum(dim=spatial_dims)`；子端把这两步合并进新的 `+def _act_reduce_kernel(`：在 tile 内先做 inline HardSwish `+        t = vals + 3.0` / `+        t = tl.where(t > 6.0, 6.0, t)` / `+        t = tl.where(t < 0.0, 0.0, t)` / `+        h = vals * (t * (1.0 / 6.0))`，紧接着 `+        acc += tl.sum(h, 1)` 与 `+        acc2 += tl.sum(h * h, 1)`，x_act 中间张量彻底消失。随后 triton_groupnorm_mean 的签名从 `-    S_c: torch.Tensor, SS_c: torch.Tensor, S_group: torch.Tensor, SS_group: torch.Tensor,` 简化为 `+def triton_groupnorm_mean(x: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor, num_groups: int, eps: float)`，forward 尾段也相应从 `-        out = triton_groupnorm_mean(S_c, SS_c, S_group, SS_group, weight, bias, G, P, eps)` 变成 `+        out = triton_groupnorm_mean(x, weight, bias, G, eps)`。",
+      "confidence": "high",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.2472；无 @triton.autotune；hunks=1、regions=['_gn_mean_kernel'] 是整文件级 hunk，工具仅识别到一处 region，sites 因此只能填 `_gn_mean_kernel`。"
+    },
+    {
+      "edge_id": "L2_2_28_106_107",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "elementwise add (x+y)",
+        "consumer": "elementwise mul ((x+y)*y)"
+      },
+      "secondary": [
+        "PrecisionChange",
+        "EliminateMaterialization"
+      ],
+      "sites": [
+        "square_kernel",
+        "ModelNew",
+        "__init__"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父端 forward 用两次 torch elementwise 算子 `-        x = x + y` 与 `-        x = x * y`；子端引入 `+def fused_add_mul_kernel(a_ptr, y_ptr, out_ptr, n_elements, BLOCK: tl.constexpr):` 且 kernel 体是 `+    a = tl.load(a_ptr + offsets, mask=mask, other=0.0)` / `+    yv = tl.load(y_ptr + offsets, mask=mask, other=0.0)` / `+    out = (a + yv) * yv` / `+    tl.store(out_ptr + offsets, out, mask=mask)`，forward 相应替换为 `+        out = torch.empty_like(x)` 加 `+        fused_add_mul_kernel[grid](x, y, out, n_elements)`，把 add 与 mul 合成一趟。同时顶部新增 `+torch.backends.cuda.matmul.allow_tf32 = True` 与 `+torch.backends.cudnn.allow_tf32 = True`（secondary=PrecisionChange 让前面的 nn.Linear 走 TF32 Tensor-Core），并省掉一次中间张量分配（secondary=EliminateMaterialization）。",
+      "confidence": "high",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=2.6014；introduced autotuner（新增 `+@triton.autotune(configs=AUTOTUNE_FUSED, key=['n_elements'])` 挂在 fused_add_mul_kernel 上；square_kernel 上原有的 AUTOTUNE_SQUARE 保持不变）。"
+    },
+    {
+      "edge_id": "L2_2_29_16_92",
+      "primary": "PrecisionChange",
+      "primary_args": {
+        "source": "fp16 tile 先 tl.cast 成 fp32 后 tl.dot（GEMM 走 fp32 非 Tensor Core）",
+        "target": "保持 fp16 操作数直接 tl.dot（fp16 MMA + fp32 累加器）"
+      },
+      "secondary": [
+        "ChangeLaunchConfig",
+        "HostDeviceOverlap"
+      ],
+      "sites": [
+        "_fused_gemm_double_mish_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "kernel 内父版 `-        a_block = tl.cast(a_block_fp16, tl.float32)` / `-        b_block = tl.cast(b_block_fp16, tl.float32)` 再 `acc += tl.dot(a_block, b_block)` 使 tl.dot 实为 fp32 操作数；子版删除这两行 cast，改为 `+        a_block = tl.load(a_addrs, mask=a_mask, other=0.0)` 直接以 fp16 送进 `acc += tl.dot(a_block, b_block)`（注释 `+        # load fp16 tiles; keep as fp16 so Triton can use mma/tensor cores`），这是让 GEMM 首次吃到 Ampere Tensor Core 的关键精度动作，主导 2.57x。次要：默认 tile 从 `-    BLOCK_M = 64`/`-    BLOCK_N = 128` 提到 `+    BLOCK_M = 128`/`+    BLOCK_N = 256` 并新增手写运行时 autotune（ChangeLaunchConfig），且新增 `+        self.register_buffer('input_h', None)` 复用半精度输入缓冲以减少每步分配（HostDeviceOverlap）。Mish 的 exp/log 代数重写只是等价的寄存器内改写，不单列。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=2.5668（<10，无需 suspicious 标记）；子端新增的是手写 forward autotune 循环（self._tile_candidates + torch.cuda.Event + torch.cuda.synchronize），非 @triton.autotune 装饰器；工具只识别到单 region=['_fused_gemm_double_mish_kernel']，sites 因此仅此一值，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_34_104_106",
+      "primary": "LoopTransform",
+      "primary_args": {
+        "type": "single-pass->two-pass-loop",
+        "params": "沿 C 轴用 for i in range(num_cblocks) 分块两趟"
+      },
+      "secondary": [
+        "Tile",
+        "WarpReduce"
+      ],
+      "sites": [
+        "_fused_ln_gelu_scale_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版一次装载整行并直接归约：`-    offs = rows[:, None] * C + c_idx[None, :]`、`-    sum_val = tl.sum(x_vals * m_f[None, :], axis=1)`、`-    var = tl.sum((diff * diff) * m_f[None, :], axis=1) / C`，随后 normalize+affine+GELU+store 一趟完成；子版引入 `+    num_cblocks = (C + BLOCK_C - 1) // BLOCK_C` 与 `+    for i in range(num_cblocks):` 先累加 `+        sum_acc += tl.sum(x_tile * m_f[None, :], axis=1)`/`+        sumsq_acc += tl.sum((x_tile * x_tile) * m_f[None, :], axis=1)`，再第二个 `+    for i in range(num_cblocks):` 做 normalize/affine/GELU/store。把单趟整块处理改成沿通道分块的两趟循环是本次核心动作（LoopTransform），分块引入 BLOCK_C 覆盖 C 的多个 tile（secondary=Tile），归约由一次性 tl.sum 变为跨 tile 分级累加（secondary=WarpReduce）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.0635（几乎无加速）；无 @triton.autotune；单 hunk、regions=['_fused_ln_gelu_scale_kernel']，spans_multiple_loci=false；parent_fast_p=1.24、child_fast_p=1.32。"
+    },
+    {
+      "edge_id": "L2_2_35_161_165",
+      "primary": "HostDeviceOverlap",
+      "primary_args": {
+        "action": "移除每次 forward 的内联 autotune 搜索循环，改为按 (dev,N,C,H,W) 缓存固定配置"
+      },
+      "secondary": [
+        "Tile",
+        "IncreaseWorkPerThread"
+      ],
+      "sites": [
+        "_pool_hs_kernel",
+        "triton_pool_hardswish_maxpool2x2"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版 launcher 每次调用都跑内联 autotune：`-    for blk in (32, 64, 128):`/`-        for warps in (2, 4, 8):`/`-            for stages in (2, 3):` 生成 54 个候选并 warmup+`-        torch.cuda.synchronize()`+CUDA Event 计时；子版整段删除，替换为 `+    if not hasattr(triton_pool_hardswish_maxpool2x2, \"_best_cfg_cache\"):` 与命中缓存后 `+        best_blk = 64`/`+        best_blk_h = 2`/`+        best_warps = 4`/`+        best_stages = 2` 固定默认，热路径不再 synchronize/多次 launch（primary=HostDeviceOverlap，解释 parent_fast_p=0.0956 的病态慢）。同时 kernel 新增 `+    BLOCK_H: tl.constexpr` 并把单行处理包进 `+    for li in range(BLOCK_H):`/`+        h_out = h_base + li`，grid 由 `-    grid = (n_rows, chunks_w)` 改为 `+    grid = (n_rows_tiles, chunks_w)`（secondary=Tile/IncreaseWorkPerThread：每 program 处理 BLOCK_H 行）。",
+      "confidence": "high",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=14.6774（>10，标 suspicious_parent_speedup）；真实原因是父版每步重跑内联 autotune（parent_fast_p=0.0956），子版是移除 autotune 而非新增，故不写 introduced autotuner；child_fast_p=1.403。"
+    },
+    {
+      "edge_id": "L2_2_35_177_178",
+      "primary": "PrecisionChange",
+      "primary_args": {
+        "source": "fp32 PyTorch conv/hardswish/maxpool/mish",
+        "target": "torch.cuda.amp.autocast fp16 计算 + channels_last 内存格式"
+      },
+      "secondary": [
+        "Vectorize"
+      ],
+      "sites": [
+        "ModelNew",
+        "__init__"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版 forward 为纯 fp32：`-        x = self.conv(x)` / `-        x = torch.nn.functional.hardswish(x)` / `-        x = self.pool(x)` / `-        x = torch.nn.functional.mish(x)`；子版把这些整段包进 `+        with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):` 并在首行加 `+        x = x.contiguous(memory_format=torch.channels_last)`、结尾 `+        x = x.to(dtype=torch.float32).contiguous()`，__init__ 里也新增 `+            self.conv.to(memory_format=torch.channels_last)`。主导加速是把 conv/pool/act 交给 fp16 autocast 走 Tensor Core（PrecisionChange）；channels_last 的 NHWC 访存对齐作为 secondary=Vectorize。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.9256；无 @triton.autotune；hunks=2、regions=['ModelNew','__init__'] 均被实际改动，spans_multiple_loci=true；forward 改动计入 ModelNew region。"
+    },
+    {
+      "edge_id": "L2_2_37_154_155",
+      "primary": "ChangeLaunchConfig",
+      "primary_args": {
+        "dim": "BLOCK_N|BLOCK_C",
+        "value": "1024->256 | min(..,256)->min(..,128)"
+      },
+      "secondary": [
+        "Tile",
+        "EliminateMaterialization"
+      ],
+      "sites": [
+        "_fused_swish_bias_groupnorm_kernel",
+        "fused_swish_bias_groupnorm"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "wrapper 里 tile 常量被改小：`-    BLOCK_N = 1024  # large row-block to reduce kernel-launch and increase work per program` → `+    BLOCK_N = 256`，`-    BLOCK_C = min(((group_size + vec - 1) // vec) * vec, 256)` → `+    BLOCK_C = min(((group_size + vec - 1) // vec) * vec, 128)`（primary=ChangeLaunchConfig：纯分块参数，算法不变）。同时 kernel store 路径由 fp16 物化改回 fp32 直存：删除 `-        out_tile = tl.cast(out_fp32, tl.float16)` 与 `-    return out_h.float()`，改为 `+        tl.store(out_ptrs, out_fp32, mask=mask)` 及 wrapper `+    out = torch.empty((N, C), device=x.device, dtype=torch.float32)`，去掉一次全张量 fp16→fp32 往返（secondary=EliminateMaterialization）。BLOCK_N/BLOCK_C 变化连带改变 channel tile 数 `tiles`（secondary=Tile）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=7.1458（<10）；但 parent_fast_p=0.6667（父版慢于 reference，疑似 BLOCK_N=1024 寄存器溢出导致占用率崩塌），是本次 7x 的主要来源；10 个 hunk 多为注释改写，无 @triton.autotune 装饰器变更。"
+    },
+    {
+      "edge_id": "L2_2_39_153_156",
+      "primary": "PrecisionChange",
+      "primary_args": {
+        "source": "fp32 cuBLAS gemm 再 y.half() 下采样",
+        "target": "torch.cuda.amp.autocast fp16 gemm 直接产出 fp16 + 融合核存 fp32"
+      },
+      "secondary": [
+        "EliminateMaterialization",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "forward",
+        "triton_fused_norm_affine",
+        "_fused_norm_affine_kernel",
+        "_col_sum_sumsq_kernel"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版 forward 做 `-        y = self.gemm(x)  # shape (B, N), float32` 再 `-        y_half = y.half()`（一次全张量下采样物化）；子版改为 `+        with torch.cuda.amp.autocast(dtype=torch.float16):` `+            y_half = self.gemm(x)`，让 GEMM 直接在 fp16 Tensor Core 上算出 fp16（primary=PrecisionChange）。配套消除两次转换往返：融合核删 `-    out_f16 = out.to(tl.float16)`/`-    return out.to(torch.float32)` 改 `+    tl.store(out_ptr + linear_offs, out, mask=mask)` 与 `+    out = torch.empty((B, N), dtype=torch.float32, device=device)`（secondary=EliminateMaterialization）；autotune 候选新增 `+    triton.Config({\"BLOCK_N\": 256, \"BLOCK_ROWS\": 1024}, num_warps=8, num_stages=3)`（secondary=ChangeLaunchConfig，触发 modified autotuner）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=4.9834；REDUCTION_AUTOTUNE 挂在归约核上，本边向其候选列表新增一档（修改 @triton.autotune 配置）→记 modified/introduced autotuner，加速归因需存疑；child_fast_p=5.30。"
+    },
+    {
+      "edge_id": "L2_2_40_52_80",
+      "primary": "PrecisionChange",
+      "primary_args": {
+        "source": "fp32 Triton GEMM（tl.dot fp32 操作数）",
+        "target": "默认 use_fp16=True 走 fp16 GEMM + weight_t_half/input.half + epilogue 内 acc*scale"
+      },
+      "secondary": [
+        "ChangeLaunchConfig",
+        "Fuse"
+      ],
+      "sites": [
+        "matmul_bias_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版 forward 是 fp32：`-        out = triton_linear(x, self.matmul.weight, self.matmul.bias)` 后再 `-        out = out * self.scaling_factor`/`-        out = out + original_x`（两次 fp32 逐元素物化）。子版新增 autograd Function `TritonLinearDetachedResidual`，默认 `+    def __init__(self, in_features, out_features, scaling_factor, use_fp16=True):` 并在 forward 里 `+            a = input.half()` / `+            b_t = weight_t_half`，`triton_linear_from_t` 放宽为 `+    assert a.dtype in (torch.float32, torch.float16)`——让 GEMM 以 fp16 吃 Tensor Core（primary=PrecisionChange）。次要：kernel 尾部把缩放折进 epilogue `+    acc = acc * scale_plus_one`（Fuse，消掉两次逐元素），AUTOTUNE_CONFIGS 由小 tile 重写为大 tile `+    triton.Config({\"BLOCK_M\": 512, \"BLOCK_N\": 256, \"BLOCK_K\": 512}, num_warps=16, num_stages=4)`（ChangeLaunchConfig，修改 @triton.autotune 配置）。",
+      "confidence": "low",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=2.2296；父版 GEMM 已在跑，多改（fp16 路径 + 放大 autotune tile + epilogue 融合 + 新增自定义 backward 的 detached-residual 语义）同批发生，难单独归因，confidence=low。子版修改 @triton.autotune 候选（记 modified autotuner）。工具只识别单 region=['matmul_bias_kernel']，sites 仅此一值，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_42_1_69",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "ConvTranspose2d(x) 大空间输出",
+        "consumer": "triton_mean_hw 全局空间均值"
+      },
+      "secondary": [
+        "EliminateMaterialization",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "forward",
+        "_row_mean_kernel"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版 forward 先算完整反卷积再取均值：`-        x = self.conv_transpose(x)` → `-        x = triton_mean_hw(x)  # shape (B, C, 1, 1)`；子版利用线性性把 GAP 前置、彻底不物化 convT 的大输出，改写为 `+        in_mean = triton_mean_hw(x).view(B, C_in)`、`+        w_sum = w.sum(dim=(2, 3))  # (C_in, C_out)`、`+        out_mean = in_mean @ w_sum  # (B, C_out)`，后续只在 (B,C) 小张量上做加 bias/logsumexp/*10。这把「convT + 全局池化」两趟合一为「输入池化 + 小矩阵乘」，(B,C_out,H',W') 中间张量被消除（primary=Fuse，secondary=EliminateMaterialization）。归约核 `_row_mean_kernel` 改名并保留逐块 tl.sum 循环（`+        acc += tl.sum(vals)`），同时 @triton.autotune 候选由 `-    triton.Config({\"BLOCK\": 256}, num_warps=2...)` 等改为 `+    triton.Config({\"BLOCK\": 4096}, num_warps=8, num_stages=3)`（secondary=ChangeLaunchConfig）。",
+      "confidence": "high",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=26.8293（>10，标 suspicious_parent_speedup）；但 parent_fast_p=1.0318（父版已在 reference 速度），巨大加速来自子版算法改写（跳过完整 ConvTranspose2d），非父版病态；@triton.autotune 候选被修改（记 modified autotuner）。"
+    },
+    {
+      "edge_id": "L2_2_42_1_169",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "ConvTranspose2d(x) 大空间输出",
+        "consumer": "triton_mean_hw 全局空间均值"
+      },
+      "secondary": [
+        "EliminateMaterialization",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "forward",
+        "_row_mean_kernel"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "与 L2_2_42_1_69 同源改写：父版 `-        x = self.conv_transpose(x)` 后再 `-        x = triton_mean_hw(x)`；子版 forward 改为 `+        in_mean = triton_mean_hw(x).view(B, C_in)` → `+        w_sum = w.sum(dim=(2, 3))  # (C_in, C_out)` → `+        out_mean = in_mean @ w_sum  # (B, C_out)`（docstring 写 `+      - Moves global average over spatial dims (H, W) before the ConvTranspose2d to avoid`、`+        operating on huge spatial maps.`），把 convT+池化合一为「输入池化+小 matmul」，不物化 convT 大输出（primary=Fuse，secondary=EliminateMaterialization）。核内改用 `+    row_ptr = x_ptr + row * stride` 并把 `rows` 作形参、autotune key 由 `-@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['N'])` 变 `+@triton.autotune(configs=MEAN_AUTOTUNE, key=['N', 'rows'])`（secondary=ChangeLaunchConfig，modified autotuner）。",
+      "confidence": "high",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=26.9939（>10，标 suspicious_parent_speedup）；parent_fast_p=1.0318 说明父版非病态，巨大加速源于子版跳过 ConvTranspose2d 的算法改写；child_fast_p=27.85；@triton.autotune 名称与 key 均改（记 modified autotuner）。"
+    },
+    {
+      "edge_id": "L2_2_46_8_94",
+      "primary": "PrecisionChange",
+      "primary_args": {
+        "source": "fp32 Conv2d + fp32 fused tanh/avgpool kernel",
+        "target": "fp16 autocast Conv2d（channels_last+缓存 fp16 权重）+ fp16 融合核"
+      },
+      "secondary": [
+        "Fuse",
+        "EliminateMaterialization"
+      ],
+      "sites": [
+        "fused_tanh_avgpool_kernel",
+        "triton_fused_tanh_avgpool",
+        "forward"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版 forward `-        x = self.conv(x)`（fp32）后 `-        x = triton_fused_tanh_avgpool(x, self.subtract1_value, self.subtract2_value, self.kernel_size_pool)`；子版新建 `+        with torch.cuda.amp.autocast(dtype=torch.float16):` `+                out = F.conv2d(x, self._weight_fp16, self._bias_fp16, ...)` 并把融合核改名为 fp16 版 `+def fused_tanh_sub_avgpool_fp16_kernel(...)`（输入指针注释 `+    inp_ptr,         # pointer to input tensor (fp16)...`），最后 `+                out = out.to(torch.float32)`——主导动作是 conv 走 fp16 Tensor Core（primary=PrecisionChange）。次要：__init__ 里 `+            self.conv.bias.data.sub_(self.subtract1_value)` 把 subtract1 折进 bias、删去核内一次逐元素减法（secondary=Fuse/EliminateMaterialization），并新增 channels_last 权重与 `+            torch.backends.cudnn.benchmark = True`。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.4366；无 @triton.autotune，但新增 `torch.backends.cudnn.benchmark=True`（cuDNN 卷积算法自动选择，非装饰器）；hunks=4、regions=[fused_tanh_avgpool_kernel,triton_fused_tanh_avgpool,forward]，spans=true。"
+    },
+    {
+      "edge_id": "L2_2_46_94_109",
+      "primary": "Vectorize",
+      "primary_args": {
+        "axis": "channel (C)",
+        "width": "NHWC 连续通道块",
+        "note": "NCHW->channels_last，同 warp 读连续 channel"
+      },
+      "secondary": [
+        "Tile",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "fused_tanh_sub_avgpool_fp16_kernel",
+        "triton_fused_tanh_sub_avgpool_fp16"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版（94）按 NCHW 沿宽度分块：`-    base_chan = (n_idx * C + c_idx) * (H * W)`、`-    ow = ow_tile * BLOCK + offs`，grid `-    grid = lambda meta: (N * C * out_h, (out_w + meta[\"BLOCK\"] - 1) // meta[\"BLOCK\"])`；子版切到 channels_last NHWC，把最内维（连续）改成 channel：`+    c_idx = c_tile * BLOCK + c_offs`、`+    inp_off_00 = ((base_n + h00) * W + w00) * C + c_idx`，使同 warp 读到的 `c_idx` 在内存中相邻（primary=Vectorize，提升 coalescing）。wrapper 相应加 `+    if not inp.is_contiguous(memory_format=torch.channels_last):`/`+    out = out.contiguous(memory_format=torch.channels_last)`，BLOCK 从 `-    BLOCK = 256`（宽度）改为 `+    BLOCK = 64`（通道块）、grid 改 `+    grid = lambda meta: (N * out_h * out_w, (C + meta[\"BLOCK\"] - 1) // meta[\"BLOCK\"])`、`+        num_warps=4`（secondary=Tile/ChangeLaunchConfig：块→程序映射重建）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.4534；无 @triton.autotune；hunks=6 全落在融合核与其 launcher，regions=[fused_tanh_sub_avgpool_fp16_kernel,triton_fused_tanh_sub_avgpool_fp16]，spans=true。"
+    },
+    {
+      "edge_id": "L2_2_48_29_30",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "torch 逐元素链 x*scale → tanh → *bias → sigmoid（4 个独立 kernel）",
+        "consumer": "同一个 fused_pointwise 输出张量"
+      },
+      "secondary": [
+        "EliminateMaterialization",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "fused_pointwise"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版 fused_pointwise 完全是 torch 算子：`-    y = x * scale_b`、`-    y = torch.tanh(y)`、`-    y = y * bias_b`、`-    y = torch.sigmoid(y)`，每趟各物化一个 (B,C,D,H,W) 中间张量；子版新增 `+def _fused_pointwise_kernel(` 把四趟合一，核内 `+    x = tl.load(x_ptr + idx, mask=mask, other=0.0)` → `+    expv = tl.exp(-2.0 * y)` / `+    tanh_y = 2.0 / (1.0 + expv) - 1.0` → `+    z = tanh_y * b` → `+    out_val = 1.0 / (1.0 + tl.exp(-z))` → `+    tl.store(out_ptr + idx, out_val, mask=mask)`，per-channel 参数退化成标量载入 `+    s = tl.load(scale_ptr + pid_c)`（`+    b = tl.load(bias_ptr + pid_c)`）。合一（primary=Fuse）顺带消掉三个中间张量（secondary=EliminateMaterialization），并首次挂上 `+@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['S', 'C', 'B'])`（5 档 BLOCK/num_warps/num_stages，secondary=ChangeLaunchConfig）。Conv3d 仍保留 `     self.conv = nn.Conv3d(...)` 未被改写。",
+      "confidence": "high",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.5663（<10）；introduced autotuner（子版为新 kernel 首次添加 @triton.autotune）；整文件级单 hunk，工具只给出 regions=['fused_pointwise']，sites 只能取该值，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_48_68_76",
+      "primary": "PrecisionChange",
+      "primary_args": {
+        "source": "fp32 F.conv3d，postop wrapper 再 inp.half() 并把结果 out_h.to(inp.dtype) 升回 fp32",
+        "target": "x/weight/bias 先 .half() 直接跑 fp16 F.conv3d，postop 核吃 fp16、存 fp16"
+      },
+      "secondary": [
+        "EliminateMaterialization",
+        "Tile"
+      ],
+      "sites": [
+        "forward",
+        "fused_postops",
+        "_fused_conv_postop_kernel"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "forward 里父版是 `-        x = F.conv3d(` 配 fp32 权重；子版改为 `+        x_h = x.half()` / `+        scaled_weight_h = scaled_weight.half()` / `+        scaled_bias_h = scaled_bias.half() if scaled_bias is not None else None` 再 `+        x_h = F.conv3d(`（注释写明 `+        # To avoid an extra fp32 -> fp16 roundtrip, run the conv in fp16 directly.`），让 conv 落到 fp16 Tensor Core——这是解释 1.53x 的主导动作（primary=PrecisionChange）。配套 wrapper 删掉两次全张量往返：`-    inp_h = inp.half()` / `-    return out_h.to(inp.dtype)` 被 `+    out = torch.empty_like(inp)` 与 `+    return out` 取代（secondary=EliminateMaterialization）。核内启动映射由 `-    n = tl.program_id(0)` / `-    c = tl.program_id(1)` / `-    base = (n * C + c) * R` 合成一维 `+    nc = tl.program_id(0)` + `+    c = nc % C` + `+    base = nc * R`，grid 从 `-    grid = lambda meta: (N, C, (R + meta[\"BLOCK_SIZE\"] - 1) // meta[\"BLOCK_SIZE\"])` 变 `+    grid = lambda meta: (N * C, (R + meta[\"BLOCK_SIZE\"] - 1) // meta[\"BLOCK_SIZE\"])`（secondary=Tile：块→program 映射重建）。核尾把 sigmoid 用 tanh 恒等式重写（`-    out = 1.0 / (1.0 + tl.exp(-z))` → `+    u = z * 0.5` / `+    tanh_u = (eu - 1.0) / (eu + 1.0)` / `+    out = 0.5 * (1.0 + tanh_u)`），属等价寄存器内改写，不单列。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.5304；无 @triton.autotune（BLOCK_SIZE 由外部传入，本边未改其值）；hunks=5，regions=[_fused_conv_postop_kernel,fused_postops,forward] 三处均有实质改动，spans_multiple_loci=true。"
+    },
+    {
+      "edge_id": "L2_2_49_156_165",
+      "primary": "EliminateMaterialization",
+      "primary_args": {
+        "site": "triton_softmax_sigmoid 的 permute+contiguous 输入拷贝与 transpose+contiguous 输出拷贝",
+        "how": "改为按 stride 直接读写原 (N,C,D,H,W) 布局"
+      },
+      "secondary": [
+        "IncreaseWorkPerThread",
+        "Tile"
+      ],
+      "sites": [
+        "triton_softmax_sigmoid",
+        "_softmax_sigmoid_kernel"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版为了把 channel 放到最内维做了两次全张量物化：`-    x_perm = x.permute(0, 2, 3, 4, 1).contiguous()` / `-    x_flat = x_perm.view(M, C)` 以及结尾 `-    out = out_flat.view(N, S, C).transpose(1, 2).contiguous().view(N, C, D, H, W)`；子版整段删除，只留 `+    out = torch.empty_like(x)`，kernel 签名扩为 `+def _softmax_sigmoid_kernel(x_ptr, out_ptr, M, N, C, D, H, W, stride_n, stride_c, stride_d, stride_h, stride_w, ...)`，用 `+    base = n[:, None] * stride_n + d[:, None] * stride_d + h[:, None] * stride_h + w[:, None] * stride_w + cols[None, :] * stride_c` 直接寻址（wrapper 里 `+    stride_n, stride_c, stride_d, stride_h, stride_w = x.stride()`），省掉两次完整的重排拷贝＋两份同尺寸缓冲（primary=EliminateMaterialization，docstring 也写 `+    directly using tensor strides to avoid a large permute+contiguous copy`）。同时每 program 处理行数 `-    ROWS = 8` → `+    ROWS = 32`（secondary=IncreaseWorkPerThread，BLOCK 仍为 64）。行索引需要 `+    n = row_idx // S` 等整数拆分才能还原四维坐标，属于分块映射改写（secondary=Tile）；代价是 channel 维不再是连续内维，访存连续性变差，但被省下的拷贝远超此项。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.8651；无 @triton.autotune（BLOCK/ROWS 为手工 constexpr）；hunks=4，regions=[_softmax_sigmoid_kernel,triton_softmax_sigmoid]，spans_multiple_loci=true；parent_fast_p=0.6936（父版慢于 reference）。"
+    },
+    {
+      "edge_id": "L2_2_5_118_119",
+      "primary": "Vectorize",
+      "primary_args": {
+        "axis": "conv 输入内存格式",
+        "width": "NCHW contiguous（撤销 NHWC/channels_last）"
+      },
+      "secondary": [
+        "ChangeLaunchConfig",
+        "EliminateMaterialization"
+      ],
+      "sites": [
+        "forward",
+        "_tanh_fp16_to_fp32_kernel"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "forward 里父版在 fp16 转换后强制 NHWC：`-        x_h = x_h.contiguous(memory_format=torch.channels_last)`；子版换成 `+        x_h = x_h.contiguous()`，注释给出理由 `+        # Keep the default NCHW layout (contiguous). For ConvTranspose2d, forcing channels_last can` / `+        # trigger non-optimal code paths or extra layout transforms; use default layout for stability.`——即撤销 channels_last 既去掉一次全张量布局转换拷贝，又让 `     out_h = self.conv_transpose(x_h)` 回到 cuDNN 的常规路径（primary 记为内存格式/访存布局翻转，与批 1 中把加 channels_last 归为 Vectorize 同一轴，这里是反向）。另一处是 `@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['n_elements'])` 的候选整体下调：删去 `-    triton.Config({\"BLOCK\": 32768}, num_warps=8, num_stages=3)` 与 `-    triton.Config({\"BLOCK\": 65536}, num_warps=8, num_stages=4)`，加入 `+    triton.Config({\"BLOCK\": 4096},  num_warps=4, num_stages=2)`（secondary=ChangeLaunchConfig）。两处无法分离归因：autotune 只会从候选集里选最快档，候选缩窄一般只带来小幅变化，故把布局翻转视为主要贡献，但证据不足以定高置信。",
+      "confidence": "low",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=2.276；introduced autotuner（修改 @triton.autotune 的 AUTOTUNE_CONFIGS 候选列表，按规则 4 记账）；hunks=2、regions=[_tanh_fp16_to_fp32_kernel,forward]，spans_multiple_loci=true；多动作同批发生，primary 归属存在不确定性，故 confidence=low。"
+    },
+    {
+      "edge_id": "L2_2_51_80_81",
+      "primary": "HostDeviceOverlap",
+      "primary_args": {
+        "action": "把每次 forward 的 weight→fp16 全张量 cast + mean(dim=0) + bias/subtract 均值 + .item() D2H 同步改为 register_buffer 缓存，按 data_ptr 指纹失效"
+      },
+      "secondary": [
+        "ChangeLaunchConfig",
+        "PrecisionChange",
+        "EliminateMaterialization"
+      ],
+      "sites": [
+        "_batched_row_dot_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版 forward 每个 step 都重算派生量：`-        W_fp16 = self.gemm.weight.to(x.device, dtype=torch.float16)`、`-        c_fp16 = W_fp16.mean(dim=0)`、`-        bias_mean = self.gemm.bias.to(x.device, dtype=torch.float32).mean()`、`-        subtract_mean = self.subtract.to(x.device, dtype=torch.float32).mean()`，并有一处强制设备→主机同步 `-        const = (bias_mean - subtract_mean).item()  # small scalar; convert to Python float for kernel arg`；子版新增 `+    def _update_cache(self)`（`+        v = W.mean(dim=0).detach().to(dtype=torch.float32)`）配合 `+        self.register_buffer(\"_v_fp32\", torch.zeros(in_features, dtype=torch.float32, device=device))`，forward 只在指针变化时刷新：`+        if (w_ptr != self._last_weight_ptr) or (b_ptr != self._last_bias_ptr) or (s_ptr != self._last_subtract_ptr):` → `+            self._update_cache()`，热路径不再重算 weight 均值（primary=HostDeviceOverlap，减少 CPU-GPU 往返与冗余分配）。同时 kernel 由 fp16 混合精度退回纯 fp32：`-    assert x.dtype == torch.float16 and c.dtype == torch.float16, \"Inputs must be fp16 for the mixed-precision kernel\"` → `+    assert x.dtype == torch.float32 and v.dtype == torch.float32, \"Only float32 supported\"`，并删去核内 `-        c_vals = tl.cast(c_vals_fp16, tl.float32)` / `-        x_vals = tl.cast(x_vals_fp16, tl.float32)`（secondary=PrecisionChange 反向、并顺带省掉 `-        x_fp16 = x.to(x.device, dtype=torch.float16).contiguous()` 这次全张量转换，即 EliminateMaterialization）；AUTOTUNE_CONFIGS 由 `-    triton.Config({\"BLOCK_M\": 32, \"BLOCK_N\": 1024}, num_warps=8, num_stages=3)` 重写为 `+    triton.Config({\"BLOCK\": 128, \"ROWS\": 1},  num_warps=4, num_stages=2)` 等 7 档，constexpr 名与搜索维度全换（secondary=ChangeLaunchConfig）。此外父版折进核内的常量与 GELU 被移回 torch（`-    accs = accs + const_fp32` / `-    gelu_out = x_in * sig` → `+        dots = dots + const_val` / `+        dots_gelu = F.gelu(dots).unsqueeze(1)`），属于反向拆合，未单列。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=3.1553；introduced autotuner（@triton.autotune 装饰器保留但 AUTOTUNE_CONFIGS 候选被整体重写）；parent_fast_p=11.92、child_fast_p=37.62（题面极小，host 开销主导）；整文件单 hunk，工具只给 regions=['_batched_row_dot_kernel']，sites 仅此一值，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_54_77_87",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "LeakyReLU(F.leaky_relu 一趟)",
+        "consumer": "GELU(torch.nn.functional.gelu 另一趟)，外加 per-channel 乘 multiplier"
+      },
+      "secondary": [
+        "EliminateMaterialization",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "ModelNew",
+        "__init__"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版把 multiplier 折进 conv 权重后仍用两趟 torch 激活：`-        x = self.leaky_relu(x)` 与 `-        x = torch.nn.functional.gelu(x)`（并且每次 forward 做 `-        w_scaled = w * m.view(-1, 1, 1, 1)` / `-        x = F.conv2d(x, w_scaled, b_scaled, ...)`）；子版恢复 `+        x = self.conv(x)`，但新建 `+def fused_mul_lrelu_gelu_kernel(` 把逐通道乘、LeakyReLU、GELU 三项合进一趟：`+    m_val = tl.load(m_ptr + channel)` → `+    vals = x_vals * m_val` → `+    vals = tl.where(vals >= zero, vals, vals * neg_slope)` → `+    t = 1.702 * vals` / `+    sig = 1.0 / (1.0 + tl.exp(-t))` / `+    out_vals = vals * sig`，forward 结尾变成 `+        return triton_fused_mul_lrelu_gelu(x, m, self.negative_slope)`（primary=Fuse）。合一后少掉 leaky_relu 中间张量这一整份 (B,C,H,W) 物化（secondary=EliminateMaterialization），并新增 `+@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['B', 'C', 'HW'])` 的三档 BLOCK_SIZE 搜索（secondary=ChangeLaunchConfig）。__init__ 侧删除 `-        self.leaky_relu = nn.LeakyReLU()`，是同一动作的配套改动。",
+      "confidence": "high",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.1803（很小，融合收益被放弃权重折叠带来的 per-channel 乘法回退部分抵消）；introduced autotuner（子版新增 @triton.autotune）；hunks=2、regions=[ModelNew,__init__]，spans_multiple_loci=true；整文件级 hunk 使新建 kernel 也被归到 ModelNew/__init__ 两个 region 名下。"
+    },
+    {
+      "edge_id": "L2_2_55_36_37",
+      "primary": "Other",
+      "primary_args": {
+        "description": "Backend swap：热路径从自研 Triton 融合 GEMM-.abs-归约核（grid=(B,)，一 program 扫完 OUT_pairs×IN）改为两次 cuBLAS GEMM + torch 逐元素/行求和；pairwise max 用 max(a,c)=0.5*((a+c)+|a-c|) 恒等式重写"
+      },
+      "secondary": [
+        "ChangeLaunchConfig",
+        "WarpReduce"
+      ],
+      "sites": [
+        "s2_sum_abs_matmul_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版 forward 是 `-        s2 = triton_sum_abs_matmul(x, W_minus, b_minus)`，其核内靠 `-            prod = w_block * x_vals[None, :]` / `-            tmp = tl.sum(prod, 1)` / `-        acc_block_abs = tl.abs(acc_block)` / `-        acc_total = acc_total + block_sum` 在单个 program 里跑完整个 OUT_pairs×IN；子版 forward 只剩 `+        return triton_fused_linear_maxpool_sum(x, self.matmul, self.scale_factor)`，而该 wrapper 的注释与实现明确改了后端：`+        # Using torch.matmul which will dispatch to cuBLAS for best performance` → `+        Y_plus = x_c.matmul(Wp_T)   # (B, OUT_pairs)` 与 `+        Y_minus = x_c.matmul(Wm_T)  # (B, OUT_pairs)`，再 `+        S = 0.5 * (Y_plus + bp[None, :] + tmp.abs())` 与 `+        out = S.sum(dim=1) * float(scale)`；为此 __init__ 新增转置缓冲 `+            W_plus_T = W_plus.t().contiguous()` 与 `+        self.matmul.register_buffer(\"W_plus_T\", W_plus_T)`，替掉父版的降维捷径 `-            v_in = W_plus.sum(dim=0).contiguous()  # (IN,)` 与 `-        s1 = torch.matmul(x, self.v_in) + float(self.b_plus_sum)`。自研 Triton 核只作为 `+    # Fallback to Triton kernel path (when buffers not present)` 保留、热路径不执行。这是「谁来实现这次 matmul」的后端选择翻转＋代数重写，不是 11 类中的任何一种调度层变换；Triton 回退核自身的 grid 由 `-        return (B,)` 变 `+        return (B, num_out_blocks)`（secondary=ChangeLaunchConfig/Tile 级别的影响，但不是加速来源），末级归约改由 torch 的 `+    out = temp.sum(dim=1) * float(scale)` 完成（secondary=WarpReduce）。",
+      "confidence": "medium",
+      "why_not_existing": [
+        "Fuse: 方向相反。父版是 matmul+bias+abs+归约的单趟自研核，子版把它拆成 2 次 GEMM + 逐元素 + 行归约，kernel/趟数增加而非合并。",
+        "EliminateMaterialization: 子版新增物化 Y_plus/Y_minus/S 三个 (B, OUT_pairs) 张量（父版从不物化 (B,OUT_pairs)，只累加标量 acc_total），中间量显著增多。",
+        "Tile: 回退核的分块从 1D grid=(B,) 改为 2D grid=(B, num_out_blocks)，但 forward 实际走 `+    if hasattr(linear, \"W_plus_T\") ...` 的 GEMM 分支，分块改动不可能解释 69x。",
+        "IncreaseWorkPerThread: 父版每 program 已处理整行（工作量最大），子版热路径根本不进 kernel，无「每执行单元 k 个元素」的调度语义变化。",
+        "Vectorize: diff 中无 float4/tl.multiple_of/max_contiguous 或连续维对齐相关改动。",
+        "ChangeLaunchConfig: 算法实现主体被替换（Triton→cuBLAS），并非常量/启动参数微调。",
+        "WarpReduce: 归约从核内 tl.sum + 标量累加改成 torch 的 S.sum(dim=1)，是从定制归约让位于库归约，而非把归约改造成分级结构。",
+        "SharedMemoryTransform: 未涉及片上暂存策略，cuBLAS 内部如何使用 shared memory 对本标注不可观察。",
+        "PrecisionChange: 全程 `     assert x.dtype == torch.float32, \"Only fp32 supported.\"` 未变，无 half/tf32/autocast 相关新增。",
+        "LoopTransform: 仅回退核的循环层次由双层变单层并加 pid_o 维，属新 kernel 形态，不是 unroll/swap/hoist/mask 的语义变换。",
+        "HostDeviceOverlap: host 侧 launch 次数增加（2 次 GEMM + 多次 torch 逐元素/归约），没有减少同步或合并启动。"
+      ],
+      "notes": "speedup_vs_parent=69.4444（>10，标 suspicious_parent_speedup）；parent_fast_p=0.0194（父版自研 Triton GEMM 比 reference 慢 50 倍以上）、child_fast_p=1.349；introduced autotuner（`@triton.autotune(configs=AUTOTUNE_CONFIGS, key=[\"B\", \"IN\", \"OUT_pairs\"])`，候选列表由 AUTOTUNE_CONFIGS_S2 的 5 档多行写法重写为 6 档单行写法）；单 hunk，工具只给 regions=['s2_sum_abs_matmul_kernel']，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_56_4_9",
+      "primary": "Other",
+      "primary_args": {
+        "description": "Backend swap + 拆分：自研 Triton 融合 GEMM（prod/sum 广播式、tl.atomic_add 回写）整体撤下，主矩阵乘交给 cuBLAS F.linear（并配 fp16 权重），Triton 只保留 sigmoid+行归约核"
+      },
+      "secondary": [
+        "PrecisionChange",
+        "ChangeLaunchConfig",
+        "WarpReduce"
+      ],
+      "sites": [
+        "_fused_matmul_sigmoid_sum_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版把整个 linear→sigmoid→sum 塞进一个自研核：`-def _fused_matmul_sigmoid_sum_kernel(` 内 `-        prod = w_vals * x_vals[None, :]`、`-        acc += tl.sum(prod, axis=1)`（非 tl.dot、无 Tensor Core），并用 `-    tl.atomic_add(out_ptr + row_start, partial)` 做跨块累加，launcher 还写死 `-    BLOCK_M = 1       # each program handles one row`、`-    BLOCK_N = 256`、`-    BLOCK_K = 128`。子版把矩阵乘交回库实现：`+        x_h = x.half()` → `+        logits_h = torch.nn.functional.linear(x_h, self.weight, self.bias)  # half precision output`，Triton 侧只留 `+def _sigmoid_row_sum_kernel(`（`+        s = 1.0 / (1.0 + tl.exp(-vals))` / `+        partial = tl.sum(s, 1)` / `+    tl.store(out_ptr + row_offs, acc, mask=row_mask)`），并在 __init__ 里把参数改为半精度 `+        self.weight = nn.Parameter(torch.empty(hidden_size, input_size, dtype=torch.float16))`。按 FLOP 折算（128×32768×32768≈2.7e11，父 1240ms≈0.2 TFLOP/s，子 3.79ms≈72 TFLOP/s），主要增益来自「GEMM 由谁执行」的翻转（primary=Other，与批 0 中 `_gemv_kernel`→`x.matmul(s_scaled)` 同类），fp16 位宽（secondary=PrecisionChange）、自研核首挂 autotune（`+@triton.autotune(configs=AUTOTUNE_CONFIGS, key=[\"M\", \"N\"])`，secondary=ChangeLaunchConfig）与末级归约由 atomic 累加改为分段累加（`+    acc = tl.zeros((BLOCK_M,), dtype=tl.float32)` + `+        acc += partial`，secondary=WarpReduce）是并发发生的次要动作。代价是重新物化 (M,N) logits：父版 docstring 明写 `-      - atomically accumulates into per-row outputs to avoid materializing the full (M, N) matrix.`，子版则 `+        logits = logits_h.float().contiguous()`。",
+      "confidence": "medium",
+      "why_not_existing": [
+        "Fuse: 反向操作。父版才是真正的一趟融合（GEMM+sigmoid+归约合一），子版拆成 cuBLAS GEMM 与独立 Triton 归约核两趟。",
+        "EliminateMaterialization: 子版新增 fp16 logits 与 `+        logits = logits_h.float().contiguous()` 的整份 (M,N) fp32 物化，父版从不物化 (M,N)；物化量上升。",
+        "Tile: 新核的分块（BLOCK_M 8/16/32 × BLOCK_N 1024/2048）确实不同，但它只处理原本就轻量的逐元素归约，不可能带来 327x。",
+        "IncreaseWorkPerThread: 由 atomic 每 (m, n_block) 一 program 改为每 program 扫 BLOCK_M 行整行 N，属于归约/后端重构的连带效果，非本边的核心增益来源。",
+        "Vectorize: 无宽事务/对齐提示类改动。",
+        "ChangeLaunchConfig: 不只是参数——主体算法实现从自研核换成 cuBLAS，函数与文件结构都被重写。",
+        "WarpReduce: 归约组织虽有改动（atomic→分段），但归约对象只有 M×N 逐元素，量级远小于 GEMM，解释不了主要加速，故降为 secondary。",
+        "SharedMemoryTransform: 未见片上暂存策略的显式改动。",
+        "PrecisionChange: fp32→fp16 确实发生（记为 secondary），但即便保持 fp32，把非 Tensor-Core 的广播-归约式 GEMM 换成 cuBLAS 也能得到两个数量级增益，真正的开关是后端而非位宽。",
+        "LoopTransform: `while k < K` 与 `for start in range(...)` 的取舍只体现在被撤下的旧核上，不构成语义级循环变换。",
+        "HostDeviceOverlap: host 侧只多了一次 `.float().contiguous()` 往返，没有减少同步或合并 launch。"
+      ],
+      "notes": "speedup_vs_parent=327.1768（>10，标 suspicious_parent_speedup，语料内最极端）；parent_fast_p=0.0136（父版自研 Triton GEMM 比 reference 慢约 70 倍）、child_fast_p=4.459；introduced autotuner（父版 `_fused_matmul_sigmoid_sum_kernel` 只有 `@triton.jit`，子版为 `_sigmoid_row_sum_kernel` 新增 @triton.autotune）；另新增 `+def get_inputs():` 里把输入显式建在 CUDA 上（`+    return [torch.rand(batch_size, input_size, device='cuda', dtype=torch.float32)]`），避免 CPU→GPU 往返；单 hunk，regions=['_fused_matmul_sigmoid_sum_kernel']，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_59_30_77",
+      "primary": "PrecisionChange",
+      "primary_args": {
+        "source": "fp32 nn.Linear（cuBLAS fp32 GEMM）+ fp32 逐元素 swish 核",
+        "target": "fp16 权重/输入 + F.linear fp16 GEMM（Tensor Core），Triton 核 load fp16 → cast fp32 计算 → store fp32"
+      },
+      "secondary": [
+        "ChangeLaunchConfig",
+        "EliminateMaterialization"
+      ],
+      "sites": [
+        "_swish_scale_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版 forward 是 `-        x = self.matmul(x)`（fp32 GEMM）后接 fp32 核；子版在 __init__ 里直接把参数降位 `+        self.matmul.weight.data = self.matmul.weight.data.half()` / `+            self.matmul.bias.data = self.matmul.bias.data.half()`，forward 改成 `+        x_half = x.half().contiguous()` → `+        y_half = F.linear(x_half, self.matmul.weight, self.matmul.bias)`，类 docstring 点明 `+      - Store linear weights/bias in fp16 and perform the large GEMM in fp16 (cuBLAS),`（batch=128、in=out=32768，GEMM 是绝对主导，primary=PrecisionChange）。核签名同时从 `-def _swish_scale_kernel(` 改为 `+def _swish_scale_fp16_to_fp32_kernel(`，并在核内做转换 `-    x = tl.load(x_ptr + offsets, mask=mask, other=0.0)` → `+    x_half = tl.load(x_ptr + offsets, mask=mask, other=0.0)` / `+    x = tl.cast(x_half, tl.float32)`，省掉 host 侧一次独立的全张量 fp16→fp32 拷贝（`+      - This avoids an extra full-device host-side conversion`，secondary=EliminateMaterialization）；AUTOTUNE_CONFIGS 删掉 `-    triton.Config({\"BLOCK_SIZE\": 2048}, num_warps=4, num_stages=2)`、加入 `+    triton.Config({\"BLOCK_SIZE\": 8192}, num_warps=8, num_stages=2)` 与 `+    triton.Config({\"BLOCK_SIZE\": 16384}, num_warps=8, num_stages=2)`（secondary=ChangeLaunchConfig）。",
+      "confidence": "high",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=4.6067；introduced autotuner（修改既有 @triton.autotune(configs=AUTOTUNE_CONFIGS, key=['n_elements']) 的候选列表）；整文件单 hunk，工具只给 regions=['_swish_scale_kernel']，sites 仅此一值，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_60_112_114",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "_swish_inplace_kernel（就地 swish 全张量一趟读+写）",
+        "consumer": "_gn_affine_hardswish_kernel（读取已 swish 的值做统计与归一化）"
+      },
+      "secondary": [
+        "EliminateMaterialization",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "_swish_inplace_kernel",
+        "_gn_affine_hardswish_kernel",
+        "forward"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版是两个 kernel：删除整段 `-def _swish_inplace_kernel(`（其尾部为 `-        s = vals * sig` / `-        tl.store(ptrs, s, mask=mask)`），launch 侧也删掉 `-            grid_swish = lambda meta: (N, C)` 与 `-            _swish_inplace_kernel[grid_swish](`；swish 改为在 GN 核的两趟循环里按需重算——第一趟统计段由 `-            s_vals = tl.load(ptrs, mask=mask, other=0.0)` 改为 `+            vals = tl.load(ptrs, mask=mask, other=0.0)` 加 `+            sig = 1.0 / (1.0 + tl.exp(-vals))` / `+            s_vals = vals * sig`，第二趟归一化段同样插入 `+            sig = 1.0 / (1.0 + tl.exp(-vals))`，注释写明 `+    # iterate channels first for contiguous loads, compute swish on-the-fly to avoid extra pass`，类 docstring 总结 `+      - This removes an entire global write+read and a kernel launch compared to the 2-kernel approach.`（primary=Fuse：两趟合一）。合一的代价是重复计算 sigmoid、收益是消掉整份中间写读（secondary=EliminateMaterialization）；空间块常量 `-            BLOCK_SPATIAL = 1024` → `+            BLOCK_SPATIAL = 256`（注释 `+            # Use 256 which is a multiple of 32 (warp) and 4 (float4) for good vectorization on Ampere.`，secondary=ChangeLaunchConfig）；核内 `-    invstd = 1.0 / tl.sqrt(var + eps)` → `+    invstd = tl.rsqrt(var + eps)` 属等价指令替换。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.1319（极小，两趟合一被 sigmoid 重算与 BLOCK 缩小部分抵消）；无 @triton.autotune（BLOCK_SPATIAL 为手工 constexpr）；hunks=7，其中落在 ModelNew region 的 hunk 只是类 docstring 改写，未计入 sites；regions=[_swish_inplace_kernel,_gn_affine_hardswish_kernel,ModelNew,forward]，spans_multiple_loci=true。"
+    },
+    {
+      "edge_id": "L2_2_63_1_142",
+      "primary": "PrecisionChange",
+      "primary_args": {
+        "source": "fp32 nn.Linear（cuBLAS fp32 GEMM）+ fp32 fused relu/divide 核",
+        "target": "fp16 autocast GEMM（折叠 divisor 的 fp16 参数缓冲）+ 核内 fp16→fp32 转换，另开全局 TF32"
+      },
+      "secondary": [
+        "Fuse"
+      ],
+      "sites": [
+        "_relu_divide_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版 forward 为 `-        x = self.linear(x)`（fp32 GEMM）后 `-        x = triton_relu_divide(x, self.divisor)`；子版把参数预降位并缓存：`+            w_folded = self.linear.weight.data * inv_div` → `+            self.register_buffer(\"weight_half\", w_folded.half().contiguous())`，forward 改成 `+        with torch.cuda.amp.autocast(dtype=torch.float16):` / `+            out_half = F.linear(x, self.weight_half, self.bias_half)`，并在文件顶部放开 `+torch.backends.cuda.matmul.allow_tf32 = True` 与 `+    torch.set_float32_matmul_precision(\"high\")`；对 1024×8192×8192 的 GEMM 而言 fp16/Tensor Core 是 5.23x 的主导来源（primary=PrecisionChange）。次要：除法被从核内挪走、折进权重与 bias（`-    out = tl.where(x > 0.0, x * inv_div, 0.0)` → `+    res = tl.where(vals > 0.0, vals, 0.0)`，kernel 形参也删去 `-    inv_div,         # reciprocal of divisor (float scalar)`），即把 divide 与 GEMM 合一到权重预折叠（secondary=Fuse），核本身改名 `+def _relu_fp16_to_fp32_kernel(` 承担 `+    vals = vals_fp16.to(tl.float32)` 的精度回抬。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=5.2336（<10）；@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['n_elements']) 装饰器与候选 BLOCK 列表在本边未改动（仅其上注释 `-# Autotune configs for the elementwise fused ReLU+divide kernel` → `+# Autotune configs for the fp16->fp32 fused ReLU conversion kernel`），故不记 introduced autotuner；2 个 hunk 都被归到单一 region=_relu_divide_kernel，sites 只此一值，spans_multiple_loci=false；子版另加了 `+        if not x.is_contiguous():` 以避免无谓拷贝。"
+    },
+    {
+      "edge_id": "L2_2_63_1_119",
+      "primary": "PrecisionChange",
+      "primary_args": {
+        "source": "fp32 nn.Linear（cuBLAS fp32 GEMM）+ fp32 fused relu/divide 核",
+        "target": "fp16 autocast GEMM（divisor 折叠后的 fp16 权重/偏置缓冲）+ 核内 fp16→fp32 relu 回抬，另开全局 TF32"
+      },
+      "secondary": [
+        "Fuse",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "_relu_divide_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版 forward 走 `-        x = self.linear(x)`（fp32 GEMM）后 `-        x = triton_relu_divide(x, self.divisor)`，核内做 `-    out = tl.where(x > 0.0, x * inv_div, 0.0)`；子版 __init__ 预先把 divisor 折进 fp16 权重（`+            w_folded = self.linear.weight.data * inv_div` → `+            self.register_buffer(\"weight_half\", w_folded.half().contiguous())`），forward 改成 `+        with torch.cuda.amp.autocast(dtype=torch.float16):` / `+            out_fp16 = F.linear(x, self.weight_half, bias)`，核改名 `+def _relu_cast_fp16_to_fp32_kernel(` 只做 `+    vals_fp16 = tl.load(in_ptr + offs, mask=mask, other=0.0)` → `+    vals = tl.cast(vals_fp16, tl.float32)` → `+    out = tl.where(vals > 0.0, vals, zeros)`，并在顶部放开 `+torch.backends.cuda.matmul.allow_tf32 = True`。对 1024×8192×8192 的 GEMM，fp16/Tensor Core 是 4.94x 的主导来源（primary=PrecisionChange）；divisor 折进权重即把 divide 与 Linear 合一（secondary=Fuse），AUTOTUNE_CONFIGS 候选整体上调（secondary=ChangeLaunchConfig）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=4.9448（<10）；introduced autotuner（@triton.autotune(key=['n_elements']) 装饰器保留但 AUTOTUNE_CONFIGS 候选被重写：删 `- triton.Config({\"BLOCK\": 256}...)` 等、加 `+ triton.Config({\"BLOCK\": 4096}, num_warps=8, num_stages=3)`，按规则 4 记账）；与批 2 的 L2_2_63_1_142 同任务同类改写；2 处 hunk 均被归到单一 region=_relu_divide_kernel，sites 只此一值，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_63_82_86",
+      "primary": "Tile",
+      "primary_args": {
+        "axis": "GEMM 内层 K 归约",
+        "size": "BLOCK_K=32 现以 2D tile 载入 (BLOCK_M×BLOCK_K)@(BLOCK_K×BLOCK_N) 送 tl.dot",
+        "mapping": "program 网格 (M/BLOCK_M × N/BLOCK_N) 未变"
+      },
+      "secondary": [
+        "ChangeLaunchConfig",
+        "EliminateMaterialization",
+        "LoopTransform"
+      ],
+      "sites": [
+        "fused_gemm_relu_div",
+        "triton_linear"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版核内沿 K 用标量 rank-1 累加：`-        for kk in range(BLOCK_K):` 里 `-            a_vals = tl.load(a_ptrs, mask=a_mask, other=0.0)  # (BLOCK_M,)` / `-            b_vals = tl.load(b_ptrs, mask=b_mask, other=0.0)  # (BLOCK_N,)` / `-            acc += a_vals[:, None] * b_vals[None, :]`（非 tl.dot、走不了 Tensor Core）；子版改成一次载入 2D tile 并调用块矩阵乘：`+        a_block = tl.load(a_ptrs, mask=a_mask, other=0.0)  # (BLOCK_M, BLOCK_K)` / `+        b_block = tl.load(b_ptrs, ...)  # (BLOCK_K, BLOCK_N)` / `+        acc += tl.dot(a_block, b_block)`，即真正把 GEMM 寄存器级分块喂给 tl.dot（可走 MMA），这是解释 7.13x 的核心动作（primary=Tile）。配套 launcher 把 divisor 预折进 packed 权重 `+    w_packed = (w_.t().contiguous() * (1.0 / float(divisor))).contiguous()` 并删掉核内 `-    acc = acc / divisor`（secondary=EliminateMaterialization）；BLOCK_M/BLOCK_N 从 `-    BLOCK_M = 64`/`-    BLOCK_N = 64` 提到 `+    BLOCK_M = 128`/`+    BLOCK_N = 128`（secondary=ChangeLaunchConfig）；内层 `for kk in range(BLOCK_K)` 被消解为块载入（secondary=LoopTransform）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=7.1274（<10）；parent_fast_p=0.126（父版自研 Triton rank-1 GEMM 远慢于 reference）、child_fast_p=0.898；核为 @triton.jit 手填 block 尺寸、无 @triton.autotune（故不记 introduced autotuner）；主增益来自 rank-1 广播累加→tl.dot 块矩阵乘，非后端切换（仍是自研 Triton 核），故不归 Other；hunk 落在 fused_gemm_relu_div（核体）与 triton_linear（host 端 packed/缩放）两处 region，spans_multiple_loci=true。"
+    },
+    {
+      "edge_id": "L2_2_64_91_92",
+      "primary": "Other",
+      "primary_args": {
+        "description": "Backend swap：linear+logsumexp 的自研 single-CTA Triton streaming GEMM（triton_logsumexp_linear）撤下，改由 cuBLAS F.linear 物化 (B,OUT) 后再 torch .logsumexp(dim=1, keepdim=True)"
+      },
+      "secondary": [
+        "WarpReduce"
+      ],
+      "sites": [
+        "__init__"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "`ModelNew.forward` 里父版 `-        x_lse = triton_logsumexp_linear(x, weight, bias)`（自研 Triton 单 CTA 流式 GEMM+logsumexp 融合核）被子版替换为 `+        out_full = F.linear(x, self.linear.weight, self.linear.bias)` 紧跟 `+        x_lse = out_full.logsumexp(dim=1, keepdim=True)`，注释明写 `+        # Use cuBLAS-backed linear for the heavy GEMM, then compute logsumexp.` / `+        # This is significantly faster for large matrices than a single-CTA Triton streaming GEMM.`，并在前面加 `+        x = x.contiguous()`。整条热路径从「自研 Triton 融合核」翻转成「cuBLAS GEMM + torch 归约」，与批 0 的 `_gemv_kernel`→`x.matmul(...)`、批 2 的 L2_2_55/L2_2_56 同类，是后端选择而非 11 类里的任一调度层变换。",
+      "confidence": "medium",
+      "why_not_existing": [
+        "Fuse: 方向相反——父版才是把 GEMM 与 logsumexp 融合进单个 streaming 核，子版把它拆成 F.linear 与 .logsumexp 两趟。",
+        "EliminateMaterialization: 子版新增物化完整 (B, OUT) 的 out_full（父版流式核不物化 (B,OUT)），中间量上升。",
+        "Tile: 子版根本不进 Triton 核，无块到线程/程序映射的变化。",
+        "IncreaseWorkPerThread: 无「每执行单元 k 个元素」的调度语义改动。",
+        "Vectorize: 无 float4/tl.multiple_of/max_contiguous 或连续维对齐相关改动（仅 `.contiguous()` 保证 cuBLAS 输入连续）。",
+        "ChangeLaunchConfig: 主体实现被替换（Triton→cuBLAS），非常量/启动参数微调。",
+        "WarpReduce: logsumexp 归约交给 torch 的 .logsumexp，是从定制流式归约让位给库归约，而非改造成分级结构（作为最贴近的 secondary 保留）。",
+        "SharedMemoryTransform: 未涉及片上暂存策略。",
+        "PrecisionChange: 全程 fp32，无 half/tf32/autocast 相关新增。",
+        "LoopTransform: 循环结构差异只存在于被撤下的自研核，不构成 unroll/swap/hoist/mask 的语义变换。",
+        "HostDeviceOverlap: host 侧反而多了 out_full 的一次完整物化，没有减少同步或合并启动。"
+      ],
+      "notes": "speedup_vs_parent=12.1954（>10，标 suspicious_parent_speedup）；parent_fast_p=0.083（父版自研 Triton streaming GEMM 比 reference 慢约 12 倍）、child_fast_p=1.013（恢复到 reference 速度）；无 @triton.autotune；单 hunk，工具把实际改在 forward 的这段归到 region=__init__，sites 只能取 __init__，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_65_86_111",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "Conv2d(x)",
+        "consumer": "AvgPool2d(pool_k, stride=pool_k)（原由 Triton pooling 核完成）",
+        "how": "__init__ 把 AvgPool 折进 conv 权重并把 conv stride 设为 pool_k"
+      },
+      "secondary": [
+        "EliminateMaterialization",
+        "HostDeviceOverlap"
+      ],
+      "sites": [
+        "_pool_sigmoid_partial_kernel_autotuned"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版 forward 先 `-        x_conv = self.conv(x)` 再启动整个 pooling+sigmoid+partial-sum Triton 核 `-        _pool_sigmoid_partial_kernel_autotuned[grid](` 做分块部分和、随后 `-        out = used_partial.sum(dim=1)` 归约；子版在 __init__ 里 `+        folded = torch.nn.functional.conv2d(W_reshaped, avg_kernel, padding=pool_k - 1)` 把 AvgPool2d 折进一个放大核 `+        new_conv = nn.Conv2d(in_channels, out_channels, kernel_size=new_k, stride=pool_k, bias=True)`，forward 塌缩成 `+        x_conv = self.conv(x)` → `+        x_sig = torch.sigmoid(x_conv)` → `+        out = torch.sum(x_sig, dim=[1, 2, 3])`——conv 与池化合为一趟（stride 直接产出池化结果），docstring 亦写 `+      - Fold AvgPool2d(pool_k, stride=pool_k) into the convolution weights ... This removes the Triton` / `+        pooling kernel, the partial-buffer pattern, and extra memory traffic / kernel launches.`（primary=Fuse）。合一后不再物化全分辨率 conv 输出与 (B,num_chunks) partial 缓冲（secondary=EliminateMaterialization），并去掉一次核启动与一次归约（secondary=HostDeviceOverlap）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=7.6484（<10）；父版 @triton.autotune 核 `_pool_sigmoid_partial_kernel_autotuned` 被整体删除（属移除而非新增/修改），故不记 introduced autotuner；parent_fast_p=1.043、child_fast_p=7.978（子版靠算法折叠远超 reference）；单 hunk，工具归到 region=_pool_sigmoid_partial_kernel_autotuned（被删核所在上下文），sites 只此一值，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_74_98_180",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "LeakyReLU→per-channel mul→LeakyReLU 逐元素链",
+        "consumer": "nn.MaxPool3d(kernel_size=2)",
+        "how": "把 2x2x2 max pool 并入同一 Triton 逐元素核"
+      },
+      "secondary": [
+        "EliminateMaterialization",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "_fused_leakyrelu_mul_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版 forward 用融合逐元素核后再单独池化：`-        x = triton_fused_leakyrelu_mul(x, mul_expanded, neg_slope=self.neg_slope)` 紧跟 `-        x = self.max_pool(x)`（`-        self.max_pool = nn.MaxPool3d(kernel_size=2)`）；子版把 MaxPool3d 折进同一核：核改名 `+def _fused_leakyrelu_mul_pool_kernel(`，一次载入 8 个邻元 `+    x000 = tl.load(...)`…`+    x111 = tl.load(ptr_in_base + offs111, mask=mask_p, other=float('-inf'))`，对每个做 LeakyReLU→*m→LeakyReLU（`+    z000 = y000 * m`、`+    r000 = tl.where(z000 > 0.0, z000, z000 * neg)`），再 `+    m1234 = tl.maximum(m12, m34)` 出池化值，forward 塌缩为 `+        x = triton_fused_leakyrelu_mul_pool(x, mul_1d, neg_slope=self.neg_slope)`（primary=Fuse），docstring 写 `+      - Fuses: LeakyReLU -> per-channel multiply -> LeakyReLU -> MaxPool3d(kernel=2) into a single Triton kernel`。合一消掉池化前那份全分辨率逐元素输出张量（secondary=EliminateMaterialization），且 `@triton.autotune` 的 key 由 `-@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['n_elements'])` 改为 `+@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['N', 'C', 'D_out', 'H_out', 'W_out', 'Dp', 'Hp', 'Wp'])`、AUTOTUNE_CONFIGS 候选由 `- BLOCK_SIZE 256/512/1024` 改 `+ BLOCK_SIZE 64/128/256`（secondary=ChangeLaunchConfig）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.2922（很小）；introduced autotuner（@triton.autotune 的 key 与候选列表均被修改，按规则 4 记账）；parent_fast_p=1.112、child_fast_p=1.437；单 hunk，工具归到 region=_fused_leakyrelu_mul_kernel（新建核与其 launcher 都被并入该 region 名），sites 只此一值，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_75_63_64",
+      "primary": "PrecisionChange",
+      "primary_args": {
+        "source": "fp32 Triton GEMM（A/B 均 fp32，`Only float32 supported`）",
+        "target": "fp16 操作数 + fp32 累加/输出/bias（A→A_fp16、缓存 fp16 转置权重）"
+      },
+      "secondary": [
+        "ChangeLaunchConfig",
+        "HostDeviceOverlap"
+      ],
+      "sites": [
+        "_matmul_kernel",
+        "triton_linear",
+        "__init__",
+        "forward"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版 `triton_linear` 断言纯 fp32：`-    assert input.dtype == torch.float32 and weight.dtype == torch.float32, \"Only float32 supported.\"` 且 `-    B = weight  # shape (out_features, in_features)`；子版签名收 fp16 转置权重 `+def triton_linear(input: torch.Tensor, B_t_fp16: torch.Tensor, bias: torch.Tensor = None)`、新增 `+    A_fp16 = A.to(torch.float16).contiguous()`、输出 `+    C = torch.empty((M, N), device=A.device, dtype=torch.float32)`、launch 传 `+        A_fp16, B, C, bias_vec,`——让 tl.dot 首次以 fp16 操作数吃 Tensor Core（primary=PrecisionChange，主导 1.80x）。次要在 __init__ `+        self._cached_W_t = None` 与 forward `+            self._cached_W_t = W.t().contiguous().to(x.device, dtype=torch.float16)` 按 data_ptr 缓存 fp16 转置权重（secondary=HostDeviceOverlap，避免每步重算/重分配）；AUTOTUNE_CONFIGS 新增 `+    triton.Config({\"BLOCK_M\": 128, \"BLOCK_N\": 128, \"BLOCK_K\": 128}, num_warps=8, num_stages=2)` 等更大 BLOCK_K=128 tensor-core 友好档（secondary=ChangeLaunchConfig）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.7953；introduced autotuner（@triton.autotune 的 AUTOTUNE_CONFIGS 候选集被重写，按规则 4 记账）；parent_fast_p=1.34、child_fast_p=2.41；hunk 落在 _matmul_kernel/triton_linear/__init__/forward 四个 region（grid lambda 未改故不取 grid），spans_multiple_loci=true。"
+    },
+    {
+      "edge_id": "L2_2_75_183_186",
+      "primary": "HostDeviceOverlap",
+      "primary_args": {
+        "action": "跨 forward 缓存转置 fp16 权重（按 weight.data_ptr() 失效），热路径不再每步 .t().half().contiguous()；并把 bias 以 fp32 传入核，省掉 host 端 .half() 与核内每 tile cast"
+      },
+      "secondary": [
+        "PrecisionChange",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "_matmul_kernel",
+        "triton_matmul",
+        "__init__",
+        "forward"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版已在跑 fp16 Triton GEMM，但每次 forward 都重算转置权重：`-            W_t = self.gemm.weight.t().contiguous()` 与 `-            out = triton_matmul(x_contig.half(), W_t.half(), linear_bias.half()).float()`；子版在 __init__ 加缓存槽 `+        self._W_t_fp16 = None` / `+        self._W_ptr = None`，forward 里 `+            if (self._W_t_fp16 is None) or (self._W_ptr != w_ptr) or (self._W_t_fp16.device != weight.device):` → `+                self._W_t_fp16 = weight.t().half().contiguous()` 并按指针复用 `+            W_t_fp16 = self._W_t_fp16`，docstring 明写 `+      - Caches a transposed fp16 copy of the linear weight to avoid repeated .t().half().contiguous() allocations.`（primary=HostDeviceOverlap，消除每步冗余转换/分配）。同时 bias 由 fp16 改回 fp32：核内 `-    bias_vals_fp16 = tl.load(bias_ptr + offs_n, mask=mask_n, other=0.0)` / `-    acc += bias_vals_fp16[None, :].to(tl.float32)` → `+    bias_vals = tl.load(bias_ptr + offs_n, mask=mask_n, other=0.0)` / `+    acc += bias_vals[None, :]`，launcher 断言 `+    assert A.dtype == torch.float16 and B_t.dtype == torch.float16 and bias.dtype == torch.float32`（secondary=PrecisionChange 仅指 bias 位宽，GEMM 操作数仍 fp16）；AUTOTUNE_CONFIGS 候选整体重排为 `+    triton.Config({\"BLOCK_M\": 512, \"BLOCK_N\": 256, \"BLOCK_K\": 64},  num_warps=16, num_stages=4)` 等（secondary=ChangeLaunchConfig）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=2.1048；introduced autotuner（@triton.autotune 的 AUTOTUNE_CONFIGS 候选集被重写，按规则 4 记账）；父版已是 fp16 GEMM，故增益来自 fp16 权重缓存 + bias 改 fp32 免核内 cast + autotune 重调，多动作难完全分离，confidence=medium；hunk 落在 _matmul_kernel/triton_matmul/__init__/forward 四个 region（grid 未改），spans_multiple_loci=true。"
+    },
+    {
+      "edge_id": "L2_2_77_32_79",
+      "primary": "PrecisionChange",
+      "primary_args": {
+        "source": "fp32 ConvTranspose3d + fp32 BatchNorm3d + fp32 AdaptiveAvgPool3d，外加自研 fp32 逐元素 scale 核 _scale_kernel",
+        "target": "eval 时把 scale 与 BN 折进 conv 权重、conv 参数/输入转 channels_last_3d+fp16 并 autocast(fp16) 走 Tensor Core，池化换成读 fp16 的新 Triton 核"
+      },
+      "secondary": [
+        "Fuse",
+        "Vectorize",
+        "EliminateMaterialization"
+      ],
+      "sites": [
+        "_scale_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版 forward 是纯 fp32 多段：`-        x = self.conv_transpose(x)` → `-            x = triton_scale(x, self.scale_factor)`（核为 `-def _scale_kernel(...)` 的 `-    out = x * scale` 逐元素乘）→ `-        x = self.batch_norm(x)` → `-        x = self.global_avg_pool(x)`；子版新增 `+    def _fold_bn(self):`（`+            self.batch_norm = nn.Identity()` 把 BN 折进 conv）、__init__ `+            self.conv_transpose.weight.data.mul_(self.scale_factor)` 折掉 scale，并在 `+        with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):` 里 `+                out = self.conv_transpose(x_pre)`（前置 `+            x_pre = x.contiguous(memory_format=torch.channels_last_3d).to(dtype=torch.float16)`），把 ConvTranspose3d 交给 fp16 Tensor Core——这是 6.16x 的主导来源（primary=PrecisionChange，与批 1 L2_2_46_8_94 同型）。次要：scale/BN 折进 conv 即把逐元素 scale 与 BN 合一（secondary=Fuse/EliminateMaterialization）、channels_last_3d 布局（secondary=Vectorize），并新增 `+def _global_avg_pool_kernel(` 顶替 AdaptiveAvgPool3d。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=6.1606；introduced autotuner（父版 @triton.autotune 挂在 `_scale_kernel(key=['n_elements'])`，子版改为挂在新 `+@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['S'])` 的 `_global_avg_pool_kernel`，属新增/改写 autotuned 核，按规则 4 记账）；另新增 `+            torch.backends.cudnn.benchmark = True`（cuDNN 卷积算法自选，非装饰器）；parent_fast_p=1.008、child_fast_p=6.21；整文件单 hunk，工具只给 region=_scale_kernel（被替换的旧核名），sites 只此一值，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_77_33_73",
+      "primary": "PrecisionChange",
+      "primary_args": {
+        "source": "fp32 ConvTranspose3d + fp32 BatchNorm3d + nn.AdaptiveAvgPool3d（scale 已在父版折进权重）",
+        "target": "eval 时把 BN 折进 conv、conv 参数/输入转 channels_last_3d+fp16 并 autocast(fp16) 走 Tensor Core，池化换成 fp32 累加的 Triton 核"
+      },
+      "secondary": [
+        "Fuse",
+        "Vectorize",
+        "EliminateMaterialization"
+      ],
+      "sites": [
+        "ModelNew"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版 forward 全程 fp32：`-        x = self.conv_transpose(x)`（注释 `-        # No explicit multiply needed; scalar has been folded into weights.`）→ `-        x = self.batch_norm(x)` → `-        x = self.global_avg_pool(x)`；子版新增 `+import triton` 与 `+@triton.autotune(AUTOTUNE_CONFIGS, key=['N', 'C', 'DHW'])` 挂着的 `+def mean_spatial_kernel(` 池化核，`+    def _fold_bn_into_conv(self):` 把 BN 折进 conv（`+            self.batch_norm = nn.Identity()`）并把 conv 参数转成 `+                    w = conv.weight.detach().contiguous(memory_format=torch.channels_last_3d).to(dtype=torch.float16)`，forward 走 `+                x_opt = x.contiguous(memory_format=torch.channels_last_3d).to(dtype=torch.float16)` → `+            with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):` → `+                out = self.conv_transpose(x_opt)`，主导 6.18x 的是把 ConvTranspose3d 交给 fp16 Tensor Core（primary=PrecisionChange，与批 1 L2_2_35_177_178 同型）。次要：BN 折进 conv（Fuse/EliminateMaterialization）、channels_last_3d（Vectorize）、新增 fp32-accumulate 的 Triton 池化核顶替 AdaptiveAvgPool3d。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=6.1838；introduced autotuner（子版从无 Triton 到有 `+@triton.autotune(AUTOTUNE_CONFIGS, key=['N', 'C', 'DHW'])` 挂在 mean_spatial_kernel）；另加 `+            torch.backends.cudnn.benchmark = True`；parent_fast_p=1.012、child_fast_p=6.257；整文件单 hunk（`@@ -1,32 +1,265 @@`），工具只给 region=ModelNew，sites 只此一值，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_8_159_163",
+      "primary": "PrecisionChange",
+      "primary_args": {
+        "source": "conv 走 fp16 但立刻 `.to(torch.float32)`，MaxPool3d/AdaptiveAvgPool3d/sum 全在 fp32",
+        "target": "conv→maxpool→avgpool 整段保持在 fp16，仅最终 (B,C,1,1,1) 小张量升回 fp32 做 sum 累加"
+      },
+      "secondary": [
+        "EliminateMaterialization"
+      ],
+      "sites": [
+        "ModelNew",
+        "__init__"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版在 fp16 conv 后马上整体升位再池化：`-        conv_out = conv_out16.to(torch.float32)` → `-        pooled = self.max_pool(conv_out)` → `-        avg_pooled = self.global_avg_pool(pooled)`；子版删除该 fp32 上采样，改为 `+        pooled16 = self.max_pool(conv_out16)                # (B, C, D', H', W') in FP16` → `+        avg_pooled16 = self.global_avg_pool(pooled16)       # (B, C, 1, 1, 1) in FP16`，只在最终小 tensor 上 `+        result = torch.sum(avg_pooled16.to(torch.float32), dim=self.sum_dim)`——把 maxpool/avgpool 的计算与存储从 fp32 降到 fp16（primary=PrecisionChange），docstring 亦改为 `+         weight casts. Keep activations in FP16 throughout conv + pooling pipeline, and perform` / `+         the final reduction (sum) in FP32 to preserve accuracy.`。省掉一次全分辨率 fp32 上采样张量并减半池化访存（secondary=EliminateMaterialization）；__init__ 里 `+        self.register_buffer(\"weight_fp16\", self.conv.weight.data.half().contiguous())` 新增 `.contiguous()` 以避免每步 relayout。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.2678（很小）；父版已在跑 fp16 conv（parent_fast_p=2.54、child_fast_p=3.22），本边增量是把池化也留在 fp16 + 缓存权重预置连续；无 @triton.autotune（全 PyTorch 算子）；2 hunk 落在 ModelNew(forward) 与 __init__，spans_multiple_loci=true。"
+    },
+    {
+      "edge_id": "L2_2_84_123_145",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "nn.Linear GEMM (self.gemm)",
+        "consumer": "BatchNorm(eval 仿射) + post-BN scale",
+        "how": "eval 时把 BN 的仿射与 scale 折进 Linear 的权重/偏置，塌缩成一次 F.linear"
+      },
+      "secondary": [
+        "EliminateMaterialization"
+      ],
+      "sites": [
+        "forward"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版 forward 是 `x = self.gemm(x)`（GEMM）后再做功能化 BN：`-        x = self.gemm(x)` 配 `-            x = F.batch_norm(x, running_mean, running_var, weight=scaled_weight, bias=bias,` / `-                             training=self.training, momentum=momentum, eps=eps)`，Linear 与 BN 是两趟；子版在 eval 分支里把 BN 仿射与 scale 预折进权重/偏置 `+                W_fused = W * inv.view(-1, 1)` / `+                b_fused = inv * (b_lin - running_mean) + bn_bias`（其中 `+            inv = bn_weight / torch.sqrt(running_var + eps)`），随后塌缩成单次 GEMM `+            x = F.linear(x, W_fused, b_fused)` 紧跟 `+            x = torch.softmax(x, dim=1)`，docstring 写 `+      - In eval mode, folds BN + optional scale into the Linear weights and bias on-device and` / `+        performs a single F.linear call (fast, cuBLAS-backed GEMM).`——把 Linear 与 BatchNorm(+scale) 两趟合一（primary=Fuse），并消掉 BN 输出那份中间激活（secondary=EliminateMaterialization）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=21.4857（>10，标 suspicious_parent_speedup）；parent_fast_p=1.02（父版已≈reference 速度），巨大比例更可能来自 eval 路径把 BN+scale 折进单次 cuBLAS GEMM、省掉独立 BatchNorm 趟与逐元素 scale（child_fast_p=21.91 远超 reference）；训练/不可折叠分支保留原语义；无 @triton.autotune（全 torch 算子）；hunk 落 ModelNew（仅类 docstring）与 forward，语义动作只在 forward，sites 取 forward、spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_87_134_137",
+      "primary": "Other",
+      "primary_args": {
+        "description": "实现/后端替换：删除自研 Triton 融合核 _fused_sub_mish_kernel（其 launcher triton_sub_mish 每次 forward 都跑 candidate_blocks 手动 autotune 小基准 + torch.cuda.synchronize），改用 torch.nn.functional.mish，并把两次 scalar 减法折进 conv.bias"
+      },
+      "secondary": [
+        "Fuse",
+        "HostDeviceOverlap"
+      ],
+      "sites": [
+        "_fused_sub_mish_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版 __init__ 只做 `-        self.total_subtract = float(subtract_value_1) + float(subtract_value_2)`，forward 走 `-        x = triton_sub_mish(x, self.total_subtract)`，而 triton_sub_mish 内部是 `-    for BLOCK in candidate_blocks:` + `-        torch.cuda.synchronize()` 的每步手调基准；子版把核整段删成注释 `+# Triton-based elementwise kernel removed.` 与 `+# so there is no need for a separate custom kernel or autotuning at runtime.`，__init__ 改为 `+            self.conv.bias = nn.Parameter(torch.full((out_channels,), -total, ...))` / `+                self.conv.bias.data = self.conv.bias.data - total`（把减法折进 bias），forward 改为 `+        x = torch.nn.functional.mish(x)`。加速主要来自放弃病态自研 Triton 路径改用库算子（后端/实现替换），减法折进 conv.bias 只是附带合一。",
+      "confidence": "medium",
+      "why_not_existing": [
+        "Fuse: 减法折进 conv.bias 确属合一（已列为 secondary），但 7.65x 的主体来自撤下每步 synchronize 的手调 Triton 核并改用 torch.mish，纯 Fuse 描述不了后端替换这一动作。",
+        "EliminateMaterialization: 未新增/去掉某个中间张量的物化，mish 仍产出一份输出。",
+        "Tile: 无块尺寸到线程/程序映射的调度改动。",
+        "IncreaseWorkPerThread: 无每执行单元元素数 k 的语义改动。",
+        "Vectorize: 无宽事务/连续维对齐相关改动。",
+        "ChangeLaunchConfig: 被删的 autotune 是 launcher 里手写 for 循环（非 @triton.autotune 装饰器），且主体实现被替换，不是只调启动常量。",
+        "WarpReduce: 无归约结构改动。",
+        "SharedMemoryTransform: 未涉及片上暂存。",
+        "PrecisionChange: 全程 fp32，无 half/tf32/autocast 改动。",
+        "LoopTransform: 唯一被消解的循环在被删的 launcher autotune 里，不是核内 unroll/swap/hoist/mask 变换。",
+        "HostDeviceOverlap: 确实去掉了每步 device→host 同步与冗余启动（列为 secondary），但按判定纪律这是后端/库替换的组成部分，不足以单独解释 primary。"
+      ],
+      "notes": "speedup_vs_parent=7.6471（<10）；parent_fast_p=0.215（父版每次 forward 跑手动 autotune 基准并 synchronize，病态偏慢）、child_fast_p=1.647；无 @triton.autotune 装饰器（被删的是手写 for BLOCK 循环），故不记 introduced autotuner；单 hunk，工具归到 region=_fused_sub_mish_kernel（被删核上下文），sites 只此一值，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_90_11_92",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "_fused_leaky_add_clamp_kernel（LeakyReLU+add+clamp）",
+        "consumer": "ModelNew.forward 里单独的 PyTorch F.gelu 一趟",
+        "how": "新建 _fused_postconv_kernel 把 LeakyReLU->add->clamp->GELU近似 合进一趟，并把 1D 网格改为 2D (N*C, spatial_blocks)、每 program 载入 per-channel sum 标量一次"
+      },
+      "secondary": [
+        "EliminateMaterialization",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "_fused_leaky_add_clamp_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版 forward 是 `-        x = triton_fused_leaky_add_clamp(x, self.sum_tensor)` 紧跟 `-        x = F.gelu(x)`（GELU 独立一趟）；子版塌缩为单调用 `+        x = triton_fused_postconv(x, self.sum_tensor, negative_slope=0.2)`，核内在 clamp 之后新增 `+    # GELU approximation via sigmoid: gelu(x) ~= x * sigmoid(1.702 * x)` / `+    gelu_approx = clamped * sigmoid` / `+    tl.store(out_ptrs, gelu_approx, mask=mask)`（primary=Fuse）。合一后 clamp 与 gelu 之间的全分辨率中间张量不再物化（secondary=EliminateMaterialization）；网格由 `-    grid = lambda meta: ((n_elements + meta['BLOCK'] - 1) // meta['BLOCK'],)` 改为 `+    grid = lambda meta: ( (N * C), ( (spatial_size + meta['BLOCK'] - 1) // meta['BLOCK'] ) )` 并用 `+    sum_val = tl.load(sum_ptr + channel)  # scalar broadcast` 取代逐元素 channel 索引，且 AUTOTUNE_CONFIGS 候选整体下调 BLOCK 并重排 num_warps/num_stages、autotune key 由 `-    key=['n_elements', 'spatial_size', 'C']` 改为 `+    key=['N', 'C', 'spatial_size']`（secondary=ChangeLaunchConfig）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.1209（很小）；introduced autotuner（@triton.autotune 的 AUTOTUNE_CONFIGS 与 key 均被修改，按规则 4 记账）；parent_fast_p=1.218、child_fast_p=1.365；单 hunk、单 region=_fused_leaky_add_clamp_kernel，sites 只此一值，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L2_2_93_154_177",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "add_min_kernel（add->min(.,0)）",
+        "consumer": "forward 里单独的 F.gelu 与 x * multiply_value 两趟",
+        "how": "新建 fused_elemwise_kernel 把 add->min->GELU近似->乘 合进单核"
+      },
+      "secondary": [
+        "EliminateMaterialization",
+        "HostDeviceOverlap"
+      ],
+      "sites": [
+        "add_min_kernel",
+        "forward"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版 forward 是 `-        x = triton_add_min(x, self.add_value)` → `-        x = F.gelu(x)` → `-        x = x * self.multiply_value`（Triton 只做 add+min，gelu 与乘法各一趟）；子版塌缩为 `+        x = triton_fused_elemwise(x, self.add_value, self.multiply_value)`，核内在 `+    y = tl.where(y < 0.0, y, 0.0)` 之后新增 `+    # GELU approximation: y * sigmoid(1.702 * y)` / `+    g = y * s` / `+    out = g * mul_val` / `+    tl.store(out_ptr + offsets, out, mask=mask)`，把 add+min+GELU+乘法合一（primary=Fuse，docstring 亦写 `+        into a single Triton kernel to reduce memory traffic and kernel launches.`）。合一消掉 min 后、gelu 后各一份全分辨率中间张量（secondary=EliminateMaterialization），并去掉两次 torch 逐元素算子往返（secondary=HostDeviceOverlap）。",
+      "confidence": "high",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.1785（很小）；无 @triton.autotune（BLOCK=1024 手填），故不记 introduced autotuner；parent_fast_p=1.091、child_fast_p=1.286；2 hunk 落在 add_min_kernel（核体+launcher）与 forward（调用塌缩），spans_multiple_loci=true。"
+    },
+    {
+      "edge_id": "L2_2_99_62_72",
+      "primary": "HostDeviceOverlap",
+      "primary_args": {
+        "action": "注册持久 fp16 权重缓存 W_half（_ensure_weight_half 按 shape/device 失效），forward 里 x 一次性 x.half()，去掉每次 forward 的 W.t().contiguous() 全量转置拷贝"
+      },
+      "secondary": [
+        "LoopTransform",
+        "ChangeLaunchConfig",
+        "PrecisionChange"
+      ],
+      "sites": [
+        "matmul_bias_gelu_kernel",
+        "triton_matmul_bias_gelu",
+        "triton_row_softmax"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版 forward 每次做 `-        W_t = W.t().contiguous()  # shape (in_features, out_features) == (K, N)`；子版 __init__ 加 `+        self.W_half = None` 与 `+    def _ensure_weight_half(self):` → `+            self.W_half = W.half().contiguous().to(W.device)`，forward 改为 `+        self._ensure_weight_half()` / `+        x_h = x.half().contiguous()` / `+        out = triton_matmul_bias_gelu(x_h, W_half, b)`，缓存复用避免每步转置/拷贝（primary=HostDeviceOverlap，与批 3 L2_2_75_183_186 同型）。次要：softmax 核把父版两个独立 for（求 max 与求 sum）合并成一次流式归并 `+    # Streaming merge to get row-wise max and sum in a single forward pass over blocks` + `+        cur_sum = tl.where(cond, cur_sum * exp_cur_minus_block + block_sum, cur_sum + block_sum * exp_block_minus_cur)`（secondary=LoopTransform）；AUTOTUNE_CONFIGS 由 `- triton.Config({'BLOCK_M': 64,...'BLOCK_K': 32}, num_warps=4...)` 整体换成 `+ triton.Config({'BLOCK_M': 128, 'BLOCK_N': 128, 'BLOCK_K': 64}, num_warps=8, num_stages=3)` 等更大 BLOCK_K=64/128（secondary=ChangeLaunchConfig）。注意 GEMM 虽把缓冲改 fp16（`+    assert A.dtype == torch.float16 and B.dtype == torch.float16 and bias.dtype == torch.float32`），但核内 `+        acc += tl.dot(A_tile.to(tl.float32), B_tile.to(tl.float32))` 又把操作数升回 fp32，fp16 只减访存、未走 Tensor Core，故 PrecisionChange 仅列 secondary 而非 primary。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.9961；introduced autotuner（@triton.autotune 的 AUTOTUNE_CONFIGS 候选被重写，按规则 4 记账）；parent_fast_p=1.458、child_fast_p=2.911；4 hunk 归到 matmul_bias_gelu_kernel/triton_matmul_bias_gelu/triton_row_softmax 三个 region（末段 ModelNew 改动被并入 triton_row_softmax hunk），spans_multiple_loci=true。"
+    },
+    {
+      "edge_id": "L2_2_99_67_94",
+      "primary": "PrecisionChange",
+      "primary_args": {
+        "source": "fp32 tl.dot + fp32 输出 C + fp32 softmax 载入（BLOCK_N/K 较小）",
+        "target": "fp16 A/B 载入直接进 tl.dot（fp32 累加）+ fp16 输出 C + softmax 读 fp16 再 cast fp32"
+      },
+      "secondary": [
+        "HostDeviceOverlap",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "matmul_bias_gelu_kernel",
+        "triton_matmul_bias_gelu",
+        "row_softmax_kernel",
+        "triton_row_softmax",
+        "forward"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版 launcher 断言 `-    assert A.dtype == torch.float32 and B_t.dtype == torch.float32 and bias.dtype == torch.float32` 且核内 tile 是 fp32 载入、`+` 之前 `tl.store(c_ptrs, acc, ...)` 存 fp32；子版把操作数真正交给 fp16 Tensor Core：核注释改 `+    A_ptr,            # A pointer (M, K) - fp16` / `+    B_ptr,            # B pointer (K, N) - fp16`，载入标 `+        A_tile = tl.load(a_ptrs, mask=mask_a, other=0.0)  # fp16 loads` 后 `+        # tl.dot on fp16 inputs yields fp32 accumulation` / `+        acc += tl.dot(A_tile, B_tile)`（dot 直接吃 fp16），并 `+    acc_fp16 = acc.to(tl.float16)` / `+    tl.store(c_ptrs, acc_fp16, mask=mask_c)`，launcher 断言改成 `+    assert A.dtype == torch.float16 and B.dtype == torch.float16 and bias.dtype == torch.float32`、`+    C = torch.empty((M, N), device=A_.device, dtype=torch.float16)`，softmax 核也改读 fp16 `+        vals = tl.load(in_ptrs, mask=mask, other=0.0)` + `+        vals_f32 = vals.to(tl.float32)`——把 8192³ GEMM 的操作数与输出降到 fp16 走 Tensor Core、并减半访存，是 3.29x 的主导来源（primary=PrecisionChange，与批 3 L2_2_75_63_64 同型）。次要：__init__/forward 新增持久 fp16 转置权重 `+        self.W_half = None` + `+            self.W_half = W.t().half().contiguous().to(W.device)` 并删掉父版每次 `-        W_t = W.t().contiguous()`（secondary=HostDeviceOverlap）；AUTOTUNE_CONFIGS 换成更大 BLOCK_N=512/1024、BLOCK_K=128 且 softmax 默认 BLOCK 由 `-    BLOCK: int = 256` 改 `+    BLOCK: int = 1024`（secondary=ChangeLaunchConfig）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=3.2885（<10）；introduced autotuner（@triton.autotune 的 AUTOTUNE_CONFIGS 候选被重写，按规则 4 记账）；与批内 L2_2_99_62_72 同为 task 2_99，但本边 dot 真正吃 fp16（非升回 fp32），故 primary 归 PrecisionChange；parent_fast_p=1.464、child_fast_p=4.814；6 hunk 落在 matmul_bias_gelu_kernel/triton_matmul_bias_gelu/row_softmax_kernel/triton_row_softmax/forward 五个 region，spans_multiple_loci=true。"
+    },
+    {
+      "edge_id": "L3_3_16_13_15",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "fused_bn_relu（BN+ReLU 一趟）",
+        "consumer": "self.conv（Conv2d）",
+        "how": "eval 分支把 BN 仿射折进 conv 权重/偏置（w_fold/b_fold）后单次 F.conv2d+relu；顺带把 fallback BN+ReLU 核改为按 channel 分块网格 (C, n_spatial/BLOCK)"
+      },
+      "secondary": [
+        "Tile",
+        "EliminateMaterialization",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "_fused_bn_relu_kernel",
+        "fused_bn_relu",
+        "__init__"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版各 forward 都是先 `-        out = fused_bn_relu(x, self.bn)` 再 `-        out = self.conv(out)`（BN+ReLU 与 conv 两趟，且 BN+ReLU 物化一份中间激活）；子版在 3 处 forward 都加了 eval 快路径 `+        if (not self.training) and (not self.bn.training) and x.is_cuda:`，把 BN 折进 conv：`+                    inv = gamma / torch.sqrt(rv + eps)` / `+                    w_fold = self.conv.weight * inv.view(-1, 1, 1, 1)` / `+                    b_fold = beta - inv * rm` 后 `+            out = F.conv2d(x, self.folded_weight, self.folded_bias, ...)` + `+            return F.relu(out, inplace=False)`（primary=Fuse，与批 3 L2_2_84_123_145 把 BN 折进 Linear 同型）。合一消掉 BN+ReLU 那份全分辨率中间激活（secondary=EliminateMaterialization）；同时 fallback 核 _fused_bn_relu_kernel 由扁平 `-    start = tl.program_id(0) * BLOCK` 改为按 channel 分块 `+    channel = tl.program_id(0)` / `+    block_idx = tl.program_id(1)`，launcher 网格由 `-    grid = lambda meta: ((n_elements + meta['BLOCK'] - 1) // meta['BLOCK'],)` 改 `+    grid = lambda meta: (C, (n_spatial + meta['BLOCK'] - 1) // meta['BLOCK'])`（secondary=Tile）；AUTOTUNE_CONFIGS 由 `BLOCK 1024/2048/4096` 下调为 `256/512/1024` 且 key 由 `- key=['n_elements', 'C', 'S']` 改 `+ key=['n_spatial', 'C', 'S']`（secondary=ChangeLaunchConfig）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.5563；introduced autotuner（@triton.autotune 的 AUTOTUNE_CONFIGS 与 key 均被修改，按规则 4 记账）；parent_fast_p=0.593、child_fast_p=0.923；7 hunk 归到 _fused_bn_relu_kernel/fused_bn_relu/__init__ 三 region（3 处 forward 折叠被并入 __init__ region），spans_multiple_loci=true。"
+    },
+    {
+      "edge_id": "L3_3_16_39_40",
+      "primary": "Vectorize",
+      "primary_args": {
+        "axis": "channel",
+        "width": "由逐通道标量循环改为 (BLOCK_C × BLOCK) 2D tile：per-channel gamma/beta/mean/var 一次性向量载入 (BLOCK_C,)，addr/vals 广播成 (BLOCK_C, BLOCK)"
+      },
+      "secondary": [
+        "LoopTransform",
+        "Tile"
+      ],
+      "sites": [
+        "_fused_bn_relu_kernel"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版在核内用标量循环逐通道处理：`-    for i in range(0, BLOCK_C):` / `-            gamma = tl.load(weight_ptr + c, mask=1, other=1.0)` / `-            vals = tl.load(x_ptr + addr, mask=mask_sp, other=0.0)`（BLOCK_C 次小的 (BLOCK,) 载入/存储 + `if m_c` 分支）；子版删掉该 for，改成一次宽事务：`+    gamma = tl.load(weight_ptr + c_offs, mask=mask_c, other=1.0)   # (BLOCK_C,)` 与 `+    vals = tl.load(x_ptr + addr, mask=mask_in, other=0.0)  # (BLOCK_C, BLOCK)`，并把参数 reshape 到 (BLOCK_C,1) 广播一次算完 `+    out_vals = (vals - mean_v) * inv_v * gamma_v + beta_v` / `+    tl.store(out_ptr + addr, out_vals, mask=mask_in)`——访存从多次窄事务合成一次宽 2D 事务、提升 ILP（primary=Vectorize），同时把标量 for 消解（secondary=LoopTransform / Tile 2D 块映射）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.3861；本 hunk 未触及 @triton.autotune 装饰器/AUTOTUNE_CONFIGS（在该 region 之外），故不记 introduced autotuner；parent_fast_p=0.730、child_fast_p=1.012；单 hunk、单 region=_fused_bn_relu_kernel，sites 只此一值，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L3_3_2_33_61",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "_gemm_kernel（GEMM）",
+        "consumer": "host 端 out+=bias 与 ModelNew forward 的 F.relu 两趟",
+        "how": "以 constexpr APPLY_BIAS/APPLY_RELU 把 bias 与 ReLU 并入 GEMM epilogue；hidden 层输出改 fp16 缓冲串联；缓存 fp16 转置权重"
+      },
+      "secondary": [
+        "PrecisionChange",
+        "HostDeviceOverlap",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "_gemm_kernel",
+        "triton_gemm",
+        "grid"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版 forward 是三段：核只算纯 GEMM（`-        a = tl.load(a_ptrs, mask=a_mask, other=0.0)` 直接进 `-        acc += tl.dot(a, b)`、核内无 bias/relu），bias 在 host `-        out += self.bias.unsqueeze(0)`、ReLU 在 ModelNew `-                out = F.relu(out)`（每层 GEMM+bias+relu 三趟）。子版在核内加 constexpr 标志 `+    A_IS_FP16: tl.constexpr, APPLY_BIAS: tl.constexpr, APPLY_RELU: tl.constexpr, OUT_IS_FP16: tl.constexpr,`，并在累加后融合 epilogue `+    if APPLY_BIAS:` → `+        acc += bias_vals` 与 `+    if APPLY_RELU:` → `+        acc = tl.maximum(acc, 0.0)`（primary=Fuse，把 bias+ReLU 折进 GEMM 一趟，与批 3 L2_2_84 折叠同型）。次要：hidden 层把激活/输出降到 fp16 缓冲串联 `+    if OUT_IS_FP16:` → `+        out_cast = tl.cast(acc, tl.float16)` + forward `+        layers.append(LinearTriton(current_in, hidden, bias=True, out_fp16=True))`（secondary=PrecisionChange，但注意 dot 仍 `+            a = tl.cast(a, tl.float32)` 走 fp32、fp16 只减带宽非 Tensor Core）；新增持久缓存 `+        self.register_buffer('weight_t_fp16', self.weight.detach().t().contiguous().half())` 并删父版每次 `-        Wt = self.weight.t().contiguous()`（secondary=HostDeviceOverlap）；AUTOTUNE_CONFIGS 由 `- triton.Config({'BLOCK_M': 64,...'BLOCK_K': 32}, num_warps=2...)` 换成 `+ triton.Config({'BLOCK_M': 128, 'BLOCK_N': 1024, 'BLOCK_K': 128}, num_warps=8, num_stages=3)` 等更大 tile（secondary=ChangeLaunchConfig）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=7.6916（<10）；introduced autotuner（@triton.autotune 的 AUTOTUNE_CONFIGS 候选被重写，按规则 4 记账）；parent_fast_p=0.408（父版自研 fp32 Triton GEMM 慢于 reference）、child_fast_p=3.140；4 hunk 归到 _gemm_kernel/triton_gemm/grid 三 region（LinearTriton 与 ModelNew 的 forward 改动被并入 grid hunk），多动作并存难完全分离故 confidence=medium，spans_multiple_loci=true。"
+    },
+    {
+      "edge_id": "L3_3_23_6_7",
+      "primary": "EliminateMaterialization",
+      "primary_args": {
+        "site": "_relu_kernel / _relu6_kernel 的 out_ptr 独立输出张量",
+        "how": "改为就地写回 tl.store(x_ptr + offs, ...)，launcher 去掉 torch.empty_like(out) 分配"
+      },
+      "secondary": [
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "_relu_kernel",
+        "_relu6_kernel"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版两个核都带独立 out_ptr：`-def _relu_kernel(x_ptr, out_ptr, n_elements, BLOCK: tl.constexpr):` 且 `-    tl.store(out_ptr + offs, res, mask=mask)`，launcher 里 `-    out = torch.empty_like(x_contig)` 与 `-    _relu_kernel[grid](x_contig, out, n)`；子版把签名收成 `-`→`+def _relu_kernel(x_ptr, n_elements, BLOCK: tl.constexpr):`、store 就地 `+    tl.store(x_ptr + offs, res, mask=mask)`（relu6 同理 `+    tl.store(x_ptr + offs, clamped, mask=mask)`），launcher 去掉 out 缓冲、直接对 x 就地处理并 `+    return x`，docstring 写 `+    Writes the result back to x_ptr in-place to avoid extra allocations.`——核数不变但不再物化输出张量（primary=EliminateMaterialization，就地）。次要：AUTOTUNE_CONFIGS 由 `- triton.Config({'BLOCK': 256}, num_warps=1...)` 等改 `+ triton.Config({'BLOCK': 4096}, num_warps=4, num_stages=2)`（候选集与 num_warps 被修改，secondary=ChangeLaunchConfig）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.1477（很小）；introduced autotuner（@triton.autotune 的 AUTOTUNE_CONFIGS 候选被修改，按规则 4 记账）；in-place 属推理路径优化（docstring 提示可能干扰 autograd）；parent_fast_p=0.882、child_fast_p=1.012；3 hunk 落在 _relu_kernel 与 _relu6_kernel 两 region，spans_multiple_loci=true。"
+    },
+    {
+      "edge_id": "L3_3_43_2_19",
+      "primary": "Fuse",
+      "primary_args": {
+        "producer": "q@k^T matmul + 自研 triton_scale_and_mask 核 + F.softmax 多趟",
+        "consumer": "att@v 第二个 matmul",
+        "how": "整体替换为单次 PyTorch F.scaled_dot_product_attention 融合核（flash-attention 式）"
+      },
+      "secondary": [
+        "EliminateMaterialization",
+        "PrecisionChange"
+      ],
+      "sites": [
+        "forward"
+      ],
+      "spans_multiple_loci": false,
+      "reasoning": "父版 forward 把注意力拆成一串独立趟：`-        att_half = (q_half @ k_half.transpose(-2, -1))  # (B, nh, T, T) in fp16` → `-        att_flat = triton_scale_and_mask(att_flat, mask_flat, scale, neg_inf)`（自研 Triton scale+mask 核）→ `-        att = F.softmax(att, dim=-1)` → `-        y = att @ v  # (B, nh, T, hs)`（两次 matmul + 独立 softmax + 独立 scale/mask 核，物化 (B,nh,T,T) 大 att）；子版塌缩为 `+        y = F.scaled_dot_product_attention(q_attn, k_attn, v_attn, attn_mask=None, dropout_p=dropout_p, is_causal=True)`，注释 `+            # scaled_dot_product_attention performs scaling, causal masking (when is_causal=True), softmax and matmul in a fused kernel`（primary=Fuse：scale+mask+softmax+PV 合成一趟），并因此不再物化 (B,nh,T,T) 中间张量（secondary=EliminateMaterialization，flash 式），且 v 也降到 fp16 `+            v_attn = v.half()`（secondary=PrecisionChange）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.8367；无 @triton.autotune；parent_fast_p=1.033（父版≈reference）、child_fast_p=1.898；本边判定存在 Fuse vs Other 张力：它同时是自研 Triton scale_mask 核 + 分立 torch 算子 → 库融合核 SDPA 的后端替换（按 Other 先例可写 Other），但相较 L2_2_64（Other，子版反而新增物化）本边是真正的多趟合一 + 去掉 (T,T) 物化，与 L2_2_84（虽落到 cuBLAS 仍判 Fuse）一致，故取 Fuse 为主、EliminateMaterialization/PrecisionChange 为辅；单 hunk、单 region=forward，spans_multiple_loci=false。"
+    },
+    {
+      "edge_id": "L3_3_47_56_57",
+      "primary": "IncreaseWorkPerThread",
+      "primary_args": {
+        "k": "每 program 由 1 行升为 ROWS_PER_PROG=8 行（(ROWS_PER_PROG × BLOCK) 2D tile）",
+        "axis": "row",
+        "mapping": "grid 由 (num_rows,) 改为 (ceil(num_rows/8),)，BLOCK 128→256"
+      },
+      "secondary": [
+        "Tile",
+        "EliminateMaterialization",
+        "ChangeLaunchConfig"
+      ],
+      "sites": [
+        "_l2_norm_kernel",
+        "triton_l2_normalize_rows",
+        "forward"
+      ],
+      "spans_multiple_loci": true,
+      "reasoning": "父版每 program 只归一化 1 行：`-    pid = tl.program_id(0)  # which vector we're normalizing` / `-    base_index = pid * L` 内 `-        sumsq += tl.sum(vals * vals)`（标量归约），launcher `-    grid = (num_rows,)`、`-    BLOCK: int = 128`；子版让每 program 吃 8 行、用 2D tile 向量化：`+    ROWS_PER_PROG: tl.constexpr,  # how many rows each program handles` / `+    base_row = pid * ROWS_PER_PROG` / `+        idxs = row_base[:, None] + off + offs[None, :]  # (ROWS_PER_PROG x BLOCK)` / `+        sumsq = sumsq + tl.sum(vals * vals, axis=1)`，launcher 改 `+    grid = ((num_rows + ROWS_PER_PROG - 1) // ROWS_PER_PROG,)` 与 `+def triton_l2_normalize_rows(x: torch.Tensor, eps: float = 1e-12, BLOCK: int = 256, ROWS_PER_PROG: int = 8)`（primary=IncreaseWorkPerThread，per-thread 元素数 1→8）。次要：这是引入 (ROWS×BLOCK) 2D 分块与映射（secondary=Tile），BLOCK 128→256（secondary=ChangeLaunchConfig）；forward 侧还把 intra-normalize 后对 flatten 向量的第二次 L2 归约用代数恒等式省掉 `+        # final L2 normalization across the flattened vector is equivalent to dividing by sqrt(K). We exploit that to avoid an extra expensive reduction.` → `+        final_scale = 1.0 / math.sqrt(float(self.cluster_size))` / `+        vlad_flat = vlad_flat * final_scale`，并去掉 vlad 的 `-        vlad = vlad.transpose(1, 2).contiguous()` 转置拷贝（secondary=EliminateMaterialization）。",
+      "confidence": "medium",
+      "why_not_existing": [],
+      "notes": "speedup_vs_parent=1.351（很小）；无 @triton.autotune（_l2_norm_kernel 为 plain @triton.jit，BLOCK/ROWS 手填 constexpr），故不记 introduced autotuner；parent_fast_p=0.869、child_fast_p=1.174；3 hunk 落在 _l2_norm_kernel/triton_l2_normalize_rows/forward 三 region（IncreaseWorkPerThread/Tile 在前两、省第二次归约在 forward），spans_multiple_loci=true。"
+    }
+  ]
+}

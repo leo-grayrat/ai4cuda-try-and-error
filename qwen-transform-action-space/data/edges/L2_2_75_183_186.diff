@@ -1,0 +1,134 @@
+@@ -3,12 +3,15 @@
+ import triton
+ import triton.language as tl
+ 
+-# Autotune configs tuned for NVIDIA A6000 (Ampere) with Tensor-Core-friendly BLOCK_K
++# Autotune configs tuned for NVIDIA A6000 (Ampere) with Tensor‑Core-friendly BLOCK_K
++# and power-of-two square tiles that suit large 8192x8192 matmuls.
+ AUTOTUNE_CONFIGS = [
++    triton.Config({"BLOCK_M": 128, "BLOCK_N": 128, "BLOCK_K": 64},  num_warps=8,  num_stages=3),
+     triton.Config({"BLOCK_M": 128, "BLOCK_N": 256, "BLOCK_K": 64},  num_warps=8,  num_stages=3),
+-    triton.Config({"BLOCK_M": 128, "BLOCK_N": 512, "BLOCK_K": 64},  num_warps=8,  num_stages=4),
+-    triton.Config({"BLOCK_M": 256, "BLOCK_N": 256, "BLOCK_K": 128}, num_warps=16, num_stages=4),
+-    triton.Config({"BLOCK_M": 256, "BLOCK_N": 512, "BLOCK_K": 128}, num_warps=16, num_stages=4),
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 256, "BLOCK_K": 32},  num_warps=8,  num_stages=3),
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 256, "BLOCK_K": 64},  num_warps=16, num_stages=4),
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 512, "BLOCK_K": 64},  num_warps=16, num_stages=4),
++    triton.Config({"BLOCK_M": 512, "BLOCK_N": 256, "BLOCK_K": 64},  num_warps=16, num_stages=4),
+ ]
+ 
+ @triton.autotune(configs=AUTOTUNE_CONFIGS, key=['M', 'N', 'K'])
+@@ -18,7 +21,7 @@
+     B_ptr,        # pointer to B_T (K, N) row-major (fp16)
+     C_ptr,        # pointer to C (M, N) row-major (fp32)
+     M, N, K,      # matrix dims
+-    bias_ptr,     # pointer to bias (N,) row-major (fp16)
++    bias_ptr,     # pointer to bias (N,) row-major (fp32)
+     BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr
+ ):
+     pid_m = tl.program_id(0)
+@@ -49,10 +52,10 @@
+ 
+         acc += tl.dot(a, b)
+ 
+-    # add bias: load fp16 bias, promote to fp32 before adding to accumulator
++    # add bias: load fp32 bias directly (bias is passed as fp32), no per-tile cast required
+     mask_n = offs_n < N
+-    bias_vals_fp16 = tl.load(bias_ptr + offs_n, mask=mask_n, other=0.0)
+-    acc += bias_vals_fp16[None, :].to(tl.float32)
++    bias_vals = tl.load(bias_ptr + offs_n, mask=mask_n, other=0.0)
++    acc += bias_vals[None, :]
+ 
+     # store C as fp32
+     c_ptrs = C_ptr + (offs_m[:, None] * N + offs_n[None, :])
+@@ -63,17 +66,21 @@
+ def triton_matmul(A: torch.Tensor, B_t: torch.Tensor, bias: torch.Tensor):
+     """
+     Compute A @ B_t (where B_t is B transposed, shape (K, N)) and add bias (N,).
+-    A: (M, K) expected dtype torch.float16 (we cast before calling)
++    A: (M, K) expected dtype torch.float16
+     B_t: (K, N) expected dtype torch.float16
+-    bias: (N,) expected dtype torch.float16
++    bias: (N,) expected dtype torch.float32 (passed as fp32 to avoid per-tile conversions)
+     Returns: (M, N) dtype torch.float32
+     """
+     assert A.is_cuda and B_t.is_cuda and bias.is_cuda, "All tensors must be on CUDA."
+-    # We expect fp16 inputs for Tensor Core usage
+-    assert A.dtype == B_t.dtype == bias.dtype and A.dtype == torch.float16, "A, B_t, bias must be fp16 for optimized path."
++    # We expect fp16 operands for A/B and a fp32 bias (so the kernel can load bias as fp32 directly).
++    assert A.dtype == torch.float16 and B_t.dtype == torch.float16 and bias.dtype == torch.float32, \
++        "A/B must be fp16 and bias must be fp32 for optimized path."
+ 
+     A = A.contiguous()
+     B_t = B_t.contiguous()
++    # ensure bias is contiguous and on the same device
++    if bias.device != A.device:
++        bias = bias.to(A.device)
+     bias = bias.contiguous()
+ 
+     M, K = A.shape
+@@ -89,7 +96,7 @@
+         n_blocks = (N + meta['BLOCK_N'] - 1) // meta['BLOCK_N']
+         return (m_blocks, n_blocks)
+ 
+-    # Launch kernel (A, B_t are fp16; C is fp32; bias is fp16)
++    # Launch kernel (A, B_t are fp16; C is fp32; bias is fp32)
+     _matmul_kernel[grid](A, B_t, C, M, N, K, bias)
+ 
+     return C
+@@ -101,6 +108,7 @@
+       - Replaces the heavy GEMM (nn.Linear) with a Triton-backed mixed-precision matmul (fp16 operands, fp32 accumulation)
+       - Keeps GroupNorm and subsequent ops in fp32 to preserve exact semantics and numerical stability.
+       - Final bias (self.bias) preserved and added after reduction.
++      - Caches a transposed fp16 copy of the linear weight to avoid repeated .t().half().contiguous() allocations.
+     """
+     def __init__(self, in_features, out_features, num_groups, bias_shape):
+         super(ModelNew, self).__init__()
+@@ -110,10 +118,16 @@
+         # final bias parameter as in original architecture
+         self.bias = nn.Parameter(torch.randn(bias_shape))
+ 
++        # cache for transposed fp16 weight to avoid repeated host-side casts & allocations
++        self._W_t_fp16 = None
++        self._W_ptr = None  # track weight.data_ptr() to know when cache is stale
++
+     def forward(self, x):
+         """
+         Forward:
+           1. Compute x @ W.T + linear_bias using Triton matmul in mixed precision.
++             - Reuse cached fp16 transposed weight when possible.
++             - Pass bias as fp32 to the kernel to avoid per-tile casting inside the kernel.
+           2. Cast back to fp32 and apply GroupNorm.
+           3. Compute min across channel dimension.
+           4. Add final bias (broadcasting as in original model).
+@@ -121,11 +135,26 @@
+         # Ensure inputs are contiguous and on CUDA
+         if x.device.type == 'cuda':
+             x_contig = x.contiguous()
+-            # cast operands to fp16 to leverage Tensor Cores
+-            W_t = self.gemm.weight.t().contiguous()
++            # Prepare linear bias (fp32) - ensure device and contiguity
+             linear_bias = self.gemm.bias if self.gemm.bias is not None else torch.zeros(self.gemm.out_features, device=x.device, dtype=x.dtype)
+-            # Call Triton matmul with fp16 operands, then cast result back to fp32 for GroupNorm
+-            out = triton_matmul(x_contig.half(), W_t.half(), linear_bias.half()).float()
++            linear_bias_fp32 = linear_bias.float()
++            if linear_bias_fp32.device != x_contig.device:
++                linear_bias_fp32 = linear_bias_fp32.to(x_contig.device)
++            linear_bias_fp32 = linear_bias_fp32.contiguous()
++
++            # Prepare cached transposed fp16 weight. Update cache if underlying weight storage changed.
++            weight = self.gemm.weight
++            w_ptr = weight.data_ptr()
++            if (self._W_t_fp16 is None) or (self._W_ptr != w_ptr) or (self._W_t_fp16.device != weight.device):
++                # create a transposed, fp16, contiguous copy on the weight's device
++                # store pointer so we can detect weight re-initialization/overwrite
++                self._W_t_fp16 = weight.t().half().contiguous()
++                self._W_ptr = w_ptr
++
++            W_t_fp16 = self._W_t_fp16
++
++            # Call Triton matmul with fp16 operands and fp32 bias; cast result back to fp32 for GroupNorm
++            out = triton_matmul(x_contig.half(), W_t_fp16, linear_bias_fp32).float()
+         else:
+             # fallback to torch if not on CUDA
+             out = torch.nn.functional.linear(x, self.gemm.weight, self.gemm.bias)

@@ -1,0 +1,131 @@
+# Qwen 自动化研究探索：Program Transformation Action Space
+
+## 性质声明（必读）
+
+本目录是 **Qwen3.8-Flash 自动化研究探索** 的输出。
+
+- 作者仅测试 AI 端到端自主完成「文献调研 → 实验设计 → 论文撰写 → 引用完整性核验」
+  这一完整流程的可能性；本目录内容 **不代表严肃研究投稿意向**。
+- 文献检索、程序变换标注、统计分析、图表生成、论文正文与结论 **全部由 AI 生成，
+  未经人工复核**。
+- 其中的实验标注方法（以 AI 自动标注代替研究笔记原案的「人工标注」）已在论文
+  Limitations 中如实声明其 bias 与循环自证风险。
+- 本目录的方法论约束继承自仓库根目录 `RESEARCH_RETROSPECTIVE.md`：每一项实验在
+  执行前都必须回答「如果这个实验完美完成，它会改变我们对原研究问题的哪一个判断？」
+  若答案只是「工具更完整了、记录更可复现了」，则视为基础设施，不包装为研究进展。
+
+## 研究命题（Idea 4）
+
+对 LLM 驱动的 CUDA kernel 优化，把搜索 / 学习界面从 *整段代码（token 序列）生成*
+提升到 *参数化程序变换* `a = (τ, ℓ, θ)`，是否真的显著改变搜索效率与学习效率？
+
+体裁：Position / Analysis Paper（主张 + 真实数据初步证据 + 可证伪实验框架设计）。
+
+## 目录结构
+
+| 路径 | 内容 |
+|------|------|
+| `SPEC.md` | 本次执行的研究 spec（自包含，含完整背景脉络） |
+| `stage1_research/` | Stage 1 交付：RQ Brief、文献图谱、逐篇核查表、Related Work 素材 |
+| `data/adaexplore/` | AdaExplore 原始轨迹解压产物（大文件，不入库） |
+| `data/edges/` | 成功 parent→child 边的 unified diff 与元数据 |
+| `data/annotations.json` | AI 自动标注结果（冻结 vocabulary + reasoning） |
+| `figures/` | 熵分析与复用率图表 |
+| `paper/` | 英文主稿（`main.md` / LaTeX） |
+| `paper/zh/` | 中文对照稿 |
+| `scripts/` | 纯数据管道脚本（**不含** classifier / locator / AST pipeline） |
+
+## 数据边界
+
+只使用公开可得的 AdaExplore 父子轨迹数据（`.cache/adaexplore-l2.tar.gz`、
+`.cache/adaexplore-l3.tar.gz`），不依赖 CUDA Agent 未开源的任何观测量
+（逐 token Critic value、原始概率、advantage、Agent 轨迹、工具调用日志）。
+
+## 与旧实验代码的隔离
+
+本目录 **不复用** `action-credit/` 与 `cuda-skill-efficiency/` 的任何代码。
+方法论红线：不写 classifier、不写 locator、不写 AST pipeline；
+transformation vocabulary 先冻结再标注。
+
+## 工作流
+
+按 `academic-pipeline` skill 的阶段编排执行（用户指示：全程自动推进，checkpoint 不等待确认）：
+Stage 1 RESEARCH（quick）→ Stage 1.5 EXPERIMENT → Stage 2 WRITE → Stage 2.5 INTEGRITY
+→ Stage 3 REVIEW（五视角盲审）→ Stage 4 REVISE → Stage 3′ RE-REVIEW → Stage 4′ RE-REVISE
+→ Stage 4.5 FINAL INTEGRITY → Stage 5 FINALIZE。
+
+## 产出状态（全部阶段已完成）
+
+| 阶段 | 产物 | 结果 |
+|------|------|------|
+| Stage 1 | `stage1_research/`（含 `KEYWORD_GROUP_AUDIT.md`） | RQ Brief + 逐源核查账 + **spec §5.1 七组关键词逐条对账**；2 条 spec 文献检索不到 → 禁止引用 |
+| Stage 1.5 | `STAGE1_5_REPORT.md`、`data/`、`figures/` | 2,510 候选边 / 55 标注；词表覆盖 90.9% |
+| Stage 2 | `paper/main.md` v1 | 8,825 词初稿 |
+| Stage 2.5 | `STAGE2_5_INTEGRITY.md` | 28/28 引用回源；69/69 数字；拦下 3 处不可验证断言 |
+| Stage 3 | `stage3_review/` | 五份盲审 + 编辑决定：**Major Revision**（overall 48–57） |
+| Stage 4 | `stage4_revision/REVISION_NOTES.md` | R-1..R-8 逐项处置；**头条统计结论反号** |
+| Stage 3′/4′ | `stage3prime_rereview/` | R-1..R-6 MET、R-7/R-8 PARTIAL；抓出 §5.2 残留矛盾 |
+| Stage 4.5 | `STAGE4_5_FINAL_INTEGRITY.md`（含 v3 复跑） | 从零复核引用；新发现并修 3 处引用字段错误；v3 补入 [33]–[35] |
+| Stage 5 | `paper/latex/`、`paper/zh/full.md` | LaTeX 源 + **BibTeX 自动生成的文献表**（`references.bib` 36 条，正文 `[n]` → `\cite{}`，PDF 内 111 个内部跳转 + 52 个可点 URL）+ **已编译 PDF（经结构性验证）**；中文对照稿 |
+
+终态关卡（v3，全部可重跑）：
+
+```
+python scripts/verify_references.py       # 引用从零回源（arXiv + CrossRef + URL 三类解析器）
+python scripts/verify_paper_numbers.py    # 数字与文本断言
+python scripts/verify_zh_alignment.py    # 中英定量 token + 符号对齐
+python scripts/integrity_scan.py paper/main.md   # CJK / 引用闭环 / 章节
+python scripts/make_latex.py             # 编译 PDF 并验证页数、尾部章节、图片数、缺字
+```
+
+### 关于 PDF 的一条自我纠正
+
+本目录先前版本声称「本机无任何 TeX 引擎，PDF 有意未产出」。那句话是错的：我只查了沙箱进程的
+PATH，而 MiKTeX 实际装在用户目录下（`AppData\Local\Programs\MiKTeX\miktex\bin\x64`）。
+现在 `make_latex.py` 会主动探测 PATH 之外的常见安装位置，并且**不再把「PDF 文件存在」当成成功**：
+它用 pypdf 校验尾部章节齐备、页数与词数量级相符、嵌入图数与 `figures/` 相符，并扫描日志里的
+`Missing character` 与 `! ` 硬错误。这个改动是因为旧的宽松判定曾把一份只编到 §3.4 的 8 页截断产物
+报成 `pdf=yes`。
+
+### 本目录的重要事实
+
+论文 v2 的核心结论与 v1 **相反**：v1 声称「语义标签不优于 diff 粗结构」，那是
+`calibrate_informativeness.py` 误用 Miller–Madow 偏差项产生的假象；修正后语义标签在自己的
+置换零模型下显著（p = 0.0005），而粗结构（p = 0.752）与 hunk 数（p = 0.436）都不显著。
+同时撤回了另外两项当时当作证据使用的说法（恒等式熵比较、跨任务复现率）。
+
+本流水线自身的两次失败（对账全绿却对方法错误免疫；一次只限于 HTML 的检索失败
+被误判为审稿人造假）已记录于**附录 B**，并作为对自动化科研流水线的发现而非过程琐事呈现。
+
+### 结构说明（本目录内各部分该读哪儿）
+
+- **正文只包含论断与证据**。限制集中在 §7.5「本文没有证明什么」一处。
+- 本流水线自己的生产过程（一个误差如何反转结论、一次检索失败如何被误判为造假、
+  同一家族五个评审席位等于什么）已全部移到 **附录 B — Production record**，
+  不在正文论证里占位。`scripts/denarrate.py` 做这次搬移，
+  `scripts/repair_section_order.py` 负责修正搬移时误切的节顺序并卡住结构不变量。
+- 中文稿与英文稿同步经过 `scripts/denarrate_zh.py`，去掉了
+  「不作遮掩地报告」「诚实的配重」「不是我们选的推托」这类自我表扬式修辞与硬译指代。
+
+### 参考文献怎么生成
+
+正文里的 `[n]` 在构建时会被 `scripts/make_latex.py` 改写成 `\cite{}`，手敲的 `## References`
+列表从构建副本中剔除，由 **latexmk + BibTeX + unsrtnat（数字模式）** 生成带编号、可跳转的
+文献表；`references.bib` 本身由 `scripts/make_bib.py` 从已经过 `verify_references.py` 回源的
+列表派生，不手敲。构建时会报告**没有作者段的条目**，因为空作者会在文献表里退化为只有标题、
+很容易被忽略——曾经 36 条里有 16 条如此，已全部补齐（`scripts/fetch_authors.py` 取元数据，
+再用 `verify_references.py` 逐条比对作者姓氏，现在 36/36 无缺失）。
+
+取作者时有一个坑值得记：arXiv 逐条请求会被限流，改用一次 `id_list` 批量查询；而 abs 页的
+`citation_author` 元标签居然出过一个并不存在的作者（把一个人名拆成 `Max`、`Fan` 两项），
+与页面上可见的作者栏不符。所以**元数据不能直接当事实用**，要拿可见作者栏交叉校对后再写入。
+
+### 已知未完成（不作表面修补）
+
+1. 正文词数超出 workshop 8–12 页目标（`integrity_scan.py` 实测为准）；进一步删减会改变论证重心，属作者决策。
+2. §7.1 四条消解标准已执行三条（脚本：`annotation_agreement.py`、`probe_candidates.py`）：
+   无定义盲重标得 74.5% 一致 / Cohen κ = 0.687；**但头条在盲标下不再显著（p = 0.106，对 p = 0.0005）**，
+   38 条一致子集 p = 0.0016；开放编码（24 条任务零重叠边）归纳出 7 类并独立重发现后端改派。
+   **仍缺真正独立（人类）的第二标注。**
+3. 无任何干预实验：§4 是协议，L2/L3 主张未被检验。
+4. Stage 2 的 v1 稿件当时未单独提交，故 Stage 3′ 无逐行回归 diff（过程缺陷）。

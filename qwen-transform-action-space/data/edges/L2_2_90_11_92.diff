@@ -1,0 +1,195 @@
+@@ -4,113 +4,134 @@
+ import triton
+ import triton.language as tl
+ 
+-# Autotuning configurations for different block sizes
++# Autotune configurations: explore a variety of block sizes and warps for Ampere.
+ AUTOTUNE_CONFIGS = [
+-    triton.Config({"BLOCK": 256}, num_warps=2, num_stages=2),
+-    triton.Config({"BLOCK": 512}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK": 1024}, num_warps=8, num_stages=2),
+-    triton.Config({"BLOCK": 2048}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK": 128},  num_warps=2, num_stages=2),
++    triton.Config({"BLOCK": 256},  num_warps=4, num_stages=2),
++    triton.Config({"BLOCK": 512},  num_warps=4, num_stages=3),
++    triton.Config({"BLOCK": 1024}, num_warps=8, num_stages=3),
+ ]
+ 
+ 
+ @triton.autotune(
+     configs=AUTOTUNE_CONFIGS,
+-    key=["n_elements", "spatial_size", "C"],
++    key=["N", "C", "spatial_size"],
+ )
+ @triton.jit
+-def _fused_leaky_add_clamp_kernel(
+-    inp_ptr,      # input pointer (flattened)
+-    sum_ptr,      # per-channel sum pointer (length C)
+-    out_ptr,      # output pointer (flattened)
+-    n_elements,   # total number of elements
+-    spatial_size, # D*H*W
+-    C,            # number of channels
+-    BLOCK: tl.constexpr,
++def _fused_postconv_kernel(
++    inp_ptr,        # pointer to input (flattened)
++    sum_ptr,        # pointer to per-channel sum (length C)
++    out_ptr,        # pointer to output (flattened)
++    N,              # batch size
++    C,              # channels
++    spatial_size,   # D*H*W
++    NEG_SLOPE: tl.constexpr,  # negative slope for LeakyReLU (constexpr to enable optimization)
++    BLOCK: tl.constexpr,      # block size for spatial elements per program
+ ):
+     """
+-    For each element:
+-      y = leaky_relu(x, negative_slope=0.2)
+-      y = y + sum_tensor[channel]
+-      y = clamp(y, -1.0, 1.0)
+-    Writes result to out_ptr.
++    Kernel layout:
++      - grid dim 0: idx_bc = batch * C + channel  (each program handles a full (batch,channel) slice)
++      - grid dim 1: block index over spatial_size with BLOCK elements per program
++
++    Operations fused:
++      1) LeakyReLU (negative_slope = NEG_SLOPE)
++      2) add per-channel sum (broadcast)
++      3) clamp to [-1.0, 1.0]
++      4) GELU approximation: x * sigmoid(1.702 * x)
++
++    Notes:
++      - Uses branchless ops and vectorized loads/stores.
++      - sum_ptr is expected to be length C (per-channel scalar).
+     """
+-    block_start = tl.program_id(0) * BLOCK
+-    offs = block_start + tl.arange(0, BLOCK)
+-    mask = offs < n_elements
++    idx_bc = tl.program_id(0)              # which (batch,channel) slice
++    block_idx = tl.program_id(1)           # which block of spatial elements
+ 
+-    # Load input values
+-    x = tl.load(inp_ptr + offs, mask=mask, other=0.0)
++    # offsets within this block
++    offs = block_idx * BLOCK + tl.arange(0, BLOCK)
++    mask = offs < spatial_size
+ 
+-    # Compute channel index for each linear offset:
+-    # linear_index = ((batch * C + channel) * spatial_size) + spatial_idx
+-    # => channel = (linear_index // spatial_size) % C
+-    tmp = offs // spatial_size
+-    c_idx = tmp % C  # vector of channel indices
++    # base offset for this (batch,channel) slice in flattened buffer
++    base = idx_bc * spatial_size
++    ptrs = inp_ptr + base + offs
+ 
+-    # Load per-channel sum (broadcasted)
+-    sum_vals = tl.load(sum_ptr + c_idx, mask=mask, other=0.0)
++    # load input values (masked)
++    x = tl.load(ptrs, mask=mask, other=0.0)
+ 
+-    # Leaky ReLU with negative_slope = 0.2
+-    neg_slope = 0.2
+-    positive = x >= 0.0
+-    leaky = tl.where(positive, x, x * neg_slope)
++    # compute channel index and load per-channel sum once
++    channel = idx_bc % C
++    sum_val = tl.load(sum_ptr + channel)  # scalar broadcast
+ 
+-    # Add and clamp
+-    added = leaky + sum_vals
+-    clamped = tl.where(added < -1.0, -1.0, tl.where(added > 1.0, 1.0, added))
++    # LeakyReLU (branchless)
++    pos = tl.maximum(x, 0.0)
++    neg = tl.minimum(x, 0.0)
++    leaky = pos + neg * NEG_SLOPE
+ 
+-    # Store output
+-    tl.store(out_ptr + offs, clamped, mask=mask)
++    # add per-channel sum and clamp to [-1.0, 1.0]
++    added = leaky + sum_val
++    clamped = tl.minimum(tl.maximum(added, -1.0), 1.0)
++
++    # GELU approximation via sigmoid: gelu(x) ~= x * sigmoid(1.702 * x)
++    z = 1.702 * clamped
++    sigmoid = 1.0 / (1.0 + tl.exp(-z))
++    gelu_approx = clamped * sigmoid
++
++    # store result
++    out_ptrs = out_ptr + base + offs
++    tl.store(out_ptrs, gelu_approx, mask=mask)
+ 
+ 
+-def triton_fused_leaky_add_clamp(inp: torch.Tensor, sum_tensor: torch.Tensor):
++def triton_fused_postconv(inp: torch.Tensor, sum_tensor: torch.Tensor, negative_slope: float = 0.2):
+     """
+-    Wraps and launches the Triton kernel that fuses:
+-      leaky_relu -> add (broadcast sum_tensor over channels) -> clamp
+-    Returns a new tensor (not in-place).
++    Wrap and launch Triton kernel that fuses:
++      LeakyReLU -> add (per-channel) -> clamp -> GELU approximation
++
++    inp: (N, C, D, H, W) float32 CUDA tensor
++    sum_tensor: (C, 1, 1, 1) or (C,) float32 CUDA tensor
+     """
+     if not inp.is_cuda:
+-        # Fallback to PyTorch implementation on CPU
+-        out = F.leaky_relu(inp, negative_slope=0.2)
++        # CPU fallback preserves original semantics
++        out = F.leaky_relu(inp, negative_slope=negative_slope)
+         out = out + sum_tensor
+         out = torch.clamp(out, min=-1.0, max=1.0)
++        out = F.gelu(out)
+         return out
+ 
+-    # Ensure contiguous tensors on CUDA
+     inp = inp.contiguous()
+-    sum_tensor = sum_tensor.contiguous()
++    # Ensure sum_tensor is 1D of length C
++    sum_1d = sum_tensor.view(-1).contiguous()
+     out = torch.empty_like(inp)
+ 
+-    n_elements = inp.numel()
+     N, C, D, H, W = inp.shape
+     spatial_size = D * H * W
+ 
+-    # grid based on selected BLOCK
+-    grid = lambda meta: ((n_elements + meta["BLOCK"] - 1) // meta["BLOCK"],)
++    # 2D grid: (N*C, num_spatial_blocks)
++    grid = lambda meta: (
++        (N * C),
++        ( (spatial_size + meta["BLOCK"] - 1) // meta["BLOCK"] ),
++    )
+ 
+-    _fused_leaky_add_clamp_kernel[grid](
+-        inp, sum_tensor, out, n_elements, spatial_size, C
++    # Launch kernel: pass NEG_SLOPE as constexpr to allow compile-time optimizations
++    _fused_postconv_kernel[grid](
++        inp, sum_1d, out, N, C, spatial_size, negative_slope
+     )
+     return out
+ 
+ 
+ class ModelNew(nn.Module):
+     """
+-    Optimized model: uses PyTorch Conv3d, then a Triton kernel to fuse
+-    LeakyReLU + add(broadcast sum_tensor) + clamp, then applies GELU via PyTorch.
++    Optimized model: keep PyTorch Conv3d (cuDNN), then apply a Triton-fused kernel
++    for LeakyReLU + add(broadcast sum_tensor) + clamp + GELU (approx).
+     """
+     def __init__(self, in_channels, out_channels, kernel_size, sum_tensor_shape):
+         super(ModelNew, self).__init__()
+         self.conv = nn.Conv3d(in_channels, out_channels, kernel_size)
+         # sum_tensor expected shape (out_channels, 1, 1, 1)
+-        self.sum_tensor = nn.Parameter(torch.randn(sum_tensor_shape))
++        self.sum_tensor = nn.Parameter(torch.randn(sum_tensor_shape, dtype=torch.float32))
+ 
+     def forward(self, x):
+         x = self.conv(x)
+-        # fused LeakyReLU + add + clamp via Triton (or fallback on CPU)
+-        x = triton_fused_leaky_add_clamp(x, self.sum_tensor)
+-        # apply GELU (using PyTorch implementation)
+-        x = F.gelu(x)
++        # fuse the following ops in a single Triton kernel for reduced memory traffic
++        x = triton_fused_postconv(x, self.sum_tensor, negative_slope=0.2)
+         return x
+ 
+ 

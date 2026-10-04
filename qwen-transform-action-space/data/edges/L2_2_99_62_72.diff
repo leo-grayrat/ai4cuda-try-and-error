@@ -1,0 +1,321 @@
+@@ -3,14 +3,19 @@
+ import triton
+ import triton.language as tl
+ 
+-# Autotune configs for GEMM kernel (matmul + bias + GELU)
++# More aggressive autotune candidates targeted for Ampere (A6000).
++# Larger BLOCK_K and larger tiles to better utilize Tensor Cores and memory bandwidth.
+ AUTOTUNE_CONFIGS = [
+-    triton.Config({"BLOCK_M": 64, "BLOCK_N": 64, "BLOCK_K": 32}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK_M": 128, "BLOCK_N": 128, "BLOCK_K": 32}, num_warps=8, num_stages=2),
+-    triton.Config({"BLOCK_M": 256, "BLOCK_N": 64, "BLOCK_K": 32}, num_warps=8, num_stages=2),
+-    triton.Config({"BLOCK_M": 64, "BLOCK_N": 256, "BLOCK_K": 32}, num_warps=8, num_stages=2),
+-    triton.Config({"BLOCK_M": 128, "BLOCK_N": 64, "BLOCK_K": 64}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK_M": 128, "BLOCK_N": 128, "BLOCK_K": 64},  num_warps=8, num_stages=3),
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 128, "BLOCK_K": 64},  num_warps=8, num_stages=3),
++    triton.Config({"BLOCK_M": 128, "BLOCK_N": 256, "BLOCK_K": 64},  num_warps=8, num_stages=3),
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 256, "BLOCK_K": 64},  num_warps=8, num_stages=3),
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 256, "BLOCK_K": 128}, num_warps=8, num_stages=4),
++    triton.Config({"BLOCK_M": 128, "BLOCK_N": 512, "BLOCK_K": 128}, num_warps=8, num_stages=4),
++    triton.Config({"BLOCK_M": 512, "BLOCK_N": 256, "BLOCK_K": 128}, num_warps=8, num_stages=4),
++    triton.Config({"BLOCK_M": 512, "BLOCK_N": 512, "BLOCK_K": 128}, num_warps=8, num_stages=4),
+ ]
++
+ 
+ @triton.autotune(
+     configs=AUTOTUNE_CONFIGS,
+@@ -18,90 +23,88 @@
+ )
+ @triton.jit
+ def matmul_bias_gelu_kernel(
+-    A_ptr,            # A pointer (M, K)
+-    B_ptr,            # B pointer (K, N) - pass weight.t() so B is (K,N)
+-    C_ptr,            # output pointer (M, N)
++    A_ptr,            # A pointer (M, K)  fp16
++    B_ptr,            # B pointer (N, K) stored as (N, K) fp16, but kernel indexes as (K, N) via strides
++    C_ptr,            # output pointer (M, N) fp32
+     M, N, K,          # matrix dimensions
+     stride_am, stride_ak,  # A strides
+-    stride_bk, stride_bn,  # B strides
++    stride_bk, stride_bn,  # B strides (to emulate (K,N) access)
+     stride_cm, stride_cn,  # C strides
+-    bias_ptr, stride_bias, # bias pointer and stride (bias shape N,)
++    bias_ptr, stride_bias, # bias pointer and stride (bias shape N,) fp32
+     BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr
+ ):
+-    # block indices
+     pid_m = tl.program_id(0)
+     pid_n = tl.program_id(1)
+ 
+-    # compute start indices of this block
+     row_start = pid_m * BLOCK_M
+     col_start = pid_n * BLOCK_N
+ 
+-    # ranges within block
+     offs_m = row_start + tl.arange(0, BLOCK_M)
+     offs_n = col_start + tl.arange(0, BLOCK_N)
+     k_offs = tl.arange(0, BLOCK_K)
+ 
+-    # Initialize accumulator
+     acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
+ 
+-    # loop over K dimension
++    # Loop over K dimension to accumulate
+     for k in range(0, K, BLOCK_K):
+-        # current k block
+         k_block = k + k_offs
+ 
+-        # masks for valid loads
+         mask_a = (offs_m[:, None] < M) & (k_block[None, :] < K)
+         mask_b = (k_block[:, None] < K) & (offs_n[None, :] < N)
+ 
+-        # compute pointers
+         a_ptrs = A_ptr + (offs_m[:, None] * stride_am + k_block[None, :] * stride_ak)
++        # B is given with shape (N, K). We want to access it as (K, N), so stride_bk refers to stride over K in memory.
+         b_ptrs = B_ptr + (k_block[:, None] * stride_bk + offs_n[None, :] * stride_bn)
+ 
+-        # load tiles (shape: (BLOCK_M, BLOCK_K) and (BLOCK_K, BLOCK_N))
+-        A_tile = tl.load(a_ptrs, mask=mask_a, other=0.0)
+-        B_tile = tl.load(b_ptrs, mask=mask_b, other=0.0)
++        A_tile = tl.load(a_ptrs, mask=mask_a, other=0.0).to(tl.float16)
++        B_tile = tl.load(b_ptrs, mask=mask_b, other=0.0).to(tl.float16)
+ 
+-        # multiply-accumulate
+-        acc += tl.dot(A_tile, B_tile)
++        # Use fp32 accumulation for numerical stability; inputs are fp16 to leverage tensor cores.
++        acc += tl.dot(A_tile.to(tl.float32), B_tile.to(tl.float32))
+ 
+-    # add bias (broadcast over rows)
++    # Add bias (broadcast across rows)
+     bias_vals = tl.load(bias_ptr + offs_n * stride_bias, mask=offs_n < N, other=0.0)
+     acc = acc + bias_vals[None, :]
+ 
+     # GELU approximation: x * sigmoid(1.702 * x)
+     acc = acc * (1.0 / (1.0 + tl.exp(-1.702 * acc)))
+ 
+-    # store result
++    # Store result into C (fp32)
+     c_ptrs = C_ptr + (offs_m[:, None] * stride_cm + offs_n[None, :] * stride_cn)
+     mask_c = (offs_m[:, None] < M) & (offs_n[None, :] < N)
+     tl.store(c_ptrs, acc, mask=mask_c)
+ 
+ 
+-def triton_matmul_bias_gelu(A: torch.Tensor, B_t: torch.Tensor, bias: torch.Tensor):
++def triton_matmul_bias_gelu(A: torch.Tensor, B: torch.Tensor, bias: torch.Tensor):
+     """
+-    A: (M, K), contiguous
+-    B_t: (K, N), contiguous (this should be weight.t().contiguous())
+-    bias: (N,)
+-    returns C: (M, N) with GELU applied
++    A: (M, K) fp16 contiguous
++    B: (N, K) fp16 (weight in original Linear layout (out_features, in_features))
++    bias: (N,) fp32
++    returns: C (M, N) fp32 with GELU applied
+     """
+-    assert A.is_cuda and B_t.is_cuda and bias.is_cuda, "Tensors must be on CUDA."
+-    assert A.dtype == torch.float32 and B_t.dtype == torch.float32 and bias.dtype == torch.float32
++    assert A.is_cuda and B.is_cuda and bias.is_cuda, "Tensors must be on CUDA."
++    assert A.dtype == torch.float16 and B.dtype == torch.float16 and bias.dtype == torch.float32
+ 
+     A_ = A.contiguous()
+-    B_ = B_t.contiguous()
++    B_ = B  # keep B as-is (N, K) fp16
+     bias_ = bias.contiguous()
+ 
+     M, K = A_.shape
+-    Kb, N = B_.shape
++    N_b, Kb = B_.shape
+     assert Kb == K, "K dimension mismatch between A and B"
+-    C = torch.empty((M, N), device=A_.device, dtype=A_.dtype)
++    N = N_b
++
++    C = torch.empty((M, N), device=A_.device, dtype=torch.float32)
+ 
+     stride_am, stride_ak = A_.stride()
+-    stride_bk, stride_bn = B_.stride()
++    # B_.stride() returns (stride_over_N, stride_over_K) given shape (N, K)
++    stride_bn_actual, stride_bk_actual = B_.stride()
++    # The kernel expects (stride_bk, stride_bn) to emulate a (K, N) layout access.
++    stride_bk, stride_bn = stride_bk_actual, stride_bn_actual
++
+     stride_cm, stride_cn = C.stride()
+     stride_bias = bias_.stride()[0]
+ 
+-    # grid based on BLOCK_M and BLOCK_N from autotune meta
+     grid = lambda meta: (
+         (M + meta['BLOCK_M'] - 1) // meta['BLOCK_M'],
+         (N + meta['BLOCK_N'] - 1) // meta['BLOCK_N'],
+@@ -118,58 +121,58 @@
+     return C
+ 
+ 
+-# Softmax kernel: compute row-wise softmax (each program handles one row)
++# Optimized row-wise softmax: numerically stable two-pass variant.
+ @triton.jit
+ def row_softmax_kernel(
+-    X_ptr, Y_ptr,  # input and output pointers (row-major M x N)
++    X_ptr, Y_ptr,
+     M, N,
+-    stride_xm, stride_xn,  # strides for X
+-    stride_ym, stride_yn,  # strides for Y
++    stride_xm, stride_xn,
++    stride_ym, stride_yn,
+     BLOCK: tl.constexpr
+ ):
+     row = tl.program_id(0)
+-    # each program handles one row
+     offs = tl.arange(0, BLOCK)
+     neg_inf = -1e20
+ 
+-    # compute block-wise maximums into an accumulator vector
+-    max_block = tl.full((BLOCK,), neg_inf, dtype=tl.float32)
++    # Streaming merge to get row-wise max and sum in a single forward pass over blocks
++    cur_max = -1e20
++    cur_sum = 0.0
++
++    # First pass: compute merged max and sum (after GELU, inputs are fp32)
+     for col_start in range(0, N, BLOCK):
+         idx = col_start + offs
+         mask = idx < N
+         ptrs = X_ptr + row * stride_xm + idx * stride_xn
+         vals = tl.load(ptrs, mask=mask, other=neg_inf)
+-        max_block = tl.maximum(max_block, vals)
+ 
+-    # reduce to scalar max
+-    row_max = tl.max(max_block, axis=0)
++        block_max = tl.max(vals, axis=0)
++        exp_vals = tl.exp(vals - block_max)
++        block_sum = tl.sum(exp_vals, axis=0)
+ 
+-    # compute sum of exp(x - row_max)
+-    sum_exp = 0.0
+-    for col_start in range(0, N, BLOCK):
+-        idx = col_start + offs
+-        mask = idx < N
+-        ptrs = X_ptr + row * stride_xm + idx * stride_xn
+-        vals = tl.load(ptrs, mask=mask, other=neg_inf)
+-        exp_vals = tl.exp(vals - row_max)
+-        sum_exp += tl.sum(exp_vals, axis=0)
++        cond = block_max > cur_max
++        exp_cur_minus_block = tl.exp(cur_max - block_max)
++        exp_block_minus_cur = tl.exp(block_max - cur_max)
++        cur_sum = tl.where(cond,
++                           cur_sum * exp_cur_minus_block + block_sum,
++                           cur_sum + block_sum * exp_block_minus_cur)
++        cur_max = tl.where(cond, block_max, cur_max)
+ 
+-    # write normalized softmax to output
++    # Second pass: write normalized softmax outputs
+     for col_start in range(0, N, BLOCK):
+         idx = col_start + offs
+         mask = idx < N
+         in_ptrs = X_ptr + row * stride_xm + idx * stride_xn
+         out_ptrs = Y_ptr + row * stride_ym + idx * stride_yn
+         vals = tl.load(in_ptrs, mask=mask, other=neg_inf)
+-        exp_vals = tl.exp(vals - row_max)
+-        res = exp_vals / sum_exp
++        res = tl.exp(vals - cur_max) / cur_sum
+         tl.store(out_ptrs, res, mask=mask)
+ 
+ 
+-def triton_row_softmax(X: torch.Tensor, BLOCK: int = 1024):
++def triton_row_softmax(X: torch.Tensor, BLOCK: int = 512):
+     """
+-    Compute softmax over dim=1 (rows of shape (M, N)) using Triton.
+-    Each Triton program handles one row; BLOCK is the per-row tile size.
++    Compute softmax over dim=1 using Triton.
++    Each program handles one row; BLOCK is the per-row tile size.
++    Default BLOCK=512 chosen to reduce the number of streaming iterations for N=8192.
+     """
+     assert X.is_cuda and X.dtype == torch.float32
+     X_ = X.contiguous()
+@@ -179,55 +182,64 @@
+     stride_xm, stride_xn = X_.stride()
+     stride_ym, stride_yn = Y.stride()
+ 
+-    # one program per row
+     grid = (M,)
+-
+-    # pass BLOCK as constexpr
+-    row_softmax_kernel[grid](
+-        X_, Y,
+-        M, N,
+-        stride_xm, stride_xn,
+-        stride_ym, stride_yn,
+-        BLOCK,
+-    )
++    row_softmax_kernel[grid](X_, Y, M, N, stride_xm, stride_xn, stride_ym, stride_yn, BLOCK)
+     return Y
+ 
+ 
+ class ModelNew(nn.Module):
+     """
+-    Optimized Model: replace the linear (matmul + bias), GELU, and Softmax with Triton kernels.
+-    - matmul + bias + GELU is implemented in a fused Triton GEMM kernel.
+-    - softmax over dim=1 is implemented as a Triton row-wise softmax kernel.
++    Optimized model:
++    - Persistent fp16 copy of weight to avoid per-forward transposes/copies.
++    - Inputs cast to fp16 once per forward to leverage tensor cores.
++    - Fused matmul + bias + GELU implemented in Triton (mixed precision).
++    - Row-wise softmax implemented in Triton with larger BLOCK to reduce passes.
+     """
+     def __init__(self, in_features, out_features):
+         super(ModelNew, self).__init__()
+         self.linear = nn.Linear(in_features, out_features)
++        # placeholder for persistent half-weight
++        self.register_buffer('_dummy_buffer_for_device', torch.empty(0), persistent=False)
++        self.W_half = None
++
++    def _ensure_weight_half(self):
++        W = self.linear.weight
++        # Create or refresh persistent fp16 contiguous copy on the weight device
++        if getattr(self, 'W_half', None) is None or self.W_half.shape != W.shape or self.W_half.device != W.device:
++            # keep it non-grad
++            self.W_half = W.half().contiguous().to(W.device)
++        else:
++            # If the weight tensor changed device (rare), move the half copy
++            if self.W_half.device != W.device:
++                self.W_half = W.half().contiguous().to(W.device)
+ 
+     def forward(self, x):
+-        # Ensure inputs are on CUDA
++        # ensure on CUDA
+         if not x.is_cuda:
+             x = x.cuda()
+-        W = self.linear.weight
+-        b = self.linear.bias
+-        # Prepare weight transposed and contiguous for Triton kernel (B should be K x N)
+-        W_t = W.t().contiguous()  # shape (in_features, out_features) == (K, N)
+-        b_ = b.contiguous()
++        self._ensure_weight_half()
+ 
+-        # Compute matmul + bias + GELU using Triton
+-        out = triton_matmul_bias_gelu(x, W_t, b_)
++        # cast input to fp16 once
++        x_h = x.half().contiguous()
++        W_half = self.W_half  # (out_features, in_features) -> shape (N, K)
++        b = self.linear.bias.contiguous()
+ 
+-        # Compute softmax across dim=1 using Triton (row-wise softmax)
+-        # Choose BLOCK tuned for large N; 1024 is a good balance for N=8192
+-        out = triton_row_softmax(out, BLOCK=1024)
++        # compute matmul + bias + GELU in Triton (mixed precision)
++        out = triton_matmul_bias_gelu(x_h, W_half, b)
++
++        # compute softmax along dim=1 using Triton
++        # Use BLOCK=512 for N=8192 to reduce loop iterations (8192/512=16)
++        out = triton_row_softmax(out, BLOCK=512)
+         return out
+ 
+ 
+-# Keep the original dataset shape variables and helper functions
++# Original shapes and helpers
+ batch_size = 1024
+ in_features = 8192
+ out_features = 8192
+ 
+ def get_inputs():
++    # create CUDA inputs for benchmarking/inference
+     return [torch.rand(batch_size, in_features).cuda()]
+ 
+ def get_init_inputs():

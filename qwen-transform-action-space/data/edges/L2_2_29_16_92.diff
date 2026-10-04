@@ -1,0 +1,316 @@
+@@ -4,177 +4,227 @@
+ import triton
+ import triton.language as tl
+ 
+-# Triton GEMM fused with two Mish activations.
+-# This kernel computes C = mish(mish(A @ B + bias))
+-# A: (M, K)
+-# B: (K, N)  <-- we will pass weight.t().contiguous().half() so B is (K, N) in FP16
+-# bias: (N,) (kept in FP32)
+-# C: (M, N) (FP32 output)
++# Fused Triton kernel: GEMM (FP16 inputs) -> FP32 accumulation -> add bias -> double-Mish -> store FP32 output.
+ @triton.jit
+ def _fused_gemm_double_mish_kernel(
+-    a_ptr,           # A pointer (FP16)
+-    b_ptr,           # B pointer (FP16, contiguous K x N)
+-    bias_ptr,        # bias pointer (FP32, N,)
+-    c_ptr,           # output pointer (FP32)
+-    M, N, K,         # matrix sizes
+-    stride_a_m, stride_a_k,    # strides for A (FP16)
+-    stride_b_k, stride_b_n,    # strides for B (FP16)
+-    stride_c_m, stride_c_n,    # strides for C (FP32)
++    a_ptr, b_ptr, bias_ptr, c_ptr,
++    M, N, K,
++    stride_a_m, stride_a_k,
++    stride_b_k, stride_b_n,
++    stride_c_m, stride_c_n,
+     BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr
+ ):
+     pid_m = tl.program_id(0)
+     pid_n = tl.program_id(1)
+ 
+-    # row and col indices for this block
++    # compute ranges for this tile
+     rm = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
+     rn = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
+ 
+-    # create accumulator in FP32
++    # accumulator in fp32
+     acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
+ 
+     # iterate over K dimension in blocks
+     for k in range(0, K, BLOCK_K):
+         rk = k + tl.arange(0, BLOCK_K)
+ 
+-        # compute addresses for A: (rm[:, None], rk[None, :])
++        # compute addresses for loads (A: rm x rk), (B: rk x rn)
+         a_addrs = a_ptr + (rm[:, None].to(tl.int64) * stride_a_m + rk[None, :].to(tl.int64) * stride_a_k)
+-        # compute addresses for B: (rk[:, None], rn[None, :])
+         b_addrs = b_ptr + (rk[:, None].to(tl.int64) * stride_b_k + rn[None, :].to(tl.int64) * stride_b_n)
+ 
+         a_mask = (rm[:, None] < M) & (rk[None, :] < K)
+         b_mask = (rk[:, None] < K) & (rn[None, :] < N)
+ 
+-        # load FP16 tiles
+-        a_block_fp16 = tl.load(a_addrs, mask=a_mask, other=0.0)
+-        b_block_fp16 = tl.load(b_addrs, mask=b_mask, other=0.0)
++        # load fp16 tiles; keep as fp16 so Triton can use mma/tensor cores
++        a_block = tl.load(a_addrs, mask=a_mask, other=0.0)
++        b_block = tl.load(b_addrs, mask=b_mask, other=0.0)
+ 
+-        # cast to FP32 for accumulation (use FP32 accumulator to preserve accuracy)
+-        a_block = tl.cast(a_block_fp16, tl.float32)
+-        b_block = tl.cast(b_block_fp16, tl.float32)
+-
+-        # accumulate (FP32)
++        # accumulate using mixed precision dot (fp16 inputs, fp32 accumulation)
+         acc += tl.dot(a_block, b_block)
+ 
+-    # add bias (broadcast over rows) - bias is FP32
+-    bias_vals = tl.load(bias_ptr + rn, mask=rn < N, other=0.0)  # shape (BLOCK_N,)
+-    acc = acc + bias_vals[None, :]  # broadcast to (BLOCK_M, BLOCK_N)
++    # add bias (broadcast over rows)
++    bias_vals = tl.load(bias_ptr + rn, mask=rn < N, other=0.0)  # FP32
++    acc = acc + bias_vals[None, :]  # shape (BLOCK_M, BLOCK_N)
+ 
+-    # Compute Mish activation twice inline in FP32 to preserve numerical stability.
+-    # Mish(x) = x * tanh(softplus(x)), softplus(x) = log(1 + exp(x)), with clamping.
++    # Apply Mish twice in fp32 registers using numerically stable algebraic forms
++    # mish(x) = x * tanh(softplus(x)), softplus(x)=ln(1+e^x)
++    # tanh(softplus(x)) = ( (1+e^x)^2 - 1 ) / ( (1+e^x)^2 + 1 )
++    # We clamp inputs for exp to avoid overflow
++    x = acc
++    # first mish
++    x_clamped = tl.where(x > 50.0, 50.0, x)
++    u = tl.exp(x_clamped)
++    A = 1.0 + u
++    A2 = A * A
++    t = (A2 - 1.0) / (A2 + 1.0)
++    m1 = x * t
+ 
+-    # First Mish
+-    x1 = acc
+-    x1_clamped = tl.where(x1 > 50.0, 50.0, x1)
+-    sp1 = tl.log(1.0 + tl.exp(x1_clamped))
+-    two_sp1 = 2.0 * sp1
+-    e1 = tl.exp(two_sp1)
+-    t1 = (e1 - 1.0) / (e1 + 1.0)
+-    m1 = x1 * t1
+-
+-    # Second Mish
++    # second mish
+     x2 = m1
+     x2_clamped = tl.where(x2 > 50.0, 50.0, x2)
+-    sp2 = tl.log(1.0 + tl.exp(x2_clamped))
+-    two_sp2 = 2.0 * sp2
+-    e2 = tl.exp(two_sp2)
+-    t2 = (e2 - 1.0) / (e2 + 1.0)
+-    out_block = x2 * t2  # FP32
++    u2 = tl.exp(x2_clamped)
++    B = 1.0 + u2
++    B2 = B * B
++    t2 = (B2 - 1.0) / (B2 + 1.0)
++    out_block = x2 * t2
+ 
+-    # store output block (FP32)
++    # store result
+     c_addrs = c_ptr + (rm[:, None].to(tl.int64) * stride_c_m + rn[None, :].to(tl.int64) * stride_c_n)
+     out_mask = (rm[:, None] < M) & (rn[None, :] < N)
+     tl.store(c_addrs, out_block, mask=out_mask)
+ 
+ 
+-# Python wrapper that prepares tensors and launches the Triton kernel
+-def triton_linear_double_mish(x: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor):
++def triton_linear_double_mish(x: torch.Tensor, weight_t_half: torch.Tensor, bias: torch.Tensor, blocks=None):
+     """
+-    x: (batch, in_features)   -- float32 CUDA (will be cast to FP16 for GEMM)
+-    weight: (out_features, in_features) -- float32 CUDA (will be transposed and cast to FP16)
+-    bias: (out_features,) -- float32 CUDA (kept FP32)
+-    returns: (batch, out_features) in FP32
++    x: (M, K) half precision CUDA
++    weight_t_half: (K, N) half precision CUDA (pre-transposed)
++    bias: (N,) float32 CUDA
++    returns: (M, N) float32 CUDA
+     """
+-    assert x.is_cuda and weight.is_cuda and bias.is_cuda, "All tensors must be on CUDA"
+-    assert x.dtype == torch.float32 and weight.dtype == torch.float32 and bias.dtype == torch.float32
++    assert x.is_cuda and weight_t_half.is_cuda and bias.is_cuda, "All tensors must be on CUDA."
++    assert x.dtype == torch.half and weight_t_half.dtype == torch.half and bias.dtype == torch.float32
+ 
+-    # Make tensors contiguous and prepare B = weight.T in FP16 (K x N)
+-    x_cont = x.contiguous()
+-    weight_cont = weight.contiguous()
+-    weight_t_half = weight_cont.t().contiguous().half()  # shape (K, N) in FP16
++    x_h = x.contiguous()
+     bias_cont = bias.contiguous()
+-    M = x_cont.shape[0]
+-    K = x_cont.shape[1]
+-    # weight_t_half shape is (K, N)
++    M = x_h.shape[0]
++    K = x_h.shape[1]
+     assert weight_t_half.shape[0] == K
+     N = weight_t_half.shape[1]
+ 
+-    # cast input to FP16 for GEMM
+-    x_half = x_cont.half()
++    out = torch.empty((M, N), device=x_h.device, dtype=torch.float32)
+ 
+-    # output (keep FP32 to match original model output)
+-    out = torch.empty((M, N), device=x.device, dtype=x.dtype)
+-
+-    # strides (use strides of the tensors we pass to the kernel)
+-    stride_a_m, stride_a_k = x_half.stride(0), x_half.stride(1)
++    stride_a_m, stride_a_k = x_h.stride(0), x_h.stride(1)
+     stride_b_k, stride_b_n = weight_t_half.stride(0), weight_t_half.stride(1)
+     stride_c_m, stride_c_n = out.stride(0), out.stride(1)
+ 
+-    # block sizes (constexpr) tuned per guidance
+-    BLOCK_M = 64
+-    BLOCK_N = 128
+-    BLOCK_K = 64
++    # default (good-on-Ampere) block sizes; can be overridden for autotuning
++    if blocks is None:
++        # prefer larger N tile to better utilize tensor cores for wide outputs
++        BLOCK_M = 128
++        BLOCK_N = 256
++        BLOCK_K = 64
++    else:
++        BLOCK_M, BLOCK_N, BLOCK_K = blocks
+ 
+     # grid
+     grid = ( (M + BLOCK_M - 1) // BLOCK_M, (N + BLOCK_N - 1) // BLOCK_N )
+ 
+-    # launch kernel with FP16 inputs (A and B), FP32 bias and output
+     _fused_gemm_double_mish_kernel[grid](
+-        x_half, weight_t_half, bias_cont, out,
++        x_h, weight_t_half, bias_cont, out,
+         M, N, K,
+         stride_a_m, stride_a_k,
+         stride_b_k, stride_b_n,
+         stride_c_m, stride_c_n,
+         BLOCK_M=BLOCK_M, BLOCK_N=BLOCK_N, BLOCK_K=BLOCK_K
+     )
+-
+     return out
+ 
+ 
+ class ModelNew(nn.Module):
+     """
+-    ModelNew replaces the linear + mish + mish sequence with a fused Triton kernel:
+-    - linear (matrix multiply + bias) using FP16 GEMM with FP32 accumulation
+-    - mish applied twice (fused, in FP32)
++    Fused implementation replacing:
++      linear (x @ W.T + b) -> mish -> mish
++    with a single Triton kernel that:
++      - uses fp16 inputs and fp32 accumulation (tensor-core friendly)
++      - pre-transposes and stores weight in half (K x N) for reuse
++      - reuses an input half-buffer to avoid repeated allocations
++      - autotunes tile sizes lazily by timing a few candidate configurations
+     """
+     def __init__(self, in_features, out_features):
+-        super(ModelNew, self).__init__()
++        super().__init__()
+         self.in_features = in_features
+         self.out_features = out_features
+-        # weight: (out_features, in_features)
++
++        # store weight and bias in fp32 to preserve original precision for state dicts
+         self.weight = nn.Parameter(torch.empty(out_features, in_features, dtype=torch.float32))
+         self.bias = nn.Parameter(torch.empty(out_features, dtype=torch.float32))
+-        # initialize like nn.Linear
+         nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+         fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+         bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0.0
+         nn.init.uniform_(self.bias, -bound, bound)
+ 
++        # persistent buffers (created lazily)
++        self.register_buffer('weight_t_half', None)  # (K, N) half pre-transposed
++        self.register_buffer('input_h', None)        # (M, K) half temporary buffer for inputs
++
++        # autotune selection cached
++        self._best_tiles = None
++        # candidate tiles chosen to explore wider N tiles and larger K strides for Ampere
++        self._tile_candidates = [
++            (128, 256, 64),
++            (128, 128, 64),
++            (128, 256, 32),
++            (64, 256, 64),
++            (256, 256, 32),
++            (128, 512, 32),
++            (64, 128, 64),
++        ]
++
+     def forward(self, x):
+-        # x may be on CPU or CUDA. Ensure we operate on CUDA to run the Triton kernel.
++        # CPU fallback: use pure PyTorch path (keeps correctness when running on CPU)
+         if not x.is_cuda:
+-            # CPU fallback using PyTorch built-ins (preserves FP32 behavior)
+             return torch.nn.functional.mish(torch.nn.functional.mish(torch.nn.functional.linear(x, self.weight, self.bias)))
+-        # On CUDA, call the Triton fused FP16-GEMM + double-Mish kernel
+-        return triton_linear_double_mish(x, self.weight, self.bias)
++
++        # ensure pre-transposed half-precision weight buffer exists and is up-to-date
++        expected_w_shape = (self.weight.shape[1], self.weight.shape[0])  # K x N
++        if self.weight_t_half is None or self.weight_t_half.shape != expected_w_shape or self.weight_t_half.device != self.weight.device:
++            with torch.no_grad():
++                # transpose and convert to half once; keep contiguous for efficient loads
++                self.weight_t_half = self.weight.detach().t().half().contiguous().to(self.weight.device)
++
++        # prepare half-precision input buffer; reuse allocation when possible
++        x_cont = x.contiguous()
++        if x_cont.dtype == torch.half:
++            x_h = x_cont
++        else:
++            expected_x_shape = (x_cont.shape[0], x_cont.shape[1])
++            if self.input_h is None or self.input_h.shape != expected_x_shape or self.input_h.device != x_cont.device:
++                with torch.no_grad():
++                    self.input_h = torch.empty(expected_x_shape, dtype=torch.half, device=x_cont.device)
++            # copy and convert into preallocated buffer
++            self.input_h.copy_(x_cont.half())
++            x_h = self.input_h
++
++        # lazy autotune to pick best tile sizes (simple runtime measurement)
++        if self._best_tiles is None:
++            torch.cuda.synchronize()
++            best_time = float('inf')
++            best_tiles = None
++            timed_runs = 3
++            for tiles in self._tile_candidates:
++                # warmup (compile)
++                _ = triton_linear_double_mish(x_h, self.weight_t_half, self.bias, blocks=tiles)
++                torch.cuda.synchronize()
++
++                # timed runs
++                start = torch.cuda.Event(enable_timing=True)
++                end = torch.cuda.Event(enable_timing=True)
++                start.record()
++                for _ in range(timed_runs):
++                    _ = triton_linear_double_mish(x_h, self.weight_t_half, self.bias, blocks=tiles)
++                end.record()
++                torch.cuda.synchronize()
++                elapsed_ms = start.elapsed_time(end) / float(timed_runs)
++
++                if elapsed_ms < best_time:
++                    best_time = elapsed_ms
++                    best_tiles = tiles
++
++            if best_tiles is None:
++                best_tiles = (128, 256, 64)
++            self._best_tiles = best_tiles
++
++        # run the fused Triton kernel with selected tiles
++        return triton_linear_double_mish(x_h, self.weight_t_half, self.bias, blocks=self._best_tiles)
+ 
+ 
+-# Keep the same helper functions for input generation as original model
++# Keep same helpers for consistency with the original problem statement
+ batch_size = 1024
+ in_features = 8192
+ out_features = 8192
+ 
+ def get_inputs():
+-    return [torch.rand(batch_size, in_features).cuda()]
++    return [torch.rand(batch_size, in_features)]
+ 
+ def get_init_inputs():
+     return [in_features, out_features]

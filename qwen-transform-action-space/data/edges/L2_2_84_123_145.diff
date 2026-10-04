@@ -1,0 +1,93 @@
+@@ -51,11 +51,12 @@
+ class ModelNew(nn.Module):
+     """
+     Optimized model:
+-      - Uses standard nn.Linear and BatchNorm (functional path used to fold scale).
+-      - Folds the separate 'scale' parameter into the BatchNorm affine weight when possible (on-device).
+-      - Falls back to BN then elementwise multiply if scale is not broadcastable to BN weight.
++      - Uses standard nn.Linear and BatchNorm.
++      - In eval mode, folds BN + optional scale into the Linear weights and bias on-device and
++        performs a single F.linear call (fast, cuBLAS-backed GEMM).
++      - In training or unfusable cases, folds scale into BN.weight when possible or uses PyTorch
++        elementwise multiplication (avoids launching tiny Triton kernels).
+       - Uses torch.softmax for the final softmax.
+-    This preserves autograd and avoids extra kernel launches and device-host transfers.
+     """
+     def __init__(self, in_features, out_features, bn_eps=1e-5, bn_momentum=0.1, scale_shape=(1,)):
+         super(ModelNew, self).__init__()
+@@ -71,31 +72,57 @@
+         Returns:
+           (batch_size, out_features) fp32 CUDA tensor after linear -> BN -> scale -> softmax
+         """
+-        # Standard GEMM
+-        x = self.gemm(x)
++        # Ensure linear params/bn params live on the same device for fusion ops
++        W = self.gemm.weight
++        device = W.device
++        dtype = W.dtype
++        # Linear bias (may be None)
++        b_lin = self.gemm.bias if self.gemm.bias is not None else torch.zeros(W.shape[0], device=device, dtype=dtype)
+ 
+-        # Prepare BN parameters and scale on the same device as bn.weight
+-        weight = self.bn.weight
+-        bias = self.bn.bias
+-        running_mean = self.bn.running_mean
+-        running_var = self.bn.running_var
++        # BN params (on device)
++        bn_weight = self.bn.weight.to(device)
++        bn_bias = self.bn.bias.to(device)
++        running_mean = self.bn.running_mean.to(device)
++        running_var = self.bn.running_var.to(device)
+         eps = self.bn.eps
+         momentum = self.bn.momentum
+-        scale = self.scale.to(weight.device)
+ 
+-        # If scale can be folded into BN's weight (scalar or per-channel), do that on-device using functional batch_norm.
++        scale = self.scale.to(device)
++
++        # If in eval mode, fold BN and scale into the linear weight and bias and do a single F.linear.
++        if not self.training:
++            # inv = gamma / sqrt(running_var + eps)
++            inv = bn_weight / torch.sqrt(running_var + eps)
++
++            # Fold post-BN scale if present (scalar or per-channel)
++            if scale.numel() == 1:
++                inv = inv * float(scale)
++            elif scale.numel() == inv.numel():
++                inv = inv * scale.view_as(inv)
++            # Compute fused weight and bias on-device without tracking autograd (eval uses no grad anyway)
++            with torch.no_grad():
++                W_fused = W * inv.view(-1, 1)
++                b_fused = inv * (b_lin - running_mean) + bn_bias
++            # Single fused GEMM (cuBLAS) + bias: fastest path
++            x = F.linear(x, W_fused, b_fused)
++            x = torch.softmax(x, dim=1)
++            return x
++
++        # Training or unfusable cases: keep training semantics.
++        # Prefer folding scale into BN.weight when possible (no extra kernel launch).
+         if scale.numel() == 1:
+-            scaled_weight = weight * scale
+-            x = F.batch_norm(x, running_mean, running_var, weight=scaled_weight, bias=bias,
+-                             training=self.training, momentum=momentum, eps=eps)
+-        elif scale.numel() == weight.numel():
+-            scaled_weight = weight * scale.view_as(weight)
+-            x = F.batch_norm(x, running_mean, running_var, weight=scaled_weight, bias=bias,
+-                             training=self.training, momentum=momentum, eps=eps)
++            scaled_weight = bn_weight * float(scale)
++            x = F.batch_norm(x, running_mean, running_var, weight=scaled_weight, bias=bn_bias,
++                             training=True, momentum=momentum, eps=eps)
++        elif scale.numel() == bn_weight.numel():
++            scaled_weight = bn_weight * scale.view_as(bn_weight)
++            x = F.batch_norm(x, running_mean, running_var, weight=scaled_weight, bias=bn_bias,
++                             training=True, momentum=momentum, eps=eps)
+         else:
+-            # General fallback: use the module BN (which handles shape checks) then multiply on-device.
++            # General fallback: use module BN (handles shapes) then elementwise multiply on-device.
+             x = self.bn(x)
+-            x = x * scale.to(x.device)
++            # Use PyTorch elementwise op to avoid small Triton kernel launch overhead
++            x = x * self.scale.to(x.device)
+             x = torch.softmax(x, dim=1)
+             return x
+ 

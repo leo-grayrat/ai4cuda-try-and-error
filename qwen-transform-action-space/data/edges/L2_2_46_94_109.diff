@@ -1,0 +1,162 @@
+@@ -5,11 +5,13 @@
+ import triton.language as tl
+ 
+ # Triton kernel that fuses tanh (approx), subtract2 and avgpool for pool=2.
+-# Operates on fp16 conv outputs to reduce memory traffic and use Tensor Cores upstream.
++# Operates on fp16 conv outputs arranged in channels-last (NHWC) to get coalesced loads
++# along the fastest (channel) dimension. The kernel tiles over channel blocks for a
++# single output spatial location (n,oh,ow).
+ @triton.jit
+ def fused_tanh_sub_avgpool_fp16_kernel(
+-    inp_ptr,         # pointer to input tensor (fp16), layout: N, C, H, W flattened
+-    out_ptr,         # pointer to output tensor (fp16), layout: N, C, out_h, out_w flattened
++    inp_ptr,         # pointer to input tensor (fp16), layout: NHWC flattened: ((n*H + h)*W + w)*C + c
++    out_ptr,         # pointer to output tensor (fp16), layout: NHWC flattened: ((n*out_h + oh)*out_w + ow)*C + c
+     N, C, H, W,      # input dims
+     out_h, out_w,    # output dims
+     pool,            # pooling kernel size (expected 2)
+@@ -17,33 +19,26 @@
+     BLOCK: tl.constexpr
+ ):
+     # tile indices
+-    tile_idx = tl.program_id(0)   # enumerates n * C * out_h + c * out_h + oh
+-    ow_tile = tl.program_id(1)    # tile along output width
++    pos_tile = tl.program_id(0)   # enumerates n * out_h * out_w + oh * out_w + ow (one spatial location per tile)
++    c_tile = tl.program_id(1)     # tile along channels (we take a contiguous channel block)
+ 
+-    # decode tile_idx into n, c, oh
+-    nch_per_batch = C * out_h
+-    n_idx = tile_idx // nch_per_batch
+-    rem = tile_idx - n_idx * nch_per_batch
+-    c_idx = rem // out_h
+-    oh = rem - c_idx * out_h
++    # decode pos_tile into n, oh, ow
++    npos_per_batch = out_h * out_w
++    n_idx = pos_tile // npos_per_batch
++    rem = pos_tile - n_idx * npos_per_batch
++    oh = rem // out_w
++    ow = rem - oh * out_w
+ 
+-    offs = tl.arange(0, BLOCK)
+-    ow = ow_tile * BLOCK + offs
+-    mask = ow < out_w
++    # channel block for this tile (contiguous in NHWC)
++    c_offs = tl.arange(0, BLOCK)
++    c_idx = c_tile * BLOCK + c_offs
++    mask_c = c_idx < C
+ 
+-    # flattened output base for this (n,c,oh) across ow
+-    base_out = ((n_idx * C + c_idx) * out_h + oh) * out_w
+-    out_offs = base_out + ow
++    # pooling top-left coordinates (scalars)
++    h0 = oh * pool
++    w0 = ow * pool
+ 
+-    # base input channel start (flattened)
+-    base_chan = (n_idx * C + c_idx) * (H * W)
+-
+-    # pooling top-left coordinates
+-    h0 = oh * pool
+-    w0 = ow * pool  # vector across lanes
+-
+-    # This kernel specializes the common case pool==2 for maximum efficiency.
+-    # Compute coordinates for the 4 elements in the 2x2 pooling window.
++    # This kernel specializes pool==2; compute coords for the 2x2 window
+     h00 = h0
+     w00 = w0
+     h01 = h0
+@@ -53,17 +48,18 @@
+     h11 = h0 + 1
+     w11 = w0 + 1
+ 
+-    # compute flattened input offsets
+-    inp_off_00 = base_chan + h00 * W + w00
+-    inp_off_01 = base_chan + h01 * W + w01
+-    inp_off_10 = base_chan + h10 * W + w10
+-    inp_off_11 = base_chan + h11 * W + w11
++    # compute flattened input offsets for NHWC layout: ((n*H + h)*W + w)*C + c
++    base_n = n_idx * H
++    inp_off_00 = ((base_n + h00) * W + w00) * C + c_idx
++    inp_off_01 = ((base_n + h01) * W + w01) * C + c_idx
++    inp_off_10 = ((base_n + h10) * W + w10) * C + c_idx
++    inp_off_11 = ((base_n + h11) * W + w11) * C + c_idx
+ 
+-    # masks for valid positions (also combine with ow bounds)
+-    valid_00 = mask & (h00 < H) & (w00 < W)
+-    valid_01 = mask & (h01 < H) & (w01 < W)
+-    valid_10 = mask & (h10 < H) & (w10 < W)
+-    valid_11 = mask & (h11 < H) & (w11 < W)
++    # masks for valid positions (channels combined with spatial validity)
++    valid_00 = mask_c & (h00 < H) & (w00 < W)
++    valid_01 = mask_c & (h01 < H) & (w01 < W)
++    valid_10 = mask_c & (h10 < H) & (w10 < W)
++    valid_11 = mask_c & (h11 < H) & (w11 < W)
+ 
+     # Load fp16 inputs; other=0.0 handles OOB lanes
+     x00 = tl.load(inp_ptr + inp_off_00, mask=valid_00, other=0.0)
+@@ -71,7 +67,7 @@
+     x10 = tl.load(inp_ptr + inp_off_10, mask=valid_10, other=0.0)
+     x11 = tl.load(inp_ptr + inp_off_11, mask=valid_11, other=0.0)
+ 
+-    # Convert to fp32 for better precision in the polynomial approximation
++    # Convert loaded channel-blocks to fp32 for polynomial precision (vectorized per block)
+     xf00 = x00.to(tl.float32)
+     xf01 = x01.to(tl.float32)
+     xf10 = x10.to(tl.float32)
+@@ -100,30 +96,39 @@
+     # Cast back to fp16 for storage (saves memory bandwidth)
+     out_vals = out_vals_f32.to(tl.float16)
+ 
+-    # Store results
+-    tl.store(out_ptr + out_offs, out_vals, mask=mask)
++    # Compute flattened output offsets for NHWC: ((n*out_h + oh)*out_w + ow)*C + c
++    out_offs = ((n_idx * out_h + oh) * out_w + ow) * C + c_idx
++
++    # Store results (mask by channels)
++    tl.store(out_ptr + out_offs, out_vals, mask=mask_c)
+ 
+ 
+ def triton_fused_tanh_sub_avgpool_fp16(inp: torch.Tensor, subtract2: float, pool: int):
+     """
+     Wrapper to launch the Triton kernel on fp16 input.
+-    Expects inp to be a CUDA tensor with shape (N,C,H,W).
+-    Returns a tensor with shape (N,C,H//pool,W//pool) dtype fp16.
++    Expects inp to be a CUDA tensor with shape (N,C,H,W) but in channels-last memory_format.
++    Returns a tensor with shape (N,C,H//pool,W//pool) dtype fp16 and channels-last layout.
+     """
+     assert inp.is_cuda, "Input must be on CUDA."
+     assert inp.dtype == torch.float16, "This wrapper expects fp16 tensors."
+ 
+-    inp = inp.contiguous()
++    # Ensure channels-last contiguous layout (NHWC). This avoids forcing a default NCHW reorder.
++    if not inp.is_contiguous(memory_format=torch.channels_last):
++        inp = inp.contiguous(memory_format=torch.channels_last)
+ 
+     N, C, H, W = inp.shape
+     out_h = H // pool
+     out_w = W // pool
++
++    # Allocate output with channels-last memory format so Triton can write contiguous channel blocks.
+     out = torch.empty((N, C, out_h, out_w), device=inp.device, dtype=inp.dtype)
++    out = out.contiguous(memory_format=torch.channels_last)
+ 
+-    # BLOCK: number of contiguous ow outputs handled by one tile (constexpr)
+-    BLOCK = 256
++    # BLOCK: number of contiguous channels handled by one tile (constexpr, warp-aligned)
++    BLOCK = 64
+ 
+-    grid = lambda meta: (N * C * out_h, (out_w + meta["BLOCK"] - 1) // meta["BLOCK"])
++    # Grid: one tile per spatial output (n,oh,ow), and tiles over channel blocks.
++    grid = lambda meta: (N * out_h * out_w, (C + meta["BLOCK"] - 1) // meta["BLOCK"])
+ 
+     fused_tanh_sub_avgpool_fp16_kernel[grid](
+         inp, out,
+@@ -132,7 +137,7 @@
+         pool,
+         float(subtract2),
+         BLOCK=BLOCK,
+-        num_warps=8
++        num_warps=4
+     )
+     return out
+ 

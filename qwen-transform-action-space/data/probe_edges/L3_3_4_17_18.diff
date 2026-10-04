@@ -1,0 +1,141 @@
+@@ -5,25 +5,12 @@
+ import triton.language as tl
+ 
+ # Autotune configs tuned for NVIDIA A6000 (Ampere)
+-# Added configurations targeted for tall-skinny matmuls (large M, small N)
++# Reduced to TensorCore-friendly candidates: M,N multiples of 16/32, K multiple of 32.
++# Fewer, well-chosen configs avoid exploring bad tilings and improve autotune stability.
+ AUTOTUNE_CONFIGS = [
+-    # Large BLOCK_M / small BLOCK_N candidates (TensorCore-friendly)
+-    triton.Config({"BLOCK_M": 1024, "BLOCK_N": 16,  "BLOCK_K": 32}, num_warps=8, num_stages=3),
+-    triton.Config({"BLOCK_M": 512,  "BLOCK_N": 16,  "BLOCK_K": 32}, num_warps=8, num_stages=3),
+-    triton.Config({"BLOCK_M": 512,  "BLOCK_N": 32,  "BLOCK_K": 32}, num_warps=8, num_stages=3),
+-    triton.Config({"BLOCK_M": 256,  "BLOCK_N": 16,  "BLOCK_K": 32}, num_warps=8, num_stages=3),
+-
+-    # Previously added tall-skinny candidates
+-    triton.Config({"BLOCK_M": 256, "BLOCK_N": 32,  "BLOCK_K": 64}, num_warps=4, num_stages=3),
+-    triton.Config({"BLOCK_M": 512, "BLOCK_N": 32,  "BLOCK_K": 64}, num_warps=4, num_stages=3),
+-    triton.Config({"BLOCK_M": 256, "BLOCK_N": 16,  "BLOCK_K": 32}, num_warps=4, num_stages=2),
+-
+-    # Existing/robust candidates
+-    triton.Config({"BLOCK_M": 64,  "BLOCK_N": 64,  "BLOCK_K": 32}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK_M": 128, "BLOCK_N": 64,  "BLOCK_K": 32}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK_M": 64,  "BLOCK_N": 128, "BLOCK_K": 32}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK_M": 128, "BLOCK_N": 128, "BLOCK_K": 64}, num_warps=8, num_stages=3),
+-    triton.Config({"BLOCK_M": 256, "BLOCK_N": 128, "BLOCK_K": 64}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK_M": 512, "BLOCK_N": 32,  "BLOCK_K": 32}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK_M": 256, "BLOCK_N": 32,  "BLOCK_K": 32}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK_M": 128, "BLOCK_N": 64,  "BLOCK_K": 32}, num_warps=8, num_stages=3),
+ ]
+ 
+ @triton.autotune(
+@@ -74,10 +61,10 @@
+         a_mask = (m_off < M)[:, None] & (k_off[None, :] < K)
+         b_mask = (k_off[:, None] < K) & (n_off[None, :] < N)
+ 
+-        # Load fp16 tiles and keep them as fp16 to reduce memory traffic.
++        # Load fp16 tiles (inputs are stored as fp16 already).
+         # tl.dot with fp16 inputs accumulates to fp32 on supported hardware.
+-        a = tl.load(a_ptrs, mask=a_mask, other=0.0).to(tl.float16)
+-        b = tl.load(b_ptrs, mask=b_mask, other=0.0).to(tl.float16)
++        a = tl.load(a_ptrs, mask=a_mask, other=0.0)
++        b = tl.load(b_ptrs, mask=b_mask, other=0.0)
+ 
+         # Block multiply-accumulate; result is accumulated into acc (fp32)
+         acc += tl.dot(a, b)
+@@ -87,7 +74,7 @@
+     # Add bias if provided; bias_ptr expected to be fp32 (for stability)
+     if has_bias:
+         bias_mask = n_off < N
+-        bias_vals = tl.load(bias_ptr + n_off, mask=bias_mask, other=0.0).to(tl.float32)  # (BLOCK_N,)
++        bias_vals = tl.load(bias_ptr + n_off, mask=bias_mask, other=0.0)  # (BLOCK_N,)
+         acc += bias_vals[None, :]
+ 
+     # Apply ReLU if requested (in fp32 accumulator)
+@@ -104,10 +91,13 @@
+     """
+     Compute x @ weight_t[:,:N_out] + bias using the Triton matmul kernel.
+     x_h: (B, K) fp16 (preallocated/reused).
+-    weight_t: (K, N_padded) fp16 (may be padded in N dimension for alignment).
++    weight_t: (K_padded, N_padded) fp16 (may be padded in K and N dimensions for alignment).
+     N_out: original output features (<= weight_t.shape[1])
+     bias: (N_out,) or None (fp32)
+     Returns: (B, N_out) fp32
++
++    Heuristic fallback: for small N (e.g., N < 64) or small total work, use torch.matmul
++    (cuBLAS) on fp32, which often outperforms Triton for narrow outputs due to launch overhead.
+     """
+     assert x_h.is_cuda and weight_t.is_cuda, "Inputs and weight must be on CUDA."
+     if bias is not None:
+@@ -120,9 +110,22 @@
+     assert wt.is_contiguous(), "weight_t must be contiguous (cached padded transposed half weight)."
+ 
+     M = x_h.shape[0]   # batch
+-    K = x_h.shape[1]   # in features
++    K = x_h.shape[1]   # in features (original, not padded)
+     N = int(N_out)     # out features (original, not padded)
+ 
++    # Heuristic fallback: if output width is small or total flop count is small, use cuBLAS path.
++    work = float(M) * float(N) * float(K)
++    if (N < 64) or (work < 2e8):
++        # Slice the padded transposed weight back to (K, N) region and compute in fp32
++        wt_slice = wt[:K, :N].float()   # (K, N)
++        out = x_h.float().matmul(wt_slice)  # (M, N)
++        if bias is not None:
++            out = out + bias.float()
++        if do_relu:
++            out = torch.relu(out)
++        return out
++
++    # Otherwise use Triton kernel path.
+     # Output in fp32 to keep rest of model in fp32
+     out = torch.empty((M, N), device=x_h.device, dtype=torch.float32)
+ 
+@@ -196,20 +199,20 @@
+         """
+         Ensure that the cached transposed-contiguous half-precision (and padded) weight exists
+         and is up-to-date with the nn.Parameter backing storage.
+-        We pad the output (N) dimension to a multiple of 128 for TensorCore alignment,
+-        but callers will pass the original N to the kernel to preserve correctness.
++        We pad both the K (rows) to a multiple of 32 (BLOCK_K) and N (cols) to a multiple
++        of 128 to favor TensorCore alignment for common tilings.
+         """
+         w = linear.weight
+         cur_ptr = w.data_ptr()
+         if getattr(self, cache_attr) is None or getattr(self, ptr_attr) != cur_ptr:
+             # Recompute and cache: transpose, make contiguous, convert to half
+-            wt_h = w.t().contiguous().half()  # shape (K, N_orig)
+-            K, N_orig = wt_h.shape
+-            # Pad N to multiple of 128 for better TensorCore alignment (cheap for small N)
+-            pad_N = ((N_orig + 127) // 128) * 128
+-            if pad_N != N_orig:
+-                wt_p = torch.zeros((K, pad_N), device=wt_h.device, dtype=wt_h.dtype)
+-                wt_p[:, :N_orig] = wt_h
++            wt_h = w.t().contiguous().half()  # shape (K_orig, N_orig)
++            K_orig, N_orig = wt_h.shape
++            pad_K = ((K_orig + 31) // 32) * 32    # pad K to multiple of 32 (BLOCK_K)
++            pad_N = ((N_orig + 127) // 128) * 128 # pad N to multiple of 128
++            if pad_K != K_orig or pad_N != N_orig:
++                wt_p = torch.zeros((pad_K, pad_N), device=wt_h.device, dtype=wt_h.dtype)
++                wt_p[:K_orig, :N_orig] = wt_h
+                 wt_h = wt_p
+             setattr(self, cache_attr, wt_h)
+             setattr(self, ptr_attr, cur_ptr)
+@@ -232,11 +235,13 @@
+         self._ensure_weight_t_half(self.fc2, '_fc2_weight_t_half', '_fc2_w_ptr')
+         self._ensure_weight_t_half(self.fc3, '_fc3_weight_t_half', '_fc3_w_ptr')
+ 
+-        # Prepare a reusable half-buffer sized to the largest FC input width to avoid per-forward allocations
++        # Prepare a reusable half-buffer sized to the largest FC input width (K) padded
++        # to a BLOCK_K multiple to enable coalesced fp16 loads in the kernel.
+         max_K = max(self.fc1.in_features, self.fc2.in_features, self.fc3.in_features)
+-        if (self._x_h_buf is None) or (self._x_h_buf.shape[0] < M) or (self._x_h_buf.shape[1] < max_K) or (self._x_h_buf.device != x.device):
+-            # allocate buffer sized (M, max_K) and reuse across forwards
+-            self._x_h_buf = torch.empty((M, max_K), device=x.device, dtype=torch.half)
++        pad_K = ((max_K + 31) // 32) * 32  # BLOCK_K-aligned (32)
++        if (self._x_h_buf is None) or (self._x_h_buf.shape[0] < M) or (self._x_h_buf.shape[1] < pad_K) or (self._x_h_buf.device != x.device):
++            # allocate buffer sized (M, pad_K) and reuse across forwards
++            self._x_h_buf = torch.empty((M, pad_K), device=x.device, dtype=torch.half)
+ 
+         # Copy and convert activations into the preallocated half-buffer (avoids allocating a new half tensor)
+         # copy_ will cast from float32 to half into the destination buffer.

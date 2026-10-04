@@ -1,0 +1,174 @@
+@@ -7,49 +7,61 @@
+ import torch as th
+ 
+ # Triton kernel: L2-normalize many vectors of length L (each vector normalized independently).
+-# We tile over the length dimension with a constexpr BLOCK size to avoid runtime arange sizing.
++# Tuned for Ampere (A6000): use BLOCK=256, ROWS_PER_PROG=8 as a good starting point.
+ @triton.jit
+ def _l2_norm_kernel(
+     x_ptr,           # pointer to input (flat)
+     out_ptr,         # pointer to output (flat)
++    num_rows,        # number of rows (runtime)
+     L,               # length of each vector (runtime)
+     eps,             # small epsilon to avoid div by zero
+-    stride,          # stride between consecutive elements in a vector (usually 1)
++    ROWS_PER_PROG: tl.constexpr,  # how many rows each program handles
+     BLOCK: tl.constexpr,  # tile size for processing chunks of the vector
+ ):
+-    pid = tl.program_id(0)  # which vector we're normalizing
+-    # start index (in elements) of this vector within the flattened buffer
+-    base_index = pid * L
++    pid = tl.program_id(0)  # which program
++    base_row = pid * ROWS_PER_PROG
+ 
+-    # First pass: compute sum of squares
+-    sumsq = 0.0
+-    # loop over chunks of size BLOCK
++    # rows handled by this program: shape (ROWS_PER_PROG,)
++    rows = base_row + tl.arange(0, ROWS_PER_PROG)
++    row_mask = rows < num_rows
++    # starting index for each row in flat buffer
++    row_base = rows * L  # shape (ROWS_PER_PROG,)
++
++    # accumulator per row
++    sumsq = tl.zeros((ROWS_PER_PROG,), dtype=tl.float32)
++
+     off = 0
+-    # use Python loop; number of iterations = ceil(L / BLOCK)
++    # loop over chunks of size BLOCK (BLOCK is constexpr)
+     while off < L:
+-        idxs = base_index + off + tl.arange(0, BLOCK)
+-        mask = (off + tl.arange(0, BLOCK)) < L  # mask inside vector bounds
+-        vals = tl.load(x_ptr + idxs, mask=mask, other=0.0)
+-        sumsq += tl.sum(vals * vals)
++        offs = tl.arange(0, BLOCK)  # shape (BLOCK,)
++        idxs = row_base[:, None] + off + offs[None, :]  # (ROWS_PER_PROG x BLOCK)
++        mask_cols = (off + offs) < L  # (BLOCK,)
++        mask = row_mask[:, None] & mask_cols[None, :]  # (ROWS_PER_PROG x BLOCK)
++        vals = tl.load(x_ptr + idxs, mask=mask, other=0.0)  # (ROWS_PER_PROG x BLOCK)
++        sumsq = sumsq + tl.sum(vals * vals, axis=1)
+         off += BLOCK
+ 
+-    # compute inverse norm
+-    inv_norm = 1.0 / tl.sqrt(sumsq + eps)
++    inv_norm = 1.0 / tl.sqrt(sumsq + eps)  # (ROWS_PER_PROG,)
+ 
+-    # Second pass: write normalized values
++    # Second pass: write normalized values for all valid rows handled by this program
+     off = 0
+     while off < L:
+-        idxs = base_index + off + tl.arange(0, BLOCK)
+-        mask = (off + tl.arange(0, BLOCK)) < L
++        offs = tl.arange(0, BLOCK)
++        idxs = row_base[:, None] + off + offs[None, :]
++        mask_cols = (off + offs) < L
++        mask = row_mask[:, None] & mask_cols[None, :]
+         vals = tl.load(x_ptr + idxs, mask=mask, other=0.0)
+-        tl.store(out_ptr + idxs, vals * inv_norm, mask=mask)
++        out_vals = vals * inv_norm[:, None]
++        tl.store(out_ptr + idxs, out_vals, mask=mask)
+         off += BLOCK
+ 
+ 
+-def triton_l2_normalize_rows(x: torch.Tensor, eps: float = 1e-12, BLOCK: int = 128):
++def triton_l2_normalize_rows(x: torch.Tensor, eps: float = 1e-12, BLOCK: int = 256, ROWS_PER_PROG: int = 8):
+     """
+     Normalize each row of x (2D tensor) to unit L2 norm using Triton kernel.
+     x: Tensor of shape (num_rows, L), contiguous, on CUDA, dtype float32
++    ROWS_PER_PROG: how many rows each Triton program should process (constexpr)
++    BLOCK: tile size (constexpr) - prefer multiples of 32 (e.g., 128 or 256) for Ampere
+     Returns a new tensor with same shape and dtype.
+     """
+     assert x.is_cuda, "Input must be on CUDA"
+@@ -57,15 +69,15 @@
+     x_contig = x.contiguous()
+     num_rows, L = x_contig.shape
+     out = torch.empty_like(x_contig)
+-    # grid one program per row
+-    grid = (num_rows,)
+-    # launch kernel; pass BLOCK as constexpr
++    # grid: one program handles ROWS_PER_PROG rows
++    grid = ((num_rows + ROWS_PER_PROG - 1) // ROWS_PER_PROG,)
+     _l2_norm_kernel[grid](
+         x_contig,               # x_ptr
+         out,                    # out_ptr
++        num_rows,               # num_rows (runtime)
+         L,                      # L (runtime)
+         eps,                    # eps
+-        1,                      # stride (unused here, kept for extensibility)
++        ROWS_PER_PROG=ROWS_PER_PROG,
+         BLOCK=BLOCK
+     )
+     return out
+@@ -123,44 +135,47 @@
+         assignment = assignment[:, :self.cluster_size]
+         assignment = assignment.view(-1, max_sample, self.cluster_size)  # -> B x N x K
+         a_sum = th.sum(assignment, dim=1, keepdim=True)  # B x 1 x K
+-        a = a_sum * self.clusters2  # B x 1 x K  * 1 x D x K  -> broadcasting -> B x D x K
++
++        # clusters2: 1 x D x K -> squeeze to D x K and transpose to K x D
++        clusters2_kd = self.clusters2.squeeze(0).transpose(0, 1)  # K x D
++        # a_sum.squeeze(1): B x K -> unsqueeze(2) -> B x K x 1; multiply by clusters2_kd -> B x K x D
++        a = a_sum.squeeze(1).unsqueeze(2) * clusters2_kd.unsqueeze(0)  # B x K x D
+ 
+         assignment = assignment.transpose(1, 2)  # B x K x N
+ 
+         x_reshaped = x_flat.view(-1, max_sample, self.feature_size)  # B x N x D
+ 
+         # vlad = assignment @ x  -> (B x K x N) x (B x N x D) -> B x K x D
+-        # Use torch.bmm on reshaped tensors for clarity and performance; then transpose to B x D x K
+-        # assignment: B x K x N, x_reshaped: B x N x D
+         vlad = th.matmul(assignment, x_reshaped)  # B x K x D
+-        vlad = vlad.transpose(1, 2).contiguous()  # -> B x D x K
+ 
+-        # subtract a
+-        vlad = vlad - a  # broadcasting B x D x K
++        # subtract a (same layout)
++        vlad = vlad - a  # B x K x D
+ 
+-        # L2 intra norm across the D dimension for each (B, K) vector
+-        # Prepare a view of shape (B*K, D) to normalize row-wise
+-        vlad_view = vlad.permute(0, 2, 1).contiguous()  # B x K x D
+-        # reshape to (B*K, D) where each row is a D-vector to normalize
+-        vlad_rows = vlad_view.view(-1, self.feature_size)  # (B*K) x D
++        # L2 intra norm across the D dimension for each (B, K) vector.
++        # Keep vlad in B x K x D, view as (B*K, D) and normalize rows using Triton kernel.
++        B_val = B
++        K_val = K
++        vlad_rows = vlad.view(-1, self.feature_size)  # (B*K) x D
+ 
+-        # Use Triton to L2-normalize each row
++        # Use Triton-based row-wise normalization (in a single pass).
++        # This replaces F.normalize(vlad_rows, p=2, dim=1) for better throughput.
+         if vlad_rows.is_cuda and vlad_rows.dtype == torch.float32:
+-            vlad_rows = triton_l2_normalize_rows(vlad_rows, eps=1e-12, BLOCK=128)
++            vlad_rows_normed = triton_l2_normalize_rows(vlad_rows, eps=1e-12, BLOCK=256, ROWS_PER_PROG=8)
+         else:
+-            # fallback to torch for CPU or different dtype
+-            vlad_rows = F.normalize(vlad_rows, p=2, dim=1, eps=1e-12)
++            # Fallback to PyTorch on CPU or non-fp32
++            vlad_rows_normed = F.normalize(vlad_rows, p=2, dim=1, eps=1e-12)
+ 
+-        # reshape back to B x K x D then transpose to B x D x K
+-        vlad = vlad_rows.view(B, self.cluster_size, self.feature_size).transpose(1, 2).contiguous()  # B x D x K
++        # reshape back to B x K x D
++        vlad = vlad_rows_normed.view(B_val, K_val, self.feature_size)  # B x K x D
+ 
+-        # flattening + L2 norm across the flattened dimension
+-        vlad_flat = vlad.reshape(-1, self.cluster_size * self.feature_size)  # -> B x DK
++        # flattening: B x (K*D)
++        vlad_flat = vlad.reshape(B_val, self.cluster_size * self.feature_size)  # -> B x DK
+ 
+-        # Normalize each row of vlad_flat using Triton if possible
+-        if vlad_flat.is_cuda and vlad_flat.dtype == torch.float32:
+-            vlad_flat = triton_l2_normalize_rows(vlad_flat, eps=1e-12, BLOCK=1024)
+-        else:
+-            vlad_flat = F.normalize(vlad_flat, p=2, dim=1, eps=1e-12)
++        # After intra-normalization, each (B,K, :) vector has unit norm, so the flattened
++        # vector's norm is sqrt(K). Therefore, final L2 normalization across the flattened
++        # vector is equivalent to dividing by sqrt(K). We exploit that to avoid an extra
++        # expensive reduction.
++        final_scale = 1.0 / math.sqrt(float(self.cluster_size))
++        vlad_flat = vlad_flat * final_scale
+ 
+         return vlad_flat  # B x DK

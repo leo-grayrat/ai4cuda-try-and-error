@@ -1,0 +1,6 @@
+data/adaexplore/
+*.tar.gz
+__pycache__/
+
+*_canvas_status
+*.canvas.status.json

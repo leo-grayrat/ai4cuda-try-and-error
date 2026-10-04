@@ -1,0 +1,202 @@
+@@ -4,12 +4,14 @@
+ import triton
+ import triton.language as tl
+ 
+-# Multi-row, larger-tile kernel: each program handles ROWS (constexpr) rows and iterates over tiles of size TILE.
+-# This increases per-program work, improves occupancy and vectorized loads on Ampere GPUs.
++# Multi-row, larger-tile kernel in mixed precision:
++# - input y is stored in fp16 (memory bandwidth savings)
++# - loads are fp16, cast to fp32 inside the kernel for GELU/exp/math and accumulation
++# - kernel processes multiple ROWS per program and unrolls two TILEs per iteration
+ @triton.jit
+ def _gelu_scale_max_kernel(
+-    y_ptr,         # pointer to input matrix (B, L)
+-    out_ptr,       # pointer to output vector (B,)
++    y_ptr,         # pointer to input matrix (B, L) stored as fp16
++    out_ptr,       # pointer to output vector (B,) stored as fp32
+     B,
+     L,
+     scale,         # scale factor (float) -- fused into the kernel (kernel assumes scale >= 0 on entry)
+@@ -24,84 +26,112 @@
+     b_ids = base_b + b_offs                          # global row ids vector
+     rows_mask = b_ids < B                            # which of these are valid rows
+ 
+-    # running per-row maxima (vector of length ROWS) initialized to very low values
++    # running per-row maxima (vector of length ROWS) initialized to very low values (fp32)
+     max_scalar = tl.full((ROWS,), -1e30, dtype=tl.float32)
+ 
+-    # tile iteration over columns
++    # tile iteration over columns (we will process two TILEs per loop to amortize overhead)
+     start = 0
+     offs = tl.arange(0, TILE)                        # shape: (TILE,)
++
+     while start < L:
+-        idx = start + offs                           # shape: (TILE,)
+-        cols_mask = idx < L                          # shape: (TILE,)
++        # First tile
++        idx1 = start + offs                           # shape: (TILE,)
++        mask1_cols = idx1 < L
++        ptrs1 = y_ptr + b_ids[:, None] * stride_yb + idx1[None, :] * stride_yl
++        mask1 = mask1_cols[None, :] & rows_mask[:, None]
+ 
+-        # compute pointers with broadcasting: shape (ROWS, TILE)
+-        ptrs = y_ptr + b_ids[:, None] * stride_yb + idx[None, :] * stride_yl
+-        mask = cols_mask[None, :] & rows_mask[:, None]
++        vals1_fp16 = tl.load(ptrs1, mask=mask1, other=0.0)
++        vals1 = tl.cast(vals1_fp16, tl.float32)  # convert to fp32 for math
+ 
+-        # masked load for a block of ROWS x TILE
+-        vals = tl.load(ptrs, mask=mask, other=0.0)
++        # GELU-like approximation in fp32: x * sigmoid(1.702 * x)
++        t1 = 1.702 * vals1
++        sig1 = 1.0 / (1.0 + tl.exp(-t1))
++        g1 = vals1 * sig1
+ 
+-        # GELU-like approximation: x * sigmoid(1.702 * x)
+-        t = 1.702 * vals
+-        sig = 1.0 / (1.0 + tl.exp(-t))
+-        g = vals * sig
++        # Second tile (may be all-masked if beyond L)
++        idx2 = start + TILE + offs
++        mask2_cols = idx2 < L
++        ptrs2 = y_ptr + b_ids[:, None] * stride_yb + idx2[None, :] * stride_yl
++        mask2 = mask2_cols[None, :] & rows_mask[:, None]
+ 
+-        # Fuse positive scale into the kernel
+-        g = g * scale
++        vals2_fp16 = tl.load(ptrs2, mask=mask2, other=0.0)
++        vals2 = tl.cast(vals2_fp16, tl.float32)
++
++        t2 = 1.702 * vals2
++        sig2 = 1.0 / (1.0 + tl.exp(-t2))
++        g2 = vals2 * sig2
++
++        # Fuse positive scale into the kernel (scale is fp32)
++        g1 = g1 * scale
++        g2 = g2 * scale
+ 
+         # masked lanes -> very low values so they don't influence max
+-        g = tl.where(mask, g, -1e30)
++        g1 = tl.where(mask1, g1, -1e30)
++        g2 = tl.where(mask2, g2, -1e30)
+ 
+         # reduce per-row across the TILE dimension; produces (ROWS,)
+-        chunk_max = tl.max(g, axis=1)
++        chunk_max1 = tl.max(g1, axis=1)
++        chunk_max2 = tl.max(g2, axis=1)
+ 
+-        # update running maxima
++        # combined chunk max for the two tiles
++        chunk_max = tl.maximum(chunk_max1, chunk_max2)
++
++        # update running maxima (all fp32)
+         max_scalar = tl.maximum(max_scalar, chunk_max)
+ 
+-        start += TILE
++        start += 2 * TILE
+ 
+-    # write out per-row results with a masked store
+-    # out_ptr + b_ids is a vector of element addresses; mask rows_mask ensures we don't write past B
++    # write out per-row results with a masked store (fp32)
+     tl.store(out_ptr + b_ids, max_scalar, mask=rows_mask)
+ 
+ 
+ def gelu_scale_max(y: torch.Tensor, scale: float):
+     """
+-    Multi-row, tiled implementation:
+-      - For scale < 0: fallback to correct PyTorch implementation (elementwise scale before max).
+-      - For scale >= 0: launch one Triton program per ROWS_PER_PROG rows; inside the kernel iterate
+-        over tiles and accumulate per-row maxima. This increases per-program work and improves GPU utilization.
++    Multi-row, tiled mixed-precision implementation:
++      - y may be fp16 or fp32. If fp16, we use it directly (memory-efficient path).
++      - For scale < 0: fallback to correct PyTorch implementation (elementwise scale before max) in fp32.
++      - For scale >= 0: ensure y is fp16 for the kernel (cast if needed), then launch Triton kernel
++        that computes GELU-approx in fp32 after casting from fp16, applies positive scale inside the kernel,
++        and returns fp32 per-row maxima.
+     """
+-    assert y.is_cuda and y.dtype == torch.float32
++    assert y.is_cuda and (y.dtype == torch.float32 or y.dtype == torch.float16)
+     B, L = y.shape
+-    y_ = y.contiguous()
++    y_in = y.contiguous()
+     out = torch.empty((B,), device=y.device, dtype=torch.float32)
+-
+-    # Strides in number of elements
+-    stride_yb = y_.stride(0)
+-    stride_yl = y_.stride(1)
+ 
+     # Negative scale: must scale before max (can't pull scale outside max)
+     if scale < 0.0:
+-        t = 1.702 * y_
++        # perform correct computation in fp32
++        y_fp32 = y_in.to(dtype=torch.float32)
++        t = 1.702 * y_fp32
+         sig = torch.sigmoid(t)
+-        g = y_ * sig
++        g = y_fp32 * sig
+         g = g * float(scale)
+         return g.max(dim=1).values
+ 
+-    # Tunable parameters (good starting point for Ampere):
+-    TILE = 256           # larger tile benefits vectorized memory access (multiple of 32)
+-    ROWS_PER_PROG = 4    # each Triton program processes 4 rows (amortizes launch/loop overhead)
++    # For positive scale: ensure y is fp16 to reduce memory traffic; convert if needed
++    if y_in.dtype != torch.float16:
++        y_half = y_in.to(dtype=torch.float16)
++    else:
++        y_half = y_in
+ 
+-    # grid over groups of ROWS_PER_PROG rows
++    # Make sure contiguous and get strides in elements (half elements)
++    y_half = y_half.contiguous()
++    stride_yb = y_half.stride(0)
++    stride_yl = y_half.stride(1)
++
++    # Tuned parameters for Ampere
++    TILE = 512           # larger tile benefits vectorized memory access (multiple of 32)
++    ROWS_PER_PROG = 8    # each Triton program processes 8 rows
++
+     grid = ((B + ROWS_PER_PROG - 1) // ROWS_PER_PROG,)
+ 
+     _gelu_scale_max_kernel[grid](
+-        y_,
++        y_half,
+         out,
+         B,
+         L,
+-        float(scale),  # scale is fused inside the kernel (kernel expects scale >= 0)
++        float(scale),  # scale fused inside kernel (kernel expects scale >= 0)
+         stride_yb,
+         stride_yl,
+         TILE=TILE,
+@@ -117,6 +147,7 @@
+     Optimized model that folds the AvgPool into the Linear weights (weight pooling),
+     and uses a Triton kernel to compute GELU-approx + scale + max reduction efficiently.
+     This avoids materializing very large intermediate tensors and reduces computation cost.
++    Uses mixed precision: pooled weights/bias stored as fp16 and linear is executed on fp16 inputs.
+     """
+     def __init__(self, in_features, out_features, pool_kernel_size, scale_factor):
+         super(ModelNew, self).__init__()
+@@ -141,33 +172,43 @@
+             else:
+                 b = torch.zeros((pooled_len,), dtype=torch.float32)
+ 
++            # Store pooled params in fp16 to reduce memory and bandwidth for the main path.
++            W = W.half()
++            b = b.half()
++
+         # Register the pooled parameters as buffers so they move with the module device
+-        self.register_buffer("pooled_weight", W)  # shape (pooled_len, in_features)
+-        self.register_buffer("pooled_bias", b)    # shape (pooled_len,)
++        self.register_buffer("pooled_weight", W)  # shape (pooled_len, in_features) dtype=torch.float16 (cpu)
++        self.register_buffer("pooled_bias", b)    # shape (pooled_len,) dtype=torch.float16 (cpu)
+ 
+     def forward(self, x):
+         """
+         x: (batch_size, in_features) float32 on CUDA (or CPU; operations will move buffers automatically)
+         Returns: (batch_size,) tensor after matmul -> avgpool -> gelu -> scale -> max
+         """
+-        # Ensure pooled weights are on the same device/dtype as input
++        # Ensure pooled weights/bias are on the same device and in fp16
+         device = x.devic
+...[TRUNCATED]

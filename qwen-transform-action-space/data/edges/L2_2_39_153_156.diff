@@ -1,0 +1,61 @@
+@@ -7,6 +7,7 @@
+ REDUCTION_AUTOTUNE = [
+     triton.Config({"BLOCK_N": 64,  "BLOCK_ROWS": 1024}, num_warps=4, num_stages=2),
+     triton.Config({"BLOCK_N": 128, "BLOCK_ROWS": 1024}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK_N": 256, "BLOCK_ROWS": 1024}, num_warps=8, num_stages=3),
+     triton.Config({"BLOCK_N": 64,  "BLOCK_ROWS": 512}, num_warps=4, num_stages=2),
+     triton.Config({"BLOCK_N": 128, "BLOCK_ROWS": 512}, num_warps=8, num_stages=3),
+     triton.Config({"BLOCK_N": 128, "BLOCK_ROWS": 256}, num_warps=4, num_stages=2),
+@@ -104,9 +105,8 @@
+     # out = vals * mult[col] + add[col]
+     out = vals * mult[None, :] + add[None, :]
+ 
+-    # Cast result back to fp16 to reduce write bandwidth (out_ptr expected to be fp16 in this path)
+-    out_f16 = out.to(tl.float16)
+-    tl.store(out_ptr + linear_offs, out_f16, mask=mask)
++    # Store result in fp32 to avoid an extra device-wide conversion later
++    tl.store(out_ptr + linear_offs, out, mask=mask)
+ 
+ 
+ def triton_col_sum_sumsq(y: torch.Tensor):
+@@ -168,7 +168,8 @@
+         y_half = y_contig.half()
+     else:
+         y_half = y_contig
+-    out = torch.empty_like(y_half)  # kernel will write fp16 to reduce bandwidth
++    # Allocate fp32 output directly; the kernel now writes fp32 to avoid a later full-tensor conversion.
++    out = torch.empty((B, N), dtype=torch.float32, device=device)
+ 
+     y_flat = y_half.view(-1)
+     out_flat = out.view(-1)
+@@ -186,8 +187,7 @@
+         out_flat,
+         B, N
+     )
+-    # Upcast result to fp32 for the rest of the model to consume
+-    return out.to(torch.float32)
++    return out
+ 
+ 
+ class ModelNew(nn.Module):
+@@ -215,16 +215,16 @@
+             x = x.cuda()
+         device = x.device
+ 
+-        # GEMM using PyTorch/cuBLAS
+-        y = self.gemm(x)  # shape (B, N), float32
++        # GEMM using PyTorch/cuBLAS in mixed-precision to produce fp16 output directly (avoids extra casts)
++        with torch.cuda.amp.autocast(dtype=torch.float16):
++            y_half = self.gemm(x)  # shape (B, N), fp16
+ 
+-        B, N = y.shape
++        B, N = y_half.shape
+         eps = self.bn.eps
+         momentum = self.bn.momentum
+         scale = self.scale.to(device=device)
+ 
+         # Compute per-column sum and sumsq in one pass (Triton) using fp16 inputs to reduce bandwidth
+-        y_half = y.half()
+         sum_cols, sumsq_cols = triton_col_sum_sumsq(y_half)  # both (N,)
+ 
+         # derive mean and variance of y (unscaled)

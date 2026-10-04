@@ -1,0 +1,67 @@
+@@ -99,39 +99,33 @@
+         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)  # (B, nh, T, hs)
+         v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)  # (B, nh, T, hs)
+ 
+-        # Use mixed precision for the attention score computation:
+-        # - cast queries and keys to float16 to reduce memory traffic and use TensorCores on Ampere
+-        # - keep values (v) in float32 to preserve final precision in the output matmul
+-        q_half = q.half()
+-        k_half = k.half()
+-        # compute raw attention scores in fp16
+-        att_half = (q_half @ k_half.transpose(-2, -1))  # (B, nh, T, T) in fp16
+-        # scale factor (host scalar)
+-        scale = 1.0 / math.sqrt(k.size(-1))
+-
+-        # prepare mask: bias shape is (1,1,max_seqlen,max_seqlen), slice first T positions
+-        # expand to (B, nh, T, T) and make contiguous; cast mask to match att_half dtype to reduce conversions
+-        mask_slice = self.bias[:, :, :T, :T]  # (1,1,T,T)
+-        mask_expanded = mask_slice.expand(B, self.n_head, T, T).contiguous().to(dtype=att_half.dtype, device=att_half.device)
+-
+-        # flatten tensors to 1D for the Triton kernel (att_half is fp16, mask_expanded is fp16)
+-        att_flat = att_half.contiguous().view(-1)
+-        mask_flat = mask_expanded.view(-1)
+-
+-        # use Triton kernel to perform fused scaling and masking:
+-        # out = att * scale ; masked positions set to a large negative value (neg_inf)
+-        # kernel accepts fp16 or fp32; here we use fp16 to save memory/bandwidth
+-        neg_inf = -1e9
+-        att_flat = triton_scale_and_mask(att_flat, mask_flat, scale, neg_inf)
+-        # reshape back to (B, nh, T, T) and convert to float32 before softmax for numerical stability
+-        att = att_flat.view(B, self.n_head, T, T).to(dtype=torch.float32)
+-
+-        # softmax (use PyTorch's optimized softmax in fp32)
+-        att = F.softmax(att, dim=-1)
+-        att = self.attn_dropout(att)
+-
+-        # attention @ value (v is fp32) -> result in fp32
+-        y = att @ v  # (B, nh, T, hs)
++        # Use PyTorch's fused scaled_dot_product_attention to avoid materializing the large att tensor.
++        # Prefer fp16 inputs to leverage TensorCores on Ampere, but return result in fp32.
++        try:
++            # prepare fp16 tensors for the fused kernel
++            q_attn = q.half()
++            k_attn = k.half()
++            v_attn = v.half()
++            # dropout probability (nn.Dropout stores probability in .p)
++            dropout_p = self.attn_dropout.p if isinstance(self.attn_dropout, nn.Dropout) else 0.0
++            # scaled_dot_product_attention performs scaling, causal masking (when is_causal=True), softmax and matmul in a fused kernel
++            y = F.scaled_dot_product_attention(q_attn, k_attn, v_attn, attn_mask=None, dropout_p=dropout_p, is_causal=True)
++            # convert back to fp32 for downstream layers
++            y = y.to(dtype=torch.float32)
++        except (AttributeError, TypeError):
++            # Fallback: fold the scale into q to avoid scaling the large attention matrix,
++            # then compute masked softmax in fp32 for numerical stability.
++            scale = 1.0 / math.sqrt(k.size(-1))
++            q_scaled = q * scale
++            att = (q_scaled @ k.transpose(-2, -1))  # (B, nh, T, T) in fp32
++            # prepare causal mask and apply
++            mask_slice = self.bias[:, :, :T, :T]  # (1,1,T,T)
++            mask_expanded = mask_slice.expand(B, self.n_head, T, T).to(dtype=att.dtype, device=att.device)
++            att = att.masked_fill(mask_expanded == 0, float('-inf'))
++            att = F.softmax(att, dim=-1)
++            att = self.attn_dropout(att)
++            # attention @ value -> result in fp32
++            y = att @ v  # (B, nh, T, hs)
+         y = y.transpose(1, 2).contiguous().view(B, T, C)  # re-assemble all head outputs side by side
+ 
+         # output projection

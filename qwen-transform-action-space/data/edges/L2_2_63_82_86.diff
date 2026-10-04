@@ -1,0 +1,123 @@
+@@ -8,14 +8,13 @@
+ @triton.jit
+ def fused_gemm_relu_div(
+     A_ptr,           # pointer to A matrix (M, K), row-major
+-    B_ptr,           # pointer to B matrix (N, K), row-major (we treat B rows as output channels)
++    B_ptr,           # pointer to packed B matrix (K, N), row-major (we pass packed weight as (K, N))
+     Bias_ptr,        # pointer to bias vector (N,)
+     C_ptr,           # pointer to output matrix (M, N), row-major
+     M, N, K,         # sizes
+     stride_A0, stride_A1,   # strides for A: (stride between rows, stride between cols)
+-    stride_B0, stride_B1,   # strides for B
++    stride_B0, stride_B1,   # strides for B (packed as K x N)
+     stride_C0, stride_C1,   # strides for C
+-    divisor,         # scalar divisor (float)
+     BLOCK_M: tl.constexpr,  # tile sizes as compile-time constants
+     BLOCK_N: tl.constexpr,
+     BLOCK_K: tl.constexpr,
+@@ -38,30 +37,25 @@
+     # accumulator
+     acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
+ 
+-    # iterate over K in blocks
++    # iterate over K in blocks - load tiles for A and packed B (shape K x N) and do block GEMM
+     k = 0
+     while k < K:
+-        # for each k in this k-block, perform rank-1 updates
+-        # We'll iterate KK times where KK = min(BLOCK_K, K - k)
+-        # Use a for-loop over BLOCK_K and mask out-of-range k values
+-        for kk in range(BLOCK_K):
+-            k_idx = k + kk
+-            valid_k = k_idx < K
++        k_start = k
++        k_offsets = tl.arange(0, BLOCK_K)  # (BLOCK_K,)
++        k_mask = (k_start + k_offsets) < K  # (BLOCK_K,)
+ 
+-            # compute addresses for A[:, k_idx] -> shape (BLOCK_M,)
+-            a_coords = offs_m * stride_A0 + k_idx * stride_A1
+-            a_ptrs = A_ptr + a_coords
+-            a_mask = mask_m & valid_k
+-            a_vals = tl.load(a_ptrs, mask=a_mask, other=0.0)  # (BLOCK_M,)
++        # load A block: shape (BLOCK_M, BLOCK_K)
++        a_ptrs = A_ptr + offs_m[:, None] * stride_A0 + (k_start + k_offsets)[None, :] * stride_A1
++        a_mask = mask_m[:, None] & k_mask[None, :]
++        a_block = tl.load(a_ptrs, mask=a_mask, other=0.0)  # (BLOCK_M, BLOCK_K)
+ 
+-            # compute addresses for B[:, k_idx] -> shape (BLOCK_N,)
+-            b_coords = offs_n * stride_B0 + k_idx * stride_B1
+-            b_ptrs = B_ptr + b_coords
+-            b_mask = mask_n & valid_k
+-            b_vals = tl.load(b_ptrs, mask=b_mask, other=0.0)  # (BLOCK_N,)
++        # load B block (packed as K x N): shape (BLOCK_K, BLOCK_N)
++        b_ptrs = B_ptr + (k_start + k_offsets)[:, None] * stride_B0 + offs_n[None, :] * stride_B1
++        b_mask = k_mask[:, None] & mask_n[None, :]
++        b_block = tl.load(b_ptrs, mask=b_mask, other=0.0)  # (BLOCK_K, BLOCK_N)
+ 
+-            # outer product accumulate -> (BLOCK_M, BLOCK_N)
+-            acc += a_vals[:, None] * b_vals[None, :]
++        # accumulate using block matrix multiply: (BLOCK_M, BLOCK_K) @ (BLOCK_K, BLOCK_N) -> (BLOCK_M, BLOCK_N)
++        acc += tl.dot(a_block, b_block)
+ 
+         k += BLOCK_K
+ 
+@@ -74,9 +68,6 @@
+ 
+     # ReLU
+     acc = tl.maximum(acc, 0.0)
+-
+-    # divide by scalar
+-    acc = acc / divisor
+ 
+     # store results
+     c_coords = offs_m[:, None] * stride_C0 + offs_n[None, :] * stride_C1
+@@ -93,7 +84,7 @@
+     assert x.is_cuda and weight.is_cuda and bias.is_cuda, "All tensors must be CUDA tensors."
+     assert x.dtype == torch.float32 and weight.dtype == torch.float32 and bias.dtype == torch.float32
+ 
+-    # Ensure contiguity for predictable strides
++    # Ensure contiguity for predictable strides and pre-scale / pack weight to avoid per-element division
+     x_ = x.contiguous()
+     w_ = weight.contiguous()
+     b_ = bias.contiguous()
+@@ -103,14 +94,19 @@
+     # Output tensor
+     out = torch.empty((M, N), device=x_.device, dtype=x_.dtype)
+ 
+-    # Strides (in elements)
++    # Pre-scale and pack weight to remove division from the kernel:
++    # pack as (K, N) row-major so kernel can load contiguous K-strides.
++    w_packed = (w_.t().contiguous() * (1.0 / float(divisor))).contiguous()
++    b_scaled = (b_ * (1.0 / float(divisor))).contiguous()
++
++    # Strides (in elements) for x and packed weight
+     stride_A0, stride_A1 = x_.stride(0), x_.stride(1)
+-    stride_B0, stride_B1 = w_.stride(0), w_.stride(1)
++    stride_B0, stride_B1 = w_packed.stride(0), w_packed.stride(1)
+     stride_C0, stride_C1 = out.stride(0), out.stride(1)
+ 
+-    # Block sizes (tuned reasonably for Ampere)
+-    BLOCK_M = 64
+-    BLOCK_N = 64
++    # Block sizes (tuned for Ampere)
++    BLOCK_M = 128
++    BLOCK_N = 128
+     BLOCK_K = 32
+ 
+     # Grid dimensions
+@@ -119,14 +115,13 @@
+         (N + BLOCK_N - 1) // BLOCK_N,
+     )
+ 
+-    # Launch Triton kernel with constexpr block sizes
++    # Launch Triton kernel with constexpr block sizes, pass packed/scaled weight and scaled bias
+     fused_gemm_relu_div[grid](
+-        x_, w_, b_, out,
++        x_, w_packed, b_scaled, out,
+         M, N, K,
+         stride_A0, stride_A1,
+         stride_B0, stride_B1,
+         stride_C0, stride_C1,
+-        float(divisor),
+         BLOCK_M=BLOCK_M, BLOCK_N=BLOCK_N, BLOCK_K=BLOCK_K
+     )
+ 

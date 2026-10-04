@@ -1,0 +1,18 @@
+@@ -82,12 +82,11 @@
+     recip = float(1.0 / divide_by)
+ 
+     # Tunable parameters chosen for good performance on Ampere (A6000).
+-    # Prefer smaller tile width and more rows per-program to lower register pressure
+-    # while maintaining good occupancy on Ampere GPUs.
+-    # Empirically, BLOCK in {256,512} with ROWS in {8,16,32} often outperforms very-wide tiles.
+-    # Using BLOCK=512 and ROWS=16 balances per-program work and register usage on A6000.
+-    ROWS = 16
+-    BLOCK = 512
++    # Use one row per program to reduce register pressure and ensure each program
++    # performs fully-contiguous loads for a single (batch,channel) row.
++    # Use a power-of-two BLOCK that often matches L2/cache behavior on Ampere.
++    ROWS = 1
++    BLOCK = 256
+ 
+     grid = ( (n_ch + ROWS - 1) // ROWS, )
+     _fused_instancenorm_divide_kernel[grid](

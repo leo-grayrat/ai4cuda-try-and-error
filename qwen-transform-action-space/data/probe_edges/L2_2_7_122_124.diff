@@ -1,0 +1,117 @@
+@@ -15,19 +15,20 @@
+ @triton.autotune(configs=AUTOTUNE_CONFIGS, key=['N', 'C', 'S_channel'])
+ @triton.jit
+ def fused_acts_kernel(
+-    x_ptr,          # pointer to input tensor (flattened), expected to point to fp16 data
+-    bias_ptr,       # pointer to bias of shape (C,), expected to be fp16
+-    out_ptr,        # pointer to output tensor (flattened), fp16
++    x_ptr,          # pointer to input tensor (flattened), expected to point to fp32 data
++    bias_ptr,       # pointer to bias of shape (C,), expected to be fp32
++    out_ptr,        # pointer to output tensor (flattened), fp32
+     N,              # batch size
+     C,              # number of channels
+     S_channel,      # D*H*W (elements per channel per batch)
+     BLOCK_SIZE: tl.constexpr,
+ ):
+     """
+-    Mixed-precision Triton kernel:
+-      - Load fp16 inputs, cast to fp32 for compute-heavy ops (exp/div) to retain accuracy.
+-      - Perform fused activations: ReLU -> GELU (approx) -> Sigmoid -> bias add in fp32.
+-      - Cast result back to fp16 and store.
++    Triton kernel in fp32:
++      - Load fp32 inputs and compute in fp32 (no host-side half copy).
++      - Perform fused activations: ReLU -> GELU (approx quick-sigmoid uses one exp) ->
++        approximate final sigmoid (softsign-like) -> bias add.
++      - Store fp32 outputs (no casts).
+     Grid mapping: (batch, channel, block_idx) so each program handles one contiguous block.
+     """
+     batch = tl.program_id(0)
+@@ -43,13 +44,11 @@
+     base = ((batch * C + channel) * S_channel) + start_in_channel
+     offs = base + offs_in_block
+ 
+-    # Load inputs for the whole block (masked) as fp16 values, then cast to fp32 for compute.
+-    x_fp16 = tl.load(x_ptr + offs, mask=mask, other=0.0)
+-    x = tl.cast(x_fp16, tl.float32)
++    # Load inputs for the whole block (masked) as fp32 values.
++    x = tl.load(x_ptr + offs, mask=mask, other=0.0)
+ 
+-    # Load bias once per program (fp16) and cast to fp32
+-    bias_fp16 = tl.load(bias_ptr + channel)
+-    bias_val = tl.cast(bias_fp16, tl.float32)
++    # Load bias once per program (fp32)
++    bias_val = tl.load(bias_ptr + channel)
+ 
+     # 1) ReLU
+     zero_f = tl.zeros((), dtype=tl.float32)
+@@ -62,41 +61,37 @@
+     sigmoid_approx = 1.0 / (1.0 + exp_neg)
+     gelu_approx = x_relu * sigmoid_approx
+ 
+-    # 3) Sigmoid on the GELU output
+-    exp_neg_g = tl.exp(-gelu_approx)
+-    sigmoid_out = 1.0 / (1.0 + exp_neg_g)
++    # 3) Approximate final sigmoid using a softsign-like approximation to avoid a second exp:
++    #    approx_sigmoid(y) = 0.5 * (1 + y / (1 + abs(y)))
++    y = gelu_approx
++    approx_sigmoid = 0.5 * (1.0 + y / (1.0 + tl.abs(y)))
+ 
+     # 4) Add bias (broadcast scalar)
+-    out_fp32 = sigmoid_out + bias_val
++    out_fp32 = approx_sigmoid + bias_val
+ 
+-    # Cast back to fp16 for storage to reduce memory traffic/storage
+-    out_fp16 = tl.cast(out_fp32, tl.float16)
+-
+-    # Store result
+-    tl.store(out_ptr + offs, out_fp16, mask=mask)
++    # Store result (fp32)
++    tl.store(out_ptr + offs, out_fp32, mask=mask)
+ 
+ 
+ def fused_activations(x: torch.Tensor, bias: torch.Tensor):
+     """
+-    Wrapper around the Triton kernel using mixed precision.
++    Wrapper around the Triton kernel using fp32 throughout.
+     Expects:
+       x: (N, C, D, H, W) CUDA tensor in fp32
+       bias: (C, 1, 1, 1) or (C,) CUDA tensor in fp32
+-    Returns tensor shaped like x and in the original dtype (fp32).
++    Returns tensor shaped like x in fp32.
+     """
+     assert x.is_cuda and bias.is_cuda, "Inputs must be on CUDA"
+ 
+-    # Ensure contiguous layout for flat view (work in fp16 for the kernel)
++    # Ensure contiguous layout for flat view (work in fp32 for the kernel)
+     x_contig = x.contiguous()
+-    x_half = x_contig.half()
+-    x_flat = x_half.view(-1)
++    x_flat = x_contig.view(-1)
+ 
+-    # Prepare bias as 1D (C,) in fp16
++    # Prepare bias as 1D (C,) in fp32
+     if bias.dim() != 1:
+         bias_flat = bias.view(bias.shape[0]).contiguous()
+     else:
+         bias_flat = bias.contiguous()
+-    bias_flat = bias_flat.half()
+ 
+     N = x_contig.shape[0]
+     C = x_contig.shape[1]
+@@ -105,14 +100,14 @@
+     W = x_contig.shape[4]
+     S_channel = D * H * W  # elements per channel per batch
+ 
+-    out_flat = torch.empty_like(x_flat)  # fp16
++    out_flat = torch.empty_like(x_flat)  # fp32
+ 
+     def grid(meta):
+         blocks_per_channel = (S_channel + meta['BLOCK_SIZE'] - 1) // meta['BLOCK_SIZE']
+         return (N, C, blocks_per_channel)
+ 
+     fused_acts_kernel[grid](x_flat, bias_flat, out_flat, N, C, S_channel)
+-    out = out_flat.view_as(x_half).to(x_contig.dtype)  # convert back to original dtype (fp32)
++    out = out_flat.view_as(x_contig)
+     return out
+ 
+ 

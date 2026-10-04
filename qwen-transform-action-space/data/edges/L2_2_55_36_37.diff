@@ -1,0 +1,404 @@
+@@ -3,239 +3,228 @@
+ import triton
+ import triton.language as tl
+ 
+-# Autotune configs tuned for Ampere-like GPUs (A6000)
+-AUTOTUNE_CONFIGS_S2 = [
+-    triton.Config(
+-        {
+-            "BLOCK_IN": 1024,
+-            "BLOCK_OUT": 256,
+-        },
+-        num_warps=16,
+-        num_stages=2,
+-    ),
+-    triton.Config(
+-        {
+-            "BLOCK_IN": 1024,
+-            "BLOCK_OUT": 128,
+-        },
+-        num_warps=8,
+-        num_stages=2,
+-    ),
+-    triton.Config(
+-        {
+-            "BLOCK_IN": 512,
+-            "BLOCK_OUT": 256,
+-        },
+-        num_warps=8,
+-        num_stages=2,
+-    ),
+-    triton.Config(
+-        {
+-            "BLOCK_IN": 512,
+-            "BLOCK_OUT": 128,
+-        },
+-        num_warps=8,
+-        num_stages=2,
+-    ),
+-    triton.Config(
+-        {
+-            "BLOCK_IN": 256,
+-            "BLOCK_OUT": 128,
+-        },
+-        num_warps=4,
+-        num_stages=2,
+-    ),
++# Autotune configs tuned for Ampere (A6000) for wide GEMM-like access
++AUTOTUNE_CONFIGS = [
++    triton.Config({"BLOCK_IN": 256, "BLOCK_OUT": 64},  num_warps=4,  num_stages=2),
++    triton.Config({"BLOCK_IN": 512, "BLOCK_OUT": 64},  num_warps=8,  num_stages=2),
++    triton.Config({"BLOCK_IN": 256, "BLOCK_OUT": 128}, num_warps=4,  num_stages=2),
++    triton.Config({"BLOCK_IN": 512, "BLOCK_OUT": 128}, num_warps=8,  num_stages=2),
++    triton.Config({"BLOCK_IN": 1024, "BLOCK_OUT": 128}, num_warps=8, num_stages=3),
++    triton.Config({"BLOCK_IN": 1024, "BLOCK_OUT": 256}, num_warps=16, num_stages=2),
+ ]
+ 
+ 
+-@triton.autotune(
+-    configs=AUTOTUNE_CONFIGS_S2,
+-    key=["B", "IN", "OUT_pairs"],
+-)
++@triton.autotune(configs=AUTOTUNE_CONFIGS, key=["B", "IN", "OUT_pairs"])
+ @triton.jit
+-def s2_sum_abs_matmul_kernel(
+-    x_ptr,      # pointer to input X: (B, IN), row-major
+-    W_ptr,      # pointer to W_minus: (OUT_pairs, IN), row-major
+-    b_ptr,      # pointer to b_minus: (OUT_pairs,)
+-    out_ptr,    # pointer to output S2: (B,)
+-    B, IN, OUT_pairs,
+-    BLOCK_IN: tl.constexpr, BLOCK_OUT: tl.constexpr
++def fused_linear_maxpool_sum_kernel(
++    x_ptr,       # Pointer to input X: (B, IN)
++    w_ptr,       # Pointer to weight W: (OUT, IN) row-major
++    b_ptr,       # Pointer to bias: (OUT,)
++    temp_ptr,    # Pointer to temporary output (B x num_out_blocks)
++    B,           # batch size
++    IN,          # input features
++    OUT_pairs,   # number of pairs = OUT // 2
++    scale,       # scalar float (applied after reduction)
++    BLOCK_IN: tl.constexpr,
++    BLOCK_OUT: tl.constexpr,
+ ):
+     """
+-    For each program handling one batch sample (pid_b), compute:
+-      s2[pid_b] = sum_{p=0..OUT_pairs-1} abs( dot( X[pid_b,:], W_minus[p,:] ) + b_minus[p] )
+-
+-    Grid is 1D over B (one program per batch sample). Each program loops over OUT_pairs in blocks of BLOCK_OUT
+-    and over IN in blocks of BLOCK_IN, accumulating per-output-pair partial dot products, then applies abs and
+-    accumulates to a scalar which is written to out_ptr[pid_b].
++    Fused kernel:
++      For each (batch b, out-block o_block) compute partial sums over a BLOCK_OUT of output-pairs:
++        - compute dot products for both rows in each pair (2p, 2p+1)
++        - add biases
++        - take pairwise max
++        - sum the BLOCK_OUT max values and write a scalar partial into temp_ptr[b, o_block_idx]
++    Grid: 2D: (B, num_out_blocks)
+     """
+     pid_b = tl.program_id(0)
+-    # base pointers
++    pid_o = tl.program_id(1)
++
++    # base pointer to this sample's input row
+     x_base = x_ptr + pid_b * IN
+ 
+-    # scalar accumulator for this batch sample
+-    acc_total = 0.0
++    # start index of this out-block (in pair-index space)
++    o_start = pid_o * BLOCK_OUT
++    o_offs = tl.arange(0, BLOCK_OUT)  # (BLOCK_OUT,)
++    o_idx = o_start + o_offs          # (BLOCK_OUT,)
++    row1 = 2 * o_idx                  # first row index for each pair
++    row2 = row1 + 1                   # second row index for each pair
+ 
+-    offs_out = tl.arange(0, BLOCK_OUT)
+-    for o_start in range(0, OUT_pairs, BLOCK_OUT):
+-        o_idx = o_start + offs_out  # shape (BLOCK_OUT,)
+-        mask_out = o_idx < OUT_pairs  # mask for valid output pairs
+-        # row base for W rows in this block: each row has length IN, so row_base = o_idx * IN
+-        row_base = o_idx * IN  # shape (BLOCK_OUT,)
++    # masks for valid rows
++    OUT_total = OUT_pairs * 2
++    row_mask = row1 < OUT_total  # (BLOCK_OUT,)
+ 
+-        # accumulator for the BLOCK_OUT rows (per-pair partial dot)
+-        acc_block = tl.zeros((BLOCK_OUT,), dtype=tl.float32)
++    # accumulators for the two rows in each pair
++    acc1 = tl.zeros((BLOCK_OUT,), dtype=tl.float32)
++    acc2 = tl.zeros((BLOCK_OUT,), dtype=tl.float32)
+ 
+-        # loop over input features in blocks
+-        offs_in = tl.arange(0, BLOCK_IN)
+-        for i_start in range(0, IN, BLOCK_IN):
+-            i_idx = i_start + offs_in  # shape (BLOCK_IN,)
+-            mask_in = i_idx < IN
++    # loop over input feature blocks
++    for i_start in range(0, IN, BLOCK_IN):
++        in_offs = tl.arange(0, BLOCK_IN)  # (BLOCK_IN,)
++        idx = i_start + in_offs           # (BLOCK_IN,)
++        mask_in = idx < IN
+ 
+-            # load x block: shape (BLOCK_IN,)
+-            x_vals = tl.load(x_base + i_idx, mask=mask_in, other=0.0)
++        # load x block (BLOCK_IN,)
++        x_vals = tl.load(x_base + idx, mask=mask_in, other=0.0)
+ 
+-            # compute W addresses: (BLOCK_OUT, BLOCK_IN)
+-            w_ptrs = W_ptr + row_base[:, None] + i_idx[None, :]
+-            mask_w = mask_out[:, None] & mask_in[None, :]
++        # compute row base addresses for W loads
++        row_base1 = row1 * IN  # (BLOCK_OUT,)
++        row_base2 = row2 * IN  # (BLOCK_OUT,)
+ 
+-            # load W block: shape (BLOCK_OUT, BLOCK_IN)
+-            w_block = tl.load(w_ptrs, mask=mask_w, other=0.0)
++        # build 2D addresses for W: shape (BLOCK_OUT, BLOCK_IN)
++        w1_ptrs = w_ptr + row_base1[:, None] + idx[None, :]
++        w2_ptrs = w_ptr + row_base2[:, None] + idx[None, :]
+ 
+-            # multiply-accumulate: sum over BLOCK_IN dimension
+-            prod = w_block * x_vals[None, :]
+-            tmp = tl.sum(prod, 1)  # shape (BLOCK_OUT,)
+-            acc_block += tmp
++        mask_w = mask_in[None, :] & row_mask[:, None]
+ 
+-        # after finishing IN loop for this out-block, add biases
+-        b_vals = tl.load(b_ptr + o_idx, mask=mask_out, other=0.0)
+-        acc_block += b_vals
++        # load W blocks for both rows
++        w1_block = tl.load(w1_ptrs, mask=mask_w, other=0.0)  # (BLOCK_OUT, BLOCK_IN)
++        w2_block = tl.load(w2_ptrs, mask=mask_w, other=0.0)  # (BLOCK_OUT, BLOCK_IN)
+ 
+-        # apply absolute and sum across the BLOCK_OUT rows
+-        acc_block_abs = tl.abs(acc_block)
+-        block_sum = tl.sum(acc_block_abs, 0)  # scalar
+-        acc_total = acc_total + block_sum
++        # compute partial dot products and accumulate
++        prod1 = w1_block * x_vals[None, :]
++        prod2 = w2_block * x_vals[None, :]
+ 
+-    # store the scalar result
+-    tl.store(out_ptr + pid_b, acc_total)
++        acc1 += tl.sum(prod1, 1)
++        acc2 += tl.sum(prod2, 1)
++
++    # add biases
++    b1 = tl.load(b_ptr + row1, mask=row_mask, other=0.0)
++    b2 = tl.load(b_ptr + row2, mask=row_mask, other=0.0)
++    acc1 += b1
++    acc2 += b2
++
++    # pairwise max and sum across BLOCK_OUT
++    max_vals = tl.maximum(acc1, acc2)  # (BLOCK_OUT,)
++    block_sum = tl.sum(max_vals, 0)    # scalar
++
++    # store into temp buffer (one scalar per (b, out-block))
++    num_out_blocks = (OUT_pairs + BLOCK_OUT - 1) // BLOCK_OUT
++    tl.store(temp_ptr + pid_b * num_out_blocks + pid_o, block_sum)
+ 
+ 
+-def triton_sum_abs_matmul(x: torch.Tensor, W_minus: torch.Tensor, b_minus: torch.Tensor):
++def triton_fused_linear_maxpool_sum(x: torch.Tensor, linear: nn.Linear, scale: float):
+     """
+-    Compute s2 = sum_p abs( X @ W_minus_T + b_minus ) using the Triton kernel.
+-
+-    x: (B, IN)
+-    W_minus: (OUT_pairs, IN) row-major
+-    b_minus: (OUT_pairs,)
+-    returns: (B,) tensor
++    Wrapper that either takes the fast GEMM path (if precomputed transposed pairwise buffers exist)
++    or falls back to the Triton fused kernel.
++    Returns: (B,) tensor
+     """
+-    assert x.is_cuda and W_minus.is_cuda and b_minus.is_cuda
+-    assert x.dtype == torch.float32 and W_minus.dtype == torch.float32 and b_minus.dtype == torch.float32
++    assert x.is_cuda and linear.weight.is_cuda
++    assert x.dtype == torch.float32 and linear.weight.dtype == torch.float32
++    assert linear.bias is not None
+ 
+     B, IN = x.shape
+-    OUT_pairs = W_minus.shape[0]
++    OUT = linear.weight.shape[0]
++    assert OUT % 2 == 0, "OUT must be divisible by 2 for pairwise pooling."
++    OUT_pairs = OUT // 2
+ 
++    # Fast path: if precomputed transposed pairwise buffers and biases exist, use two GEMMs
++    if hasattr(linear, "W_plus_T") and hasattr(linear, "W_minus_T") and hasattr(linear, "b_plus") and hasattr(linear, "b_minus"):
++        x_c = x.contiguous()
++        Wp_T = linear.W_plus_T  # (IN, OUT_pairs)
++        Wm_T = linear.W_minus_T
++
++        bp = linear.b_plus    # (OUT_pairs,)
++        bm = linear.b_minus
++
++        # Two large GEMMs: (B, IN) @ (IN, OUT_pairs) -> (B, OUT_pairs)
++        # Using torch.matmul which will dispatch to cuBLAS for best performance
++        Y_plus = x_c.matmul(Wp_T)   # (B, OUT_pairs)
++        Y_minus = x_c.matmul(Wm_T)  # (B, OUT_pairs)
++
++        # compute pairwise max via formula: max(a, c) = 0.5*( (a+c) + |a-c| )
++        tmp = Y_minus + bm[None, :]
++        S = 0.5 * (Y_plus + bp[None, :] + tmp.abs())  # (B, OUT_pairs)
++
++        # reduce over pairs and scale
++        out = S.sum(dim=1) * float(scale)  # (B,)
++        return out
++
++    # Fallback to Triton kernel path (when buffers not present)
+     x_contig = x.contiguous()
+-    W_contig = W_minus.contiguous()
+-    b_contig = b_minus.contiguous()
++    w_contig = linear.weight.contiguous()
++    b_contig = linear.bias.contiguous()
+ 
+-    # grid is 1D over batch
++    # Determine grid using BLOCK_OUT provided by autotune meta
+     def grid(meta):
+-        return (B,)
++        num_out_blocks = (OUT_pairs + meta["BLOCK_OUT"] - 1) // meta["BLOCK_OUT"]
++        return (B, num_out_blocks)
+ 
+-    out = torch.empty((B,), device=x.device, dtype=x.dtype)
++    # Allocate temp buffer with conservative size based on largest BLOCK_OUT in configs
++    max_block_out = max(cfg.spec["BLOCK_OUT"] for cfg in AUTOTUNE_CONFIGS)
++    num_out_blocks = (OUT_pairs + max_block_out - 1) // max_block_out
++    temp = torch.empty((B, num_out_blocks), device=x.device, dtype=x.dtype)
+ 
+-    s2_sum_abs_matmul_kernel[grid](
+-        x_contig, W_contig, b_contig, out, B, IN, OUT_pairs
++    fused_linear_maxpool_sum_kernel[grid](
++        x_contig,
++        w_contig,
++        b_contig,
++        temp,
++        B,
++        IN,
++        OUT_pairs,
++        float(scale),
+     )
++
++    out = temp.sum(dim=1) * float(scale)
+     return out
+ 
+ 
+ class ModelNew(nn.Module):
+     """
+-    Optimized Model that:
+-      - Precomputes W_minus (W_even - W_odd) and b_minus for absolute-term GEMM,
+-      - Precomputes v_in = sum_p W_plus[p] (equivalently sum over all rows of W) and b_plus_sum for the linear sum-term,
+-      - Uses one Triton kernel to compute s2 = sum_p abs( X @ W_minus.T + b_minus ) efficiently,
+-      - Computes s1 = X @ v_in + b_plus_sum with a light matvec,
+-      - Combines them as out = 0.5 * (s1 + s2) * scale_factor.
+-    This reduces one large GEMM compared to a naive two-GEMM approach and fuses the reduction into the Triton kernel,
+-    lowering memory traffic and improving performance on wide models.
++    Optimized Model:
++      - Assumes kernel_size == 2 (pairwise max pooling).
++      - Precomputes pairwise combinations of weights and biases:
++          W_plus = W_even + W_odd
++          W_minus = W_even - W_odd
++          b_plus = b_even + b_odd
++          b_minus = b_even - b_odd
++        and stores transposed versions W_plus_T, W_minus_T to enable two fast GEMMs in forward.
++      - Forward uses the fast GEMM path when buffers are present, otherwise falls back to a Triton fused kernel.
+     """
+     def __init__(self, in_features, out_features, kernel_size, scale_factor):
+         super(ModelNew, self).__init__()
+         assert kernel_size == 2, "This fused implementation assumes kernel_size == 2."
+         assert out_features % 2 == 0, "out_features must be divisible by 2 for pairwise pooling."
++
++        self.matmul = nn.Linear(in_features, out_features, bias=True)
+         self.scale_factor = float(scale_factor)
+-        self.in_features = in_features
+-        self.out_features = out_features
+ 
+-        # Linear layer for storage of weights/bias; we'll extract and register transformed buffers.
+-        self.matmul = nn.Linear(in_features, out_features, bias=True)
++        # Precompute pairwise buffers and transposed versions to avoid runtime transposes
++        with torch.no_grad():
++            W = self.matmul.weight.detach()  # (OUT, IN)
++            b = self.matmul.bias.detach()    # (OUT,)
+ 
+-        # Precompute pairwise components and register as buffers
+-        with torch.no_grad():
+-            W = self.matmul.weight.detach()  # shape (OUT, IN)
+-            b = self.matmul.bias.detach()    # shape (OUT,)
+-
+-            # split even/odd rows (pairwise)
++            # split even/odd rows
+             W_even = W[0::2, :].contiguous()  # (OUT_pairs, IN)
+             W_odd = W[1::2, :].contiguous()   # (OUT_pairs, IN)
+             b_even = b[0::2].contiguous()     # (OUT_pairs,)
+             b_odd = b[1::2].contiguous()      # (OUT_pairs,)
+ 
+-            # W_plus = W_even + W_odd, W_minus = W_even - W_odd
+-            W_plus = W_even + W_odd           # (OUT_pairs, IN)
+-            W_minus = W_even - W_odd          # (OUT_pairs, IN)
++            # pairwise combinations
++            W_plus = (W_even + W_odd).contiguous()   # (OUT_pairs, IN)
++            W_minus = (W_even - W_odd).contiguous()  # (OUT_pairs, IN)
++            b_plus = (b_even + b_odd).contiguous()
++            b_minus = (b_even - b_odd).contiguous()
+ 
+-            b_plus = b_even + b_odd           # (OUT_pairs,)
+-            b_minus = b_even - b_odd          # (OUT_pairs,)
++            # transposed versions for efficient GEMM: (IN, OUT_pairs)
++            W_plus_T = W_plus.t().contiguous()
++            W_minus_T = W_minus.t().contiguous()
+ 
+-            # Precompute v_in = sum_p W_plus[p] -> shape (IN,)
+-            v_in = W_plus.sum(dim=0).contiguous()  # (IN,)
+-
+-            # Precompute scalar b_plus_sum = sum_p b_plus[p]
+-            b_plus_sum = b_plus.sum().contiguous()  # scalar tensor
+-
+-            # We will keep W_minus in row-major (OUT_pairs, IN) for the Triton kernel
+-            W_minus_contig = W_minus.contiguous()
+-            b_minus_contig = b_minus.contiguous()
+-
+-        # Register buffers so they move with the module (.to()/cuda()) and are saved in state_dict()
+-        # W_minus: (OUT_pairs, IN), b_minus: (OUT_pairs,)
+-        self.matmul.register_buffer("W_minus", W_minus_contig)
+-        self.matmul.register_buffer("b_minus", b_minus_contig)
+-
+-        # v_in: (IN,), b_plus_sum: scalar tensor
+-        # store v_in and b_plus_sum on the top-level module for clarity
+-        self.register_buffer("v_in", v_in)
+-        # store scalar as a tensor for device/dtype consistency
+-        self.register_buffer("b_plus_sum", b_plus_sum)
++        # register buffers so they move with module/device and are saved
++        self.matmul.register_buffer("W_plus", W_plus)
++        self.matmul.register_buffer("W_minus", W_minus)
++        self.matmul.register_buffer("b_plus", b_plus)
++        self.matmul.register_buffer("b_minus", b_minus)
++        self.matmul.register_buffer("W_plus_T", W_plus_T)
++        self.matmul.register_buffer("W_minus_T", W_minus_T)
+ 
+     def forward(self, x: torch.Tensor):
+         """
+         x: (B, IN) -> returns (B,)
+-        Steps:
+-          s1 = X @ v_in + b_plus_sum           # cheap matvec (B,)
+-          s2 = sum_p abs( X @ W_minus.T + b_minus )  # Triton kernel (B,)
+-          out = 0.5 * (s1 + s2) * scale_factor
++        Uses fast GEMM path via precomputed transposed pairwise buffers.
+         """
+         assert x.is_cuda, "Input must be on CUDA."
+         assert x.dtype == torch.float32, "Only fp32 supported."
+ 
+-        B, IN = x.shape
+-        assert IN == self.in_features, f"Expected input feature dim {self.in_features}, got {IN}"
+-
+-        # compute s1: matvec (B,)
+-        # v_in is (IN,)
+-        s1 = torch.matmul(x, self.v_in) + float(self.b_plus_sum)
+-
+-        # compute s2 using Triton kernel
+-        W_minus = self.matmul.W_minus
+-        b_minus = self.matmul.b_minus
+-
+-        s2 = triton_sum_abs_matmul(x, W_minus, b_minus)
+-
+-        # final combine and scale
+-        out = 0.5 * (s1 + s2) * float(self.scale_factor)
+-        return out
++        return triton_fused_linear_maxpool_sum(x, self.matmul, self.scale_factor)

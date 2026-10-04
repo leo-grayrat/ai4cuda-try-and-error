@@ -1,0 +1,182 @@
+@@ -3,101 +3,126 @@
+ import triton
+ import triton.language as tl
+ 
+-# Autotune configurations for the reduction kernel
+-AUTOTUNE_CONFIGS = [
+-    triton.Config({"BLOCK": 256}, num_warps=2, num_stages=2),
+-    triton.Config({"BLOCK": 512}, num_warps=4, num_stages=2),
+-    triton.Config({"BLOCK": 1024}, num_warps=8, num_stages=2),
+-    triton.Config({"BLOCK": 2048}, num_warps=8, num_stages=3),
++# Autotune configurations tuned for Ampere (NVIDIA A6000)
++AUTOTUNE_MEAN = [
++    triton.Config({"BLOCK": 1024}, num_warps=4, num_stages=2),
++    triton.Config({"BLOCK": 2048}, num_warps=8, num_stages=2),
++    triton.Config({"BLOCK": 4096}, num_warps=8, num_stages=3),
+ ]
+ 
+-@triton.autotune(configs=AUTOTUNE_CONFIGS, key=['N'])
++@triton.autotune(configs=AUTOTUNE_MEAN, key=['N'])
+ @triton.jit
+-def _row_mean_kernel(
+-    x_ptr,        # pointer to flattened input (rows x N)
+-    out_ptr,      # pointer to output (rows,)
+-    N,            # length of each row (H*W)
+-    stride,       # stride between rows in elements (should be N for contiguous)
++def _row_mean_reduce_kernel(
++    x_ptr,         # pointer to flattened input (rows * N)
++    out_ptr,       # pointer to output means (rows)
++    N,             # length of each row (H*W)
++    stride,        # stride between rows in elements
+     BLOCK: tl.constexpr,
+ ):
+     """
+-    Compute mean across the last dimension for each row.
+-    Each program handles one row.
+-    x is laid out as (rows, N) contiguous, where rows = B * C.
++    Each program reduces one row (of length N) using a BLOCK-sized inner tile.
++    We loop over tiles of size BLOCK (constexpr) across the length N, accumulating
++    into a scalar accumulator and then write mean = acc / N.
++    Grid launched with (rows,)
+     """
+     row = tl.program_id(0)
+-    # offsets within a row handled by this program
+     offs = tl.arange(0, BLOCK)
+     acc = 0.0
+-    # iterate over the row in BLOCK-sized chunks
++
++    # Loop over tiles of size BLOCK. BLOCK is a constexpr, so this compiles.
+     for start in range(0, N, BLOCK):
+         idx = row * stride + start + offs
+         mask = start + offs < N
+         vals = tl.load(x_ptr + idx, mask=mask, other=0.0)
+-        # sum values in this block
+-        acc = acc + tl.sum(vals)
+-    # divide by N to get mean
++        # sum the loaded tile and accumulate
++        acc += tl.sum(vals)
++
++    # compute mean and store
+     mean = acc / N
+     tl.store(out_ptr + row, mean)
+ 
+ 
+ def triton_mean_hw(x: torch.Tensor):
+     """
+-    Compute global mean over H and W for each (batch, channel) pair using Triton.
++    Compute global mean over H and W for each (batch, channel) pair using a single-stage Triton reduction.
+     Input:
+       x: tensor of shape (B, C, H, W), dtype float32, device CUDA
+     Output:
+       tensor of shape (B, C, 1, 1)
+     """
+-    assert x.is_cuda, "Input must be on CUDA"
+-    assert x.dtype == torch.float32, "This Triton kernel expects float32"
++    assert x.is_cuda, "Input must be on CUDA."
++    assert x.dtype == torch.float32, "This Triton kernel expects float32."
+ 
+     B, C, H, W = x.shape
+     N = H * W
+     rows = B * C
+ 
+-    # reshape to (rows, N) contiguous
+-    x_flat = x.view(rows, N).contiguous()
++    # Flatten input to (rows, N)
++    x_flat = x.contiguous().view(rows, N)
++
++    # Prepare output
+     out = torch.empty((rows,), device=x.device, dtype=x.dtype)
+ 
+-    # grid over rows
++    # Launch kernel: one program per row
+     grid = lambda meta: (rows,)
+-
+-    # Launch kernel. stride equals N because rows are contiguous of length N.
+-    _row_mean_kernel[grid](x_flat, out, N, N)
++    _row_mean_reduce_kernel[grid](x_flat, out, N, N)
+     out = out.view(B, C, 1, 1)
+     return out
+ 
+ 
+ class ModelNew(nn.Module):
+     """
+-    Model that performs a transposed convolution, optimized global average pooling using Triton,
+-    then adds a bias, applies log-sum-exp, sum, and multiplication.
++    Optimized Model:
++      - Move spatial global mean before ConvTranspose2d to avoid operating on large HxW.
++      - Use a single-stage Triton reduction kernel tuned for Ampere to compute means efficiently.
++      - Keep remaining small ops on the compact (B, C_out) tensors.
+     """
+     def __init__(self, in_channels, out_channels, kernel_size, bias_shape):
+         super(ModelNew, self).__init__()
+         self.conv_transpose = nn.ConvTranspose2d(in_channels, out_channels, kernel_size)
+-        # bias is stored as (out_channels, 1, 1) to match original model
++        # bias stored to match original signature (out_channels, 1, 1)
+         self.bias = nn.Parameter(torch.randn(bias_shape))
+ 
+     def forward(self, x):
+-        # standard conv transpose (leave to PyTorch)
+-        x = self.conv_transpose(x)
+-        # compute global mean across H and W with Triton kernel
+-        x = triton_mean_hw(x)  # shape (B, C, 1, 1)
+-        # add bias (broadcast over batch)
+-        x = x + self.bias
+-        # log-sum-exp over channel dimension
+-        x = torch.logsumexp(x, dim=1, keepdim=True)
+-        # sum over remaining spatial dims (should be 1x1, but keep general)
+-        x = torch.sum(x, dim=(2, 3))
+-        # multiply
+-        x = x * 10.0
+-        return x
++        # x: (B, C_in, H, W)
++        B, C_in, H, W = x.shape
++
++        # 1) Compute spatial mean of input efficiently with Triton
++        in_mean = triton_mean_hw(x).view(B, C_in)  # (B, C_in)
++
++        # 2) Compute weight spatial sums for ConvTranspose2d
++        # PyTorch ConvTranspose2d weight shape: (in_channels, out_channels, kh, kw)
++        w = self.conv_transpose.weight  # (C_in, C_out, kh, kw)
++        # sum over spatial dims to get (C_in, C_out)
++        w_sum = w.sum(dim=(2, 3))  # (C_in, C_out)
++        if w_sum.device != in_mean.device:
++            w_sum = w_sum.to(in_mean.device)
++
++        # 3) Small matmul to get output spatial mean -> (B, C_out)
++        out_mean = in_mean @ w_sum  # (B, C_out)
++
++        # 4) Add conv_transpose bias if present
++        if self.conv_transpose.bias is not None:
++            conv_bias = self.conv_transpose.bias.unsqueeze(0)  # (1, C_out)
++            if conv_bias.device != out_mean.device:
++                conv_bias = conv_bias.to(out_mean.device)
++            out_mean = out_mean + conv_bias  # broadcast over batch
++
++        # 5) Add module bias and apply remaining ops on compact tensors
++        bias_vec = self.bias.view(1, -1)  # (1, C_out)
++        if bias_vec.device != out_mean.device:
++            bias_vec = bias_vec.to(out_mean.device)
++        y = out_mean + bias_vec  # (B, C_out)
++
++        # log-sum-exp over channel dimension -> (B, 1)
++        y = torch.logsumexp(y, dim=1, keepdim=True)
++
++        # multiply and return; matches original output shape (B, 1)
++        y = y * 10.0
++        return y
+ 
+ 
+-# Keep helper functions from the original module to create inputs/init args
+-
++# Keep helper functions consistent with the original module for initialization/testing
+ batch_size = 16
+ in_channels = 64
+ out_channels = 128
+@@ -106,6 +131,7 @@
+ bias_shape = (out_channels, 1, 1)
+ 
+ def get_inputs():
++    # Inputs placed on CUDA as kernels expect CUDA tensors
+     return [torch.rand(batch_size, in_channels, height, width).cuda()]
+ 
+ def get_init_inputs():
