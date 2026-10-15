@@ -1,0 +1,27 @@
+{
+  // Experiment-only config: routes OpenCode at the local recording proxy,
+  // whose upstream is the local vLLM server. Load with:
+  //   OPENCODE_CONFIG=lowprob-attribution/opencode-vllm-proxy.jsonc opencode run ...
+  // Do NOT merge into the global config: with the proxy stopped every request
+  // on this provider fails.
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "vllm": {
+      "name": "vLLM Local",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "http://127.0.0.1:8765/v1",
+        "apiKey": "EMPTY"
+      },
+      "models": {
+        "qwen3-4b": {
+          "name": "qwen3-4b",
+          "limit": {
+            "context": 8192,
+            "output": 4096
+          }
+        }
+      }
+    }
+  }
+}

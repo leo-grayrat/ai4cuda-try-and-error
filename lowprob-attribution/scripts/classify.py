@@ -6,6 +6,16 @@ number / identifier / tool_syntax.
 Context types: initial / after_compile_error / after_correctness_fail /
 after_profiling / after_tool.
 
+Two fields are classified differently:
+
+* `content` is split into prose and fenced-code segments, then each token is
+  typed from its own text.
+* `reasoning_content` is prose, so it stays NL_reasoning by default, but a token
+  is re-tagged when it is a marker no prose sentence would contain (CUDA
+  built-ins, `tl`, `num_warps`, `BLOCK_SIZE`, ...). This keeps reasoning from
+  swallowing the CUDA/Triton vocabulary the study is about, without misfiling
+  ordinary words as code.
+
 Observables per token (PLAN.md section 9): the logprob itself, `in_topn`
 (whether the chosen token appears in the returned top_logprobs), and lowprob
 flags at two thresholds. The -9999 sentinel is deliberately NOT used: DeepSeek
@@ -73,6 +83,17 @@ GENERIC_CODE_TOKENS = {
     "int32", "int64", "uint8", "int8",
 }
 
+# Words like "sum", "max", "min", "to", "load", "store", "where", "view" belong to
+# the Triton keyword set but also occur constantly in ordinary prose, so they must
+# NOT be used to detect code inside reasoning. These markers are narrow on purpose:
+# they are C/C++ identifier styles or Triton-only spellings that a prose sentence
+# essentially never contains.
+NL_CODE_MARKERS_CUDA = CUDA_KEYWORDS
+NL_CODE_MARKERS_TRITON = {
+    "tl", "num_warps", "num_stages", "BLOCK_SIZE", "BLOCK",
+    "constexpr", "program_id", "autotune", "triton",
+}
+
 LOWPROB_THRESHOLDS = (-2.0, -5.0)
 
 # regex helpers
@@ -84,6 +105,15 @@ RE_PUNCT_OR_WS = re.compile(r"^[\s\{\}\[\]\(\)\"':,;]+$")
 def classify_token_type(token: str, segment_type: str) -> str:
     """Classify a single token. segment_type is 'nl', 'code' or 'tool'."""
     if segment_type == "nl":
+        # Reasoning is prose, but it quotes code while planning a kernel. A token
+        # is only re-tagged when it is a marker no prose sentence would contain;
+        # numbers and identifiers stay NL_reasoning so the category keeps its
+        # meaning ("language the model wrote while thinking").
+        bare = token.lstrip("@")
+        if bare in NL_CODE_MARKERS_CUDA:
+            return "cuda_specific"
+        if bare in NL_CODE_MARKERS_TRITON:
+            return "triton_specific"
         return "NL_reasoning"
 
     if segment_type == "tool":

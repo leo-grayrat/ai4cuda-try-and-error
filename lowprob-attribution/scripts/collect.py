@@ -54,6 +54,11 @@ def main() -> None:
     ap.add_argument("--timeout-s", type=int, default=300)
     ap.add_argument("--runs-root", type=Path, default=LOWPROB / "runs")
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--upstream", default="https://api.deepseek.com",
+                    help="upstream base URL the recording proxy forwards to")
+    ap.add_argument("--opencode-config", type=Path,
+                    default=LOWPROB / "opencode-proxy.jsonc",
+                    help="OpenCode overlay that points a provider at the proxy")
     ap.add_argument("--prompt-suffix", default=None,
                     help="extra instruction appended to the task prompt; used to make the "
                          "model print code in the reply body so it carries logprobs")
@@ -69,7 +74,7 @@ def main() -> None:
     log_handle = log_path.open("w", encoding="utf-8")
     proxy = subprocess.Popen(
         [sys.executable, "-u", str(PROXY),
-         "--upstream", "https://api.deepseek.com",
+         "--upstream", args.upstream,
          "--listen", f"127.0.0.1:{args.port}",
          "--out", str(PROXY_OUT),
          "--top-logprobs", "20",
@@ -85,7 +90,7 @@ def main() -> None:
     if PROXY_RECORDS.exists():
         seen = len(PROXY_RECORDS.read_text(encoding="utf-8").splitlines())
 
-    env_extra = {"OPENCODE_CONFIG": str(PROXY_CONFIG.resolve())}
+    env_extra = {"OPENCODE_CONFIG": str(args.opencode_config.resolve())}
     results = []
     try:
         for task_name in args.tasks:
