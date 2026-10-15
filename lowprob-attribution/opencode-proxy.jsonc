@@ -1,0 +1,15 @@
+{
+  // Experiment-only config. Load with:
+  //   OPENCODE_CONFIG=lowprob-attribution/opencode-proxy.jsonc opencode run ...
+  // It routes the DeepSeek provider through the local recording proxy instead
+  // of api.deepseek.com directly. Do not merge it into the global config:
+  // with the proxy stopped, every request on this provider fails.
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "deepseek": {
+      "options": {
+        "baseURL": "http://127.0.0.1:8765/v1"
+      }
+    }
+  }
+}
