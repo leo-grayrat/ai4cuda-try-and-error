@@ -32,7 +32,7 @@ DeepSeek 官方 API（logprobs=True, top_logprobs=20）
 
 1. **官方 API 连通性**：`deepseek/deepseek-flash` 分组是否已配好 API key（OpenCode 的 deepseek 分组需要 `DEEPSEEK_API_KEY` 或 auth 登录）。跑一个最小 chat 请求带 `logprobs: true`，确认响应里有 logprobs 字段和 -9999 哨兵语义符合预期。
 2. **代理对齐**：起代理，把 OpenCode 指向它，跑一个最小任务，确认（a）代理侧录的 logprobs 完整、（b）能与 OpenCode events.jsonl 里的 assistant 文本按前缀匹配对齐、（c）流式聚合无丢失。
-3. **哨兵率 sanity check**：随便一段回复的 -9999 比例应该在 0%~30% 之间（全 0 说明 top_logprobs 覆盖一切无区分度，全 -9999 说明参数没生效或解析错误）。
+3. **观测量 sanity check**：原设计的"哨兵率（-9999 占比）"经实测恒为 0，已在第九节修正为 `lowprob rate`（`logprob <= τ`，τ ∈ {-2, -5}）加 `in_topn` 标记。sanity check 相应改为：确认每类样本的 `lowprob rate` 既非恒 0 也非接近 1，且 `in_topn` 在固定 `top_logprobs` 下可比。
 
 **Kill condition**：如果代理对流式 SSE 的 logprobs 聚合在 DeepSeek 官方 API 上无法实现（比如官方流式不返回 logprobs 字段），就改用非流式模式跑 OpenCode（OpenCode 支持配置非流式）或降级到逐轮回放（拿保存的 messages 重新请求）。这条 fallback 在 Phase 0 内验证。
 
@@ -50,7 +50,7 @@ DeepSeek 官方 API（logprobs=True, top_logprobs=20）
 
 ## 四、Phase 2：对齐与分类（1 天）
 
-**对齐脚本**：把 `logprobs.jsonl` 的每条 completion 与 `events.jsonl` 的 `text`/`tool_use` 事件按文本前缀匹配，产出统一的 `tokens.jsonl`：每个 token 一行，字段包括 `logprob`、`is_sentinel`（是否 -9999）、`token_text`、`event_index`、`turn`、`task`、`condition`。
+**对齐脚本**：把 `logprobs.jsonl` 的每条 completion 与 `events.jsonl` 的 `text`/`tool_use` 事件按文本前缀匹配，产出统一的 `tokens.jsonl`：每个 token 一行，字段包括 `logprob`、`logprob_field`（content / reasoning_content）、`in_topn`（chosen 是否在返回的 top_logprobs 内）、`is_lowprob`（`logprob <= τ`）、`token_text`、`event_index`、`turn`、`task`、`condition`。
 
 **分类脚本**（规则冻结后不再改）：
 - token 类型：`NL_reasoning` / `generic_code` / `triton_specific`（Triton 关键词表）/ `cuda_specific`（threadIdx、__shared__、__syncthreads 等关键词表）/ `number` / `identifier` / `tool_syntax`
@@ -62,10 +62,12 @@ DeepSeek 官方 API（logprobs=True, top_logprobs=20）
 
 四个分析（对应判读树）：
 
-1. **token 类型 × 哨兵率**：`cuda_specific`/`triton_specific` vs `generic_code` 的意外率比较——低概率是否来自 CUDA/Triton 语法本身。
-2. **上下文类型 × 哨兵率**：`after_compile_error`/`after_profiling` vs `initial`——低概率是否来自工具观察后的分布外上下文。
-3. **干预对照**：完整反馈 vs 截断反馈的整体哨兵率差异——压缩工具反馈能否消除低概率尾部。
+1. **token 类型 × lowprob rate**：`cuda_specific`/`triton_specific` vs `generic_code` 的低概率率比较——低概率是否来自 CUDA/Triton 语法本身。
+2. **上下文类型 × lowprob rate**：`after_compile_error`/`after_profiling` vs `initial`——低概率是否来自工具观察后的分布外上下文。
+3. **干预对照**：完整反馈 vs 截断反馈的整体 lowprob rate 差异——压缩工具反馈能否消除低概率尾部。
 4. **交互项**：`cuda_specific × after_compile_error`——语法本身不低概率、但被奇怪上下文带低，是比"CUDA 语法稀有"精确得多的结论。
+
+每项同时报告该单元的 logprob 均值与低分位数，以及 `in_topn` 比例，避免只由单一阈值承载结论。
 
 **产出**：`lowprob-attribution/` 目录（README、tokens.jsonl 汇总、分析脚本、结果报告），根 README 加一行入口。结果无论正反都写成一篇可独立发布的实证短报告草稿（约 4-6 页）。
 
@@ -79,8 +81,8 @@ DeepSeek 官方 API（logprobs=True, top_logprobs=20）
 
 ## 七、判读树（提前定死）
 
-- 哨兵率在 triton/cuda_specific 和 generic_code 之间无显著差异，且 after_compile_error 明显高于 initial → CUDA Agent 的 root cause 叙事需要改写：低概率不来自 CUDA 语法稀有，而来自多轮工具 Agent 的分布外上下文。
-- triton/cuda_specific 哨兵率显著高于 generic_code，且各上下文类型下一致 → CUDA Agent 的叙事得到支持，之前的质疑收回。
+- `lowprob rate`（τ=-2 与 τ=-5 两档）在 triton/cuda_specific 和 generic_code 之间无显著差异，且 after_compile_error 明显高于 initial → CUDA Agent 的 root cause 叙事需要改写：低概率不来自 CUDA 语法稀有，而来自多轮工具 Agent 的分布外上下文。
+- triton/cuda_specific 的 `lowprob rate` 显著高于 generic_code，且各上下文类型下一致 → CUDA Agent 的叙事得到支持，之前的质疑收回。
 - 两种模式在不同任务/轮次上混合出现 → 需要更细致的分解，但仍能回答"哪类 token 在什么条件下变低概率"。
 
 ## 八、执行顺序
@@ -89,3 +91,52 @@ DeepSeek 官方 API（logprobs=True, top_logprobs=20）
 2. Phase 1：冻结判读树和分类规则 → 适配 2-3 道 KernelBench CUDA 题 → 36 次运行
 3. Phase 2：对齐脚本 → 分类脚本 → tokens.jsonl
 4. Phase 3：四项分析 → 结果报告 → README 入口
+
+## 九、Phase 0 实测记录（2026-10-15）
+
+DeepSeek 官方 API 恢复后，用裸 `urllib` 直调 `https://api.deepseek.com/chat/completions` 实测（脚本 `scripts/check_logprobs.py`、`scripts/check_sentinel.py`）。四点与计划假设不符，其中第三点推翻了原观测量定义。
+
+### 1. 模型名
+
+官方 `/models` 只返回 `deepseek-flash` 和 `deepseek-v4-pro`。此前脚本里用的 `deepseek-chat` 是一个可用的别名，但不是官方列表中的模型名。两者生成的 logprobs 语义不同（见下条）。
+
+### 2. 推理模型把 logprobs 放在 `reasoning_content`
+
+`deepseek-flash` / `deepseek-v4-pro` 是推理模型：响应里 `logprobs.content` 为空，逐 token logprob 全部在 `logprobs.reasoning_content`；`deepseek-chat` 别名则把 logprobs 放在 `logprobs.content`。代理必须同时读取两路（`scripts/record_proxy.py` 已按此实现）。分析时必须记录 `logprobs field` 是哪一路，否则两类模型的样本不可比。
+
+### 3. `-9999` 哨兵不存在（推翻原观测量）
+
+计划原假设："生成的 token 不在 top-N 最可能 token 之内时，`logprob` 返回 `-9999.0` 哨兵"。实测不成立。
+
+在同一段 500 token 的 reasoning 里，有 8 个 token 的 chosen 值**不在**返回的 `top_logprobs` 列表内（即严格意义上的"不在 top-5 之内"），它们返回的是真实 logprob 而不是哨兵：
+
+```
+chosen=' Trit'      logprob=-3.500   best_alt=' User'@-1.257
+chosen=' Need'      logprob=-2.803   best_alt=' Could'@-1.895
+chosen=' including' logprob=-4.697   best_alt=' no'@-0.268
+chosen=' returns'   logprob=-6.032   best_alt='(x'@-0.857
+```
+
+全文 `logprob <= -9998` 的计数为 0。同时 `top_logprobs` 取 1、5、10、20 四档时哨兵率**恒为 0%**，而 `logprob <= -5` 的计数随档位在 0~6 之间波动。
+
+结论：哨兵率这个观测量在当前 API 上恒为 0，没有分辨力。不能作为主指标。
+
+### 4. `temperature=0` 会让 logprobs 退化为全 0
+
+同一 prompt、同一模型，省略 `temperature` 时 `min logprob = -2.118`（真实值）；显式设 `temperature=0.0` 时，全部 420~500 个 token 的 logprob **均为 0.000**，`top_logprobs` 里所有替代 token 也都是 0.000。参数存在但不携带信息。
+
+任何调用链（代理、`study.py`、OpenCode 的 provider 默认值）都不能把 `temperature` 固定为 0，否则采集到的 logprobs 全废且不会报错。
+
+### 5. 观测量修正（采集前冻结，替代原"哨兵率"）
+
+- **主指标**：`lowprob rate` = 每个样本中 `logprob <= τ` 的 token 占比，取 `τ ∈ {-2, -5}` 两档分别报告（不预设单一阈值，避免阈值选择变成自由度）。
+- **辅助标记**：`in_topn` = chosen 是否出现在返回的 `top_logprobs` 列表内。固定 `top_logprobs` 取值后它是良定义的一致指标；本次 `top_logprobs=5` 下为 8/500 = 1.6%。
+- **分布统计**：每个（token 类型 × 上下文类型）单元的 logprob 均值与低分位数，配合低概率率一起报告。
+- 原"哨兵率"表述在本文档其余部分等效替换为 `lowprob rate`。
+
+### 6. 初步信号（样本量小，仅记录不做推断）
+
+两段 `deepseek-flash` reasoning 里，logprob 最低的 token 全部是自然语言和标点——`' Trit'`、`' Need'`、`' including'`、`' Options'`、`'For'`、`' returns'`、`')'`、`' We'`——没有一个是 Triton/CUDA 专属语法。冷启动单轮、`after_error`、`cuda_cpp` 三个场景下 `logprob <= -5` 的比例分别为 1.5%、0%、0%，且 `after_error`（给出编译错误要求修复）的最低 logprob 只有 -0.215，是三者中最"确定"的。
+
+这与计划假设的方向一致，但样本只有几段单轮回复，不构成证据，仅用于确认观测量有力可测。
+
