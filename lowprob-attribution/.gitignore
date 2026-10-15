@@ -1,0 +1,7 @@
+runs/*
+!runs/.gitkeep
+results/*
+!results/.gitkeep
+proxy-records/
+*.zstd
+__pycache__/
