@@ -54,6 +54,9 @@ def main() -> None:
     ap.add_argument("--timeout-s", type=int, default=300)
     ap.add_argument("--runs-root", type=Path, default=LOWPROB / "runs")
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--prompt-suffix", default=None,
+                    help="extra instruction appended to the task prompt; used to make the "
+                         "model print code in the reply body so it carries logprobs")
     args = ap.parse_args()
 
     args.runs_root.mkdir(parents=True, exist_ok=True)
@@ -95,6 +98,7 @@ def main() -> None:
                 summary = study.run_trial(
                     (args.tasks_root / task_name).resolve(), None, args.model,
                     run_dir, args.timeout_s, "opencode", env_extra=env_extra,
+                    prompt_suffix=args.prompt_suffix,
                 )
                 lines = (PROXY_RECORDS.read_text(encoding="utf-8").splitlines()
                          if PROXY_RECORDS.exists() else [])
