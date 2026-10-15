@@ -43,7 +43,25 @@ RECORD_FIELDS = (
     "finish_reason",
     "usage",
     "temperature",
+    "first_user_message",
 )
+
+
+def first_user_text(payload: dict | None) -> str | None:
+    """Head of the first user message, used to tell task turns from OpenCode's
+    own session-title request."""
+    for message in (payload or {}).get("messages") or []:
+        if message.get("role") != "user":
+            continue
+        content = message.get("content")
+        if isinstance(content, str):
+            return content[:200]
+        if isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    return str(item.get("text"))[:200]
+        return str(content)[:200]
+    return None
 
 
 class ProxyState:
@@ -96,7 +114,8 @@ def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int,
 
         # ---- recording --------------------------------------------------
 
-        def _record_nonstream(self, data: dict, request_id: str, temperature=None):
+        def _record_nonstream(self, data: dict, request_id: str, temperature=None,
+                              first_user_message=None):
             choice = (data.get("choices") or [{}])[0]
             msg = choice.get("message") or {}
             lp = choice.get("logprobs") or {}
@@ -111,6 +130,7 @@ def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int,
                 "finish_reason": choice.get("finish_reason"),
                 "usage": data.get("usage"),
                 "temperature": temperature,
+                "first_user_message": first_user_message,
             })
 
         def _handle_chat(self, body: bytes):
@@ -121,7 +141,9 @@ def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int,
                 payload = None
             is_stream = bool(payload and payload.get("stream"))
             sent_temperature = None
+            request_head = None
             if payload is not None:
+                request_head = first_user_text(payload)
                 payload["logprobs"] = True
                 payload["top_logprobs"] = top_logprobs
                 # DeepSeek degenerates logprobs to all-zero when temperature is
@@ -144,7 +166,7 @@ def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int,
                 self.send_header("Content-Length", str(len(out)))
                 self.end_headers()
                 self.wfile.write(out)
-                self._record_nonstream(data, request_id, sent_temperature)
+                self._record_nonstream(data, request_id, sent_temperature, request_head)
                 return
 
             # ---- stream: aggregate SSE chunks, replay to caller -----------
@@ -211,6 +233,7 @@ def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int,
                     "finish_reason": finish_reason,
                     "usage": usage,
                     "temperature": sent_temperature,
+                    "first_user_message": request_head,
                 })
 
         def _write_chunk(self, raw: bytes):

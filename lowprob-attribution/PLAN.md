@@ -152,5 +152,22 @@ chosen=' returns'   logprob=-6.032   best_alt='(x'@-0.857
 
 **7.4 OpenCode 会额外发一次"生成会话标题"的辅助请求，其 logprobs 同样进入 side-record。** 实测该请求的 reasoning 内容形如 `We need answer? The user asks "Generate a title for this con...`。它不属于任务轨迹，必须在对齐阶段按 messages 内容过滤掉，否则每个 run 会混入一条无关样本。
 
-**7.5 `events.jsonl` 不记录 reasoning 文本，`--thinking` 也不改变这一点。** 带 `--thinking` 跑完后事件类型仍只有 `step_start` / `text` / `step_finish`。后果：`content` 部分的逐 token logprobs 可以用文本前缀对齐到 `text` 事件，而 `reasoning_content` 部分没有可对齐的文本载体——而推理模型的绝大多数 token（一次实测 345 个里占 345）恰在 reasoning 里。对齐方案需要另外确定（按 request 时间戳归属到相邻 step，或改为以 request 为对齐单位而不是以文本为对齐单位）。这是进入 Phase 1 前必须定下来的一件事。
+**7.5 `events.jsonl` 不记录 reasoning 文本，`--thinking` 也不改变这一点。** 带 `--thinking` 跑完后事件类型仍只有 `step_start` / `text` / `step_finish`。后果：`content` 部分的逐 token logprobs 可以用文本前缀对齐到 `text` 事件，而 `reasoning_content` 部分没有可对齐的文本载体——而推理模型的绝大多数 token 恰在 reasoning 里（一次实测 345 个里占 345）。对齐方案见 7.8。
+
+### 8. Phase 1 首次采集暴露的两个环境问题
+
+**8.1 OpenCode 不遵守 `Popen` 的 `cwd`，必须在命令行显式传 `--dir`。** `study.py` 用 `subprocess.Popen(..., cwd=work)` 把进程启动在隔离工作区里，但实测 agent 会去读 `E:\Project\Git\Research\ai4cuda-try-and-error\candidate.py`（仓库根）并列出了仓库根的内容——隔离工作区在系统 temp 下，agent 完全没在那里工作。在命令里加 `--dir <work>` 之后，agent 才在 `...\ai4cuda-task-xxxx\work\` 里读 `reference.py` / `candidate.py`。`study.py` 已按此修改；这条对 **cuda-skill-efficiency 的历史 18 次运行同样成立**，那些运行的 agent 是否在隔离工作区里工作未经核实，属于该实验自身要复核的问题，不在本轮修改范围。
+
+**8.2 工具调用的 token 没有 logprobs。** 一次 trial 的 step 记账是 `output=349, reasoning=811`，代理记录为 `reasoning_logprobs=811, content_logprobs=0`。reasoning 数量精确相等，但 349 个 visible output token 一个 logprob 都没有——它们落在工具调用（`write` / `bash` 的 JSON 参数）上，既不进 `content` 也不进 `reasoning_content`。**后果：`classify.py` 里的 `tool_syntax` 类别在本数据上无法测量**，须写进报告 limitations。
+
+### 9. 对齐单位定为「请求」
+
+原设计按 completion 文本前缀匹配 `text` 事件，这在 7.5 下只能覆盖 content 那一小部分。改为按请求配对：
+
+- 代理每条记录 = 一次 chat completion；`events.jsonl` 每对 `step_start`/`step_finish` = 一次 chat completion。两者同粒度，按顺序配对。
+- **用 step 自身的账目校验每一对**：`step_finish.part.tokens.reasoning` 必须等于该记录 `len(reasoning_logprobs)`。实测逐条相等，这是可验证的对齐键。
+- 配对前先剔除 OpenCode 自己的会话标题请求，依据代理新记录的 `first_user_message` 字段。
+- 上下文类型由**上一个 step 内**的工具结果决定（模型只在下一个请求里看到它）：工具输出含 mismatch / not close → `after_correctness_fail`；含 error / traceback / failed → `after_compile_error`；含 speedup / median / ms → `after_profiling`；其余 → `after_tool`（`after_tool` 是相对原四分类新增的一档，用于 read / write 这类既非报错也非计时的观察）。
+
+`align.py` 已按此重写，`classify.py` 的观测量同步换成 `in_topn` + 两档 lowprob 标记，并修掉了原先"按子串在哪个 segment 里就归哪类"的粗糙映射，改为按 token 流推进游标定位。
 

@@ -13,8 +13,9 @@
 | `scripts/mock_api.py` | 模拟上游 API（链路验证用，不依赖 DeepSeek 在线） |
 | `scripts/check_logprobs.py` | Phase 0：确认官方 API 返回 logprobs |
 | `scripts/check_sentinel.py` | Phase 0：真实生成下的 logprob 分布与哨兵率检查 |
+| `scripts/collect.py` | Phase 1 采集器：起代理 → 跑 study.py trial → 按 trial 切分 logprobs |
 | `scripts/classify.py` | token 分类（类型 + 上下文类型，规则冻结） |
-| `scripts/align.py` | 对齐：proxy 记录 ↔ OpenCode events.jsonl |
+| `scripts/align.py` | 对齐：按请求顺序配对 proxy 记录与 step，校验 reasoning token 数 |
 | `scripts/analyze.py` | 分析：哨兵率按 token 类型 / 上下文类型 / 交互项 / 干预条件 |
 | `tasks/` | KernelBench CUDA C++ 任务（kb_relu / kb_sum_reduce / kb_cumsum）+ `evaluate_cuda.py` |
 | `runs/` | 轨迹采集输出（每次运行一个子目录） |

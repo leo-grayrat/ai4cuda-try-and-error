@@ -1,105 +1,118 @@
-"""Analysis: compute sentinel (low-probability) rates by token type and context type.
+"""Analysis: lowprob rates by token type, context type, and their interaction.
 
-Reads tokens.jsonl (from align.py), produces:
-    - by_token_type.csv:  sentinel_rate, count, total per token_type
-    - by_context_type.csv: sentinel_rate, count, total per context_type
-    - by_interaction.csv:  sentinel_rate for token_type × context_type
-    - by_condition.csv:    overall sentinel_rate per feedback condition (full/truncated)
+Reads tokens.jsonl (from align.py) and writes one CSV per grouping plus a
+printed summary.
 
-Also prints a summary table.
+Observables per PLAN.md section 9: lowprob(<=-2), lowprob(<=-5),
+not_in_topn (chosen token absent from the returned top_logprobs) and the mean
+logprob. The -9999 sentinel is NOT used - DeepSeek returns the real logprob for
+a token outside top-N, and the sentinel rate is 0% at every top_logprobs setting
+tested.
+
+Usage:
+    python lowprob-attribution/scripts/analyze.py lowprob-attribution/results/tokens.jsonl \
+        --out-dir lowprob-attribution/results
 """
 
 from __future__ import annotations
 
-import json
+import argparse
 import csv
-import sys
+import json
 from collections import defaultdict
 from pathlib import Path
+
+COLUMNS = [
+    "group", "total", "lowprob_2", "lowprob_2_rate", "lowprob_5",
+    "lowprob_5_rate", "not_in_topn", "not_in_topn_rate", "mean_logprob",
+]
 
 
 def load_tokens(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def rate(rows: list[dict]) -> tuple[float, int, int]:
+def summarize(rows: list[dict]) -> dict:
     total = len(rows)
-    sent = sum(1 for r in rows if r.get("is_sentinel"))
-    rate = sent / total if total else 0.0
-    return rate, sent, total
+    if not total:
+        return {}
+    logprobs = [r["logprob"] for r in rows if r.get("logprob") is not None]
+    low2 = sum(1 for r in rows if r.get("lowprob_2"))
+    low5 = sum(1 for r in rows if r.get("lowprob_5"))
+    outside = sum(1 for r in rows if r.get("in_topn") is False)
+    return {
+        "total": total,
+        "lowprob_2": low2,
+        "lowprob_2_rate": low2 / total,
+        "lowprob_5": low5,
+        "lowprob_5_rate": low5 / total,
+        "not_in_topn": outside,
+        "not_in_topn_rate": outside / total,
+        "mean_logprob": (sum(logprobs) / len(logprobs)) if logprobs else None,
+    }
 
 
-def main():
-    import argparse
-    ap = argparse.ArgumentParser()
+def write_group(out_dir: Path, name: str, header: str, grouped: dict) -> None:
+    path = out_dir / f"by_{name}.csv"
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow([header] + COLUMNS[1:])
+        print(f"\n=== by {name} ===")
+        print(f"{header:<24}" + "".join(f"{c:>16}" for c in COLUMNS[1:]))
+        for key in sorted(grouped):
+            stats = summarize(grouped[key])
+            if not stats:
+                continue
+            writer.writerow([
+                key, stats["total"], stats["lowprob_2"], f"{stats['lowprob_2_rate']:.4f}",
+                stats["lowprob_5"], f"{stats['lowprob_5_rate']:.4f}",
+                stats["not_in_topn"], f"{stats['not_in_topn_rate']:.4f}",
+                f"{stats['mean_logprob']:.4f}" if stats["mean_logprob"] is not None else "",
+            ])
+            print(f"{str(key):<24}" + "".join(f"{v:>16}" for v in (
+                stats["total"], stats["lowprob_2"], f"{stats['lowprob_2_rate']:.4f}",
+                stats["lowprob_5"], f"{stats['lowprob_5_rate']:.4f}",
+                stats["not_in_topn"], f"{stats['not_in_topn_rate']:.4f}",
+                f"{stats['mean_logprob']:.4f}" if stats["mean_logprob"] is not None else "-",
+            )))
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("tokens_jsonl")
-    ap.add_argument("--out-dir", default=".")
+    ap.add_argument("--out-dir", default="lowprob-attribution/results")
+    ap.add_argument("--min-cell", type=int, default=20,
+                    help="smallest cell reported in the interaction table")
     args = ap.parse_args()
 
     tokens = load_tokens(Path(args.tokens_jsonl))
-    out = Path(args.out_dir)
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    # --- by token type ---
-    by_type = defaultdict(list)
-    for t in tokens:
-        by_type[t["token_type"]].append(t)
+    overall = summarize(tokens)
+    print(f"tokens: {overall.get('total')}  "
+          f"lowprob(<=-2)={overall.get('lowprob_2')} ({overall.get('lowprob_2_rate', 0):.1%})  "
+          f"lowprob(<=-5)={overall.get('lowprob_5')} ({overall.get('lowprob_5_rate', 0):.1%})  "
+          f"outside_topn={overall.get('not_in_topn')}  "
+          f"mean_logprob={overall.get('mean_logprob')}")
 
-    print("\n=== Sentinel rate by token type ===")
-    print(f"{'type':<22} {'sentinel_rate':>14} {'sentinel':>10} {'total':>10}")
-    with (out / "by_token_type.csv").open("w", newline="", encoding="utf-8") as fh:
-        w = csv.writer(fh)
-        w.writerow(["token_type", "sentinel_rate", "sentinel_count", "total_count"])
-        for tp in sorted(by_type):
-            r, s, n = rate(by_type[tp])
-            print(f"{tp:<22} {r:>14.4f} {s:>10} {n:>10}")
-            w.writerow([tp, f"{r:.4f}", s, n])
+    for name, key in (("token_type", "token_type"), ("context_type", "context_type")):
+        grouped = defaultdict(list)
+        for token in tokens:
+            grouped[token.get(key, "unknown")].append(token)
+        write_group(out_dir, name, key, grouped)
 
-    # --- by context type ---
-    by_ctx = defaultdict(list)
-    for t in tokens:
-        by_ctx[t["context_type"]].append(t)
+    grouped = defaultdict(list)
+    for token in tokens:
+        grouped[(token.get("token_type"), token.get("context_type"))].append(token)
+    interaction = {k: v for k, v in grouped.items() if len(v) >= args.min_cell}
+    write_group(out_dir, "interaction", "token_type x context_type", interaction)
 
-    print("\n=== Sentinel rate by context type ===")
-    print(f"{'context':<28} {'sentinel_rate':>14} {'sentinel':>10} {'total':>10}")
-    with (out / "by_context_type.csv").open("w", newline="", encoding="utf-8") as fh:
-        w = csv.writer(fh)
-        w.writerow(["context_type", "sentinel_rate", "sentinel_count", "total_count"])
-        for ctx in sorted(by_ctx):
-            r, s, n = rate(by_ctx[ctx])
-            print(f"{ctx:<28} {r:>14.4f} {s:>10} {n:>10}")
-            w.writerow([ctx, f"{r:.4f}", s, n])
-
-    # --- interaction: token_type × context_type ---
-    by_inter = defaultdict(list)
-    for t in tokens:
-        key = (t["token_type"], t["context_type"])
-        by_inter[key].append(t)
-
-    print("\n=== Sentinel rate: token_type × context_type (only cells ≥20 tokens) ===")
-    with (out / "by_interaction.csv").open("w", newline="", encoding="utf-8") as fh:
-        w = csv.writer(fh)
-        w.writerow(["token_type", "context_type", "sentinel_rate", "sentinel_count", "total_count"])
-        for (tp, ctx) in sorted(by_inter):
-            r, s, n = rate(by_inter[(tp, ctx)])
-            if n >= 20:
-                print(f"  {tp:<20} × {ctx:<24} = {r:.4f}  ({s}/{n})")
-                w.writerow([tp, ctx, f"{r:.4f}", s, n])
-
-    # --- by run condition (if present in tokens) ---
-    by_cond = defaultdict(list)
-    for t in tokens:
-        cond = t.get("condition", "unknown")
-        by_cond[cond].append(t)
-
-    if len(by_cond) > 1:
-        print("\n=== Sentinel rate by feedback condition ===")
-        with (out / "by_condition.csv").open("w", newline="", encoding="utf-8") as fh:
-            w = csv.writer(fh)
-            w.writerow(["condition", "sentinel_rate", "sentinel_count", "total_count"])
-            for cond in sorted(by_cond):
-                r, s, n = rate(by_cond[cond])
-                print(f"  {cond:<12} = {r:.4f}  ({s}/{n})")
-                w.writerow([cond, f"{r:.4f}", s, n])
+    conditions = defaultdict(list)
+    for token in tokens:
+        conditions[token.get("condition", "unknown")].append(token)
+    if len(conditions) > 1:
+        write_group(out_dir, "condition", "condition", conditions)
 
 
 if __name__ == "__main__":
