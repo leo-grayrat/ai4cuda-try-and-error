@@ -42,6 +42,7 @@ RECORD_FIELDS = (
     "reasoning_logprobs",
     "finish_reason",
     "usage",
+    "temperature",
 )
 
 
@@ -60,7 +61,8 @@ class ProxyState:
         self.n_recorded += 1
 
 
-def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int):
+def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int,
+                  temperature_override: float | None):
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
 
@@ -94,7 +96,7 @@ def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int):
 
         # ---- recording --------------------------------------------------
 
-        def _record_nonstream(self, data: dict, request_id: str):
+        def _record_nonstream(self, data: dict, request_id: str, temperature=None):
             choice = (data.get("choices") or [{}])[0]
             msg = choice.get("message") or {}
             lp = choice.get("logprobs") or {}
@@ -108,6 +110,7 @@ def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int):
                 "reasoning_logprobs": lp.get("reasoning_content") or [],
                 "finish_reason": choice.get("finish_reason"),
                 "usage": data.get("usage"),
+                "temperature": temperature,
             })
 
         def _handle_chat(self, body: bytes):
@@ -117,9 +120,16 @@ def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int):
             except json.JSONDecodeError:
                 payload = None
             is_stream = bool(payload and payload.get("stream"))
+            sent_temperature = None
             if payload is not None:
                 payload["logprobs"] = True
                 payload["top_logprobs"] = top_logprobs
+                # DeepSeek degenerates logprobs to all-zero when temperature is
+                # 0, so the probe is only meaningful off that point. Record what
+                # is actually sent, and lift it only if explicitly asked to.
+                if temperature_override is not None and payload.get("temperature") in (None, 0):
+                    payload["temperature"] = temperature_override
+                sent_temperature = payload.get("temperature")
                 body = json.dumps(payload).encode("utf-8")
 
             resp = self._forward(body, is_stream)
@@ -134,7 +144,7 @@ def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int):
                 self.send_header("Content-Length", str(len(out)))
                 self.end_headers()
                 self.wfile.write(out)
-                self._record_nonstream(data, request_id)
+                self._record_nonstream(data, request_id, sent_temperature)
                 return
 
             # ---- stream: aggregate SSE chunks, replay to caller -----------
@@ -151,15 +161,20 @@ def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int):
             finish_reason = None
             usage = None
             model = None
+            got_done = False
             try:
                 for raw in resp:
-                    line = raw.decode("utf-8", "replace").strip()
-                    if not line or not line.startswith("data:"):
-                        continue
-                    # forward chunk-by-chunk in real time
+                    # Forward every line verbatim, blank separator lines
+                    # included: the caller's SSE parser needs the blank line to
+                    # terminate an event, and dropping it (as an earlier version
+                    # did) makes OpenCode fail with a JSON parsing error.
                     self._write_chunk(raw)
+                    line = raw.decode("utf-8", "replace").strip()
+                    if not line.startswith("data:"):
+                        continue
                     data_str = line[5:].strip()
                     if data_str == "[DONE]":
+                        got_done = True
                         continue
                     try:
                         chunk = json.loads(data_str)
@@ -182,7 +197,8 @@ def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int):
                     if chunk.get("usage"):
                         usage = chunk["usage"]
             finally:
-                self._write_chunk(b"data: [DONE]\n\n")
+                if not got_done:
+                    self._write_chunk(b"data: [DONE]\n\n")
                 self._write_final_chunk()
                 state.record({
                     "ts": time.time(),
@@ -194,6 +210,7 @@ def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int):
                     "reasoning_logprobs": reasoning_lp,
                     "finish_reason": finish_reason,
                     "usage": usage,
+                    "temperature": sent_temperature,
                 })
 
         def _write_chunk(self, raw: bytes):
@@ -242,10 +259,14 @@ def main():
     ap.add_argument("--listen", default="127.0.0.1:8765")
     ap.add_argument("--out", default="lowprob-attribution/proxy-records")
     ap.add_argument("--top-logprobs", type=int, default=20)
+    ap.add_argument("--temperature-override", type=float, default=None,
+                    help="value to use when the request carries temperature 0 or none; "
+                         "DeepSeek degenerates logprobs to all-zero at temperature 0")
     args = ap.parse_args()
 
     state = ProxyState(Path(args.out))
-    handler = build_handler(state, args.upstream, args.top_logprobs)
+    handler = build_handler(state, args.upstream, args.top_logprobs,
+                            args.temperature_override)
     host, port = args.listen.split(":")
     server = ThreadingHTTPServer((host, int(port)), handler)
     print(f"[record-proxy] listening on {args.listen} -> {args.upstream}")
