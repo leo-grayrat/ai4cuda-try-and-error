@@ -171,3 +171,29 @@ chosen=' returns'   logprob=-6.032   best_alt='(x'@-0.857
 
 `align.py` 已按此重写，`classify.py` 的观测量同步换成 `in_topn` + 两档 lowprob 标记，并修掉了原先"按子串在哪个 segment 里就归哪类"的粗糙映射，改为按 token 流推进游标定位。
 
+### 10. 工具调用 token 的概率：API 边界与绕法（实测）
+
+**问题**。第一次采集的 565 个 token 全是自然语言推理，没有一个代码 token。原因是 agent 通过 `write` 工具把整份文件写出去，不在正文里逐行写；而第一批数据里"工具调用没有 logprobs"这个判断是从 token 数量差推出来的（step 报 `output=349, reasoning=811` 而 `content_logprobs=0`），没有直接看过一次工具调用响应。
+
+**实测**（`scripts/check_tool_logprobs.py`，带 `tools` 定义强制触发工具调用）：
+
+| 观测项 | 结果 |
+|---|---|
+| `finish_reason` | `tool_calls` |
+| `message` 键 | `content`, `reasoning_content`, `role`, `tool_calls` |
+| `logprobs` 键 | 只有 `content` 与 `reasoning_content` |
+| `tool_calls` | 1 个，`write_file`，arguments 3804 字符（完整 Triton 代码） |
+| `logprobs.content` | 49 个 token，全部是正文里那句引子 |
+| arguments 文本是否出现在 `logprobs.content` 里 | 否 |
+
+**结论**：工具调用的**内容**可监测——`events.jsonl` 的 `tool_use` 事件带完整 arguments；**概率不可监测**——API 的 `logprobs` 只覆盖 `content` 与 `reasoning_content`，工具参数不在其内。这是返回值范围决定的，不是采集端漏接。
+
+**绕法（已验证）**：在 prompt 里要求模型先把完整代码写在回复正文、再调用工具写入同一份内容。同一请求下：
+
+| 指令 | `logprobs.content` tokens | 正文是否含代码 |
+|---|---|---|
+| 直接调工具 | 49 | 否 |
+| 先写正文再调工具 | **860** | 是（`tl.load` / `tl.store` / `triton.jit`） |
+
+**代价与配套要求**：这条指令改变了 agent 的自然行为，代码会在正文与工具参数里各出现一次且未必逐字一致；须写进报告，并在分析时记录模型对该指令的遵守率（不遵守的 step 应计入"正文无代码"的比例，而不是当作缺失值丢弃）。
+

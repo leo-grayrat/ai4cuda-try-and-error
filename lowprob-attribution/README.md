@@ -13,6 +13,7 @@
 | `scripts/mock_api.py` | 模拟上游 API（链路验证用，不依赖 DeepSeek 在线） |
 | `scripts/check_logprobs.py` | Phase 0：确认官方 API 返回 logprobs |
 | `scripts/check_sentinel.py` | Phase 0：真实生成下的 logprob 分布与哨兵率检查 |
+| `scripts/check_tool_logprobs.py` | 验证工具调用的 token 是否携带 logprobs（含"先写正文"的绕法对比） |
 | `scripts/collect.py` | Phase 1 采集器：起代理 → 跑 study.py trial → 按 trial 切分 logprobs |
 | `scripts/classify.py` | token 分类（类型 + 上下文类型，规则冻结） |
 | `scripts/align.py` | 对齐：按请求顺序配对 proxy 记录与 step，校验 reasoning token 数 |
