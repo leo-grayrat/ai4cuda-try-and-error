@@ -140,3 +140,17 @@ chosen=' returns'   logprob=-6.032   best_alt='(x'@-0.857
 
 这与计划假设的方向一致，但样本只有几段单轮回复，不构成证据，仅用于确认观测量有力可测。
 
+### 7. OpenCode 端到端接入（同日）
+
+接入方式：项目自带 `lowprob-attribution/opencode-proxy.jsonc`，用 `OPENCODE_CONFIG` 环境变量加载，把内置 deepseek provider 的 `baseURL` 指向 `http://127.0.0.1:8765/v1`。不写进全局配置，也不在仓库根放 `opencode.json`——代理停着时该 provider 会整体不可用，不能让它成为默认。四种发现：
+
+**7.1 调用方式必须与 `study.py` 一致。** 裸跑 `opencode run "..."` 会挂住不返回，因为缺少 `--auto`（工具自动批准）、`--format json`、`OPENCODE_DISABLE_AUTOUPDATE`，以及 stdin 的 EOF（`study.py` 用 `subprocess.DEVNULL`）。补齐后 `exit=0`，事件流 `step_start` → `text` → `step_finish` 正常。
+
+**7.2 代理曾丢弃 SSE 空行，导致 OpenCode 报 JSON 解析错误。** 旧实现在迭代响应时先 `strip()` 再判断 `startswith("data:")`，空行被 `continue` 跳过，而空行正是 SSE 的事件终止符；同时 `[DONE]` 在 `finally` 里被重复写入一次。现已改为原样转发每一行（含空行）、`[DONE]` 只发一次。修复前后差别是 `exit=1 + UnknownError(JSON parsing)` 与 `exit=0`。
+
+**7.3 OpenCode 发出的 `temperature` 不是 0，而是 0.5。** 会话标题生成那次请求则完全不带 `temperature`（代理里记为 `None`，被 `--temperature-override 1.0` 补上）。代理现已在 side-record 中记录实际发送的 `temperature`。此前"opencode 传 temperature=0 导致 logprobs 退化"的猜测不成立——第一次端到端里 logprobs 几乎为 0，真实原因是任务过简（"回复 ok"）加上长系统提示，模型极度确定。
+
+**7.4 OpenCode 会额外发一次"生成会话标题"的辅助请求，其 logprobs 同样进入 side-record。** 实测该请求的 reasoning 内容形如 `We need answer? The user asks "Generate a title for this con...`。它不属于任务轨迹，必须在对齐阶段按 messages 内容过滤掉，否则每个 run 会混入一条无关样本。
+
+**7.5 `events.jsonl` 不记录 reasoning 文本，`--thinking` 也不改变这一点。** 带 `--thinking` 跑完后事件类型仍只有 `step_start` / `text` / `step_finish`。后果：`content` 部分的逐 token logprobs 可以用文本前缀对齐到 `text` 事件，而 `reasoning_content` 部分没有可对齐的文本载体——而推理模型的绝大多数 token（一次实测 345 个里占 345）恰在 reasoning 里。对齐方案需要另外确定（按 request 时间戳归属到相邻 step，或改为以 request 为对齐单位而不是以文本为对齐单位）。这是进入 Phase 1 前必须定下来的一件事。
+

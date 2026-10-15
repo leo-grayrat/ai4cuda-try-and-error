@@ -29,4 +29,9 @@
   - **`temperature=0` 会让 logprobs 全部退化为 0.000**，调用链不得固定该参数
   - 初步信号（样本小）：低概率 token 全部落在自然语言，无一为 Triton 语法
 - 任务适配：3 道 KernelBench CUDA C++ 任务已验证可跑；`evaluate_cuda.py` 已加显存守卫（估算峰值超预算即拒绝执行）
+- 代理真实链路：**通过**（`--upstream https://api.deepseek.com`，一次流式请求聚合 304 条 SSE，侧录 300 个 token logprobs，`min=-9.72`、`lowprob(≤-2)=28`）
+- OpenCode 端到端：**通过**。用 `OPENCODE_CONFIG=lowprob-attribution/opencode-proxy.jsonc` 把内置 deepseek provider 的 `baseURL` 指向本地代理，`opencode run` 正常产出事件流，代理同步侧录 logprobs。过程中修掉代理丢弃 SSE 空行导致 OpenCode 报 JSON 解析错误的 bug。三点约束见 PLAN.md 第九节第 7 条：
+  - 调用须带 `--pure --auto --format json` 与 `OPENCODE_DISABLE_AUTOUPDATE=true`，stdin 给 EOF，否则挂起
+  - 代理会额外录到 OpenCode 的"生成会话标题"辅助请求，对齐时须过滤
+  - `events.jsonl` 不记录 reasoning 文本（`--thinking` 无效），而推理模型的 logprobs 几乎全在 reasoning 上，对齐单位待定
 
