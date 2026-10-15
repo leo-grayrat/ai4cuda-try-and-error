@@ -2,7 +2,7 @@
 
 低概率 token 归因实验：检验 CUDA Agent 论文声称的"CUDA 语法稀有 → 大量低概率 token → PPO 训练不稳定"因果链起点是否成立。
 
-计划见 [PLAN.md](PLAN.md)。
+计划见 [PLAN.md](PLAN.md)，关于「闭源 API 拿不到完整逐 token 概率」的公开证据汇总见 [related-work.md](related-work.md)。
 
 ## 目录结构
 
