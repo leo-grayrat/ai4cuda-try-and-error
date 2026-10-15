@@ -197,3 +197,53 @@ chosen=' returns'   logprob=-6.032   best_alt='(x'@-0.857
 
 **代价与配套要求**：这条指令改变了 agent 的自然行为，代码会在正文与工具参数里各出现一次且未必逐字一致；须写进报告，并在分析时记录模型对该指令的遵守率（不遵守的 step 应计入"正文无代码"的比例，而不是当作缺失值丢弃）。
 
+### 11. 转向本地 vLLM：工具参数概率的唯一可行路径（2026-10-16）
+
+**为什么必须换**。第 10 节的绕法在真实 agent 里**不被遵守**：用 `--prompt-suffix` 要求"先把代码写在正文"后，6 轮里 0 轮照做，代码仍然只走 `tool_calls`（实测记录见提交 `4d7e7e0`）。而跨厂商的核对结论是：**所有 OpenAI 兼容接口的 `logprobs` 都只有 `content`（+`refusal`），结构上没有 `tool_calls` 的位置**——这不是某家的疏漏，是接口设计。详见 [related-work.md](related-work.md)。
+
+**选择 vLLM 的依据**：它是唯一能把工具调用参数当作普通生成 token 记入 `logprobs` 的后端（HF TRL 的公开 artifact 已是先例，本机已复现）：
+
+| 后端 | `tools`+`logprobs` 共存 | 工具参数带概率 |
+|---|---|---|
+| DeepSeek 官方 API | 可以 | **否** |
+| LM Studio（llama.cpp） | **400 拒绝** | — |
+| llama-server（绕过 LM Studio） | 可以 | **否** |
+| **vLLM** | 可以 | **是** |
+
+**本机环境**：WSL2(Ubuntu) + RTX 5060 Laptop（8GB，sm_120 / Blackwell）。装成 `vllm 0.31.0 + torch 2.13.0+cu130`。**sm_120 与 cu130 的配对是能跑起来的前提**——旧版 torch 不支持 Blackwell。
+
+**启动命令**：
+
+```bash
+VLLM_USE_FLASHINFER_SAMPLER=0 vllm serve /root/models/Qwen3-4B-AWQ \
+  --port 8000 --max-model-len 8192 --gpu-memory-utilization 0.86 \
+  --served-model-name qwen3-4b \
+  --enable-auto-tool-choice --tool-call-parser hermes
+```
+
+**四个必踩的坑**（都已解决）：
+
+1. **模型下载 401** — 新版 `huggingface_hub` 默认走 Xet 后端，hf-mirror 不支持。用 `HF_ENDPOINT=https://hf-mirror.com` + `HF_HUB_DISABLE_XET=1`。
+2. **`Failed to find C compiler`** — vLLM 用 torch.compile 现编 kernel，需 `apt-get install gcc g++ build-essential`。
+3. **`Could not find nvcc`** — flashinfer 采样 kernel 要 nvcc。用 `VLLM_USE_FLASHINFER_SAMPLER=0` 绕过，不必装几 GB 的 CUDA toolkit。
+4. **`"auto" tool choice requires --enable-auto-tool-choice`** — vLLM 默认不开工具解析，须显式加 `--enable-auto-tool-choice --tool-call-parser hermes`。
+
+**8B 装不下（硬约束）**：卡总 7.93 GiB − Windows 桌面占 1.06 = **可用 6.87 GiB**；8B-AWQ 权重 5.71 GiB，剩 1.16 GiB 不够 KV cache＋激活。尝试 fp8 压缩 KV cache 时又撞 `FlashInfer backend is not available`（依赖 nvcc）。**故 4B 是本机的上限**。
+
+**决定性验证**（`tool_choice: "required"` 强制后）：
+
+```
+finish_reason    : tool_calls
+arguments length : 833          ← 完整 Triton 代码
+logprobs keys    : ['content']  content tokens: 264
+>>> ARGUMENTS text inside logprobs.content: True
+    'tl.load' / 'tl.store' / 'triton.jit' in logged tokens: True
+logprob min=-3.511  mean=-0.107  lowprob(≤-2)=3
+```
+
+**模型行为差异（须记录为边界）**：4B 在普通 prompt 下**不主动调工具**，会把代码全写进正文（`tool_calls: 0`）。加 `tool_choice: "required"` 后才走工具路径。这条指令与第 10 节的 prompt-suffix 同属"用指令改变 agent 行为"，须写进报告边界。
+
+**采集配置**：`opencode-vllm-proxy.jsonc` 定义 `vllm` provider 指向记录代理，`collect.py --upstream http://127.0.0.1:8000 --model vllm/qwen3-4b`。provider 必须声明 `limit: {context: 8192, output: 4096}`——否则 OpenCode 请求 `max_tokens=32000`，vLLM 会以 `max_model_len=8192` 拒掉。
+
+**待办**：等显存空闲后，用该配置跑一次完整 trial，验证 agent 多轮轨迹下工具参数概率可稳定采集。
+
