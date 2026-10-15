@@ -6,3 +6,4 @@ __pycache__/
 .pytest-tmp/
 runs/
 *.pyc
+.workbuddy/
