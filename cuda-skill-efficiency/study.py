@@ -154,6 +154,7 @@ def estimated_skill_tokens(skill_text: str) -> tuple[int | None, str | None]:
 def child_environment(
     parent: dict[str, str], windows: bool | None = None,
     python_executable: Path | None = None, cache_dir: Path | None = None,
+    extra: dict[str, str] | None = None,
 ) -> dict[str, str]:
     env = parent.copy()
     on_windows = windows if windows is not None else os.name == "nt"
@@ -167,6 +168,8 @@ def child_environment(
     if cache_dir:
         env["TRITON_CACHE_DIR"] = str(cache_dir)
         env["CUPY_CACHE_DIR"] = str(cache_dir)
+    if extra:
+        env.update(extra)
     return env
 
 
@@ -190,18 +193,21 @@ def stop_process_tree(proc: subprocess.Popen, windows: bool | None = None) -> No
 
 def run_trial(
     task: Path, skill: Path | None, model: str, output: Path, timeout_s: int,
-    backend: str = "opencode",
+    backend: str = "opencode", env_extra: dict[str, str] | None = None,
 ) -> dict:
     if output.exists():
         raise FileExistsError(output)
     output.mkdir(parents=True)
     with isolated_task_workspace(task, output) as (work, task_hashes):
-        return _run_trial_in_workspace(task, skill, model, output, timeout_s, backend, work, task_hashes)
+        return _run_trial_in_workspace(
+            task, skill, model, output, timeout_s, backend, work, task_hashes, env_extra,
+        )
 
 
 def _run_trial_in_workspace(
     task: Path, skill: Path | None, model: str, output: Path, timeout_s: int,
     backend: str, work: Path, task_hashes: dict[str, str],
+    env_extra: dict[str, str] | None = None,
 ) -> dict:
     skill_text = skill.read_text(encoding="utf-8") if skill else ""
     prompt = (task / "task.md").read_text(encoding="utf-8")
@@ -212,7 +218,7 @@ def _run_trial_in_workspace(
     if backend == "opencode":
         command = [
             "opencode.cmd" if os.name == "nt" else "opencode", "run", "--pure", "--auto",
-            "--model", model, "--format", "json", "--title",
+            "--model", model, "--format", "json", "--dir", str(work), "--title",
             f"AI4CUDA {task.name} {skill.name if skill else 'none'}", prompt,
         ]
     elif backend == "codex":
@@ -232,7 +238,10 @@ def _run_trial_in_workspace(
     versions.mkdir()
     cache = output / "triton-cache"
     cache.mkdir()
-    env = child_environment(os.environ, python_executable=Path(sys.executable), cache_dir=cache)
+    env = child_environment(
+        os.environ, python_executable=Path(sys.executable), cache_dir=cache,
+        extra=env_extra,
+    )
     env["OPENCODE_DISABLE_AUTOUPDATE"] = "true"
     version = subprocess.run(
         [command[0], "--version"], cwd=work, env=env,
@@ -338,6 +347,8 @@ def main() -> None:
     run.add_argument("--model")
     run.add_argument("--output", type=Path, required=True)
     run.add_argument("--timeout-s", type=int, default=300)
+    run.add_argument("--opencode-config", type=Path,
+                     help="path exported as OPENCODE_CONFIG to the child process")
     evaluate = commands.add_parser("evaluate")
     evaluate.add_argument("--task", type=Path, required=True)
     evaluate.add_argument("--trial", type=Path, required=True)
@@ -346,9 +357,14 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == "run":
         model = args.model or ("deepseek/deepseek-flash" if args.backend == "opencode" else "gpt-5.5")
+        env_extra = (
+            {"OPENCODE_CONFIG": str(args.opencode_config.resolve())}
+            if args.opencode_config else None
+        )
         summary = run_trial(
             args.task.resolve(), args.skill.resolve() if args.skill else None,
             model, args.output.resolve(), args.timeout_s, args.backend,
+            env_extra=env_extra,
         )
         print(json.dumps(summary, ensure_ascii=False))
         raise SystemExit(run_exit_code(summary))
