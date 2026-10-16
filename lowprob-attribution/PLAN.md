@@ -296,4 +296,55 @@ load 判为 triton_specific   n=4   mean=-1.034  lowprob=25.00%
 **首选**：不走 agent 框架，改为**自建多轮对话脚本**直接打 DeepSeek chat completions，让代码出现在正文（logprob 必然覆盖），由脚本负责执行与反馈。这样同时解决：模型回到强模型、API 限制绕开（不需工具参数概率）、干预对照可做（反馈文本自己拼）。
 **前置最小验证**：一道题、单轮，确认正文中的代码 token 是否被 `logprobs.content` 完整覆盖。**该验证不通过则此路作废。**
 
+### 13. 换路线执行完毕：plain chat 路线成立，判读 1 的两个条件均成立（2026-10-17）
+
+**最小验证（`scripts/check_plaintext_logprobs.py`）：VIABLE。** 不提供 tools、要求把 kernel 写在正文时，**448/448 个代码 token 全部带 logprob**。坑：`max_tokens=4000` 会被推理模型的思考吃光、content 返空；16000 才出内容。
+
+**模型定案（实测）**：`deepseek-flash`（推理）把预算烧在 reasoning 上、content 常为空；**`deepseek-chat`（非推理）content 直出，reasoning_tokens=0**。
+
+**架构（`scripts/loop_driver.py`）**：不用 agent 框架，多轮对话直接打 chat-completions；驱动自己写 `candidate.py`、跑独立评测器、拼反馈文本。两个反馈条件在采集前定死：`full`（评测器原文）/ `truncated`（一行）。两个实现坑：评测器 `argv[1]` 是 **candidate 文件**而非目录（传目录 `PermissionError`）；评测器需带 torch 的解释器（`--python` 指向 anaconda）。
+
+#### ★ 结果（64 run = 4 任务 × 2 条件 × 8 重复，全部 complete，49,450 个 content token）
+
+**主对比（两种定义边界，方向一致）**：
+
+| 分组 | n | mean | lowprob(≤-2) |
+|---|---|---|---|
+| API 名（宽松表） | 2287 | -0.030 | **0.35%** |
+| 其他 | 47163 | -0.069 | 0.95% |
+| 严格表（含 CUDA 原生） | 1198 | -0.014 | **0.17%** |
+| 其他 | 48252 | -0.068 | 0.94% |
+
+Fisher p = **0.0016 / 0.0019** —— **CUDA 相关 token 的概率显著更高，不是更低。**
+
+**上下文（效应远强于 token 类型）**：
+
+| context | n | mean | lowprob | p10 |
+|---|---|---|---|---|
+| **after_failure** | 2142 | -0.237 | **3.22%** | -0.812 |
+| after_success | 23399 | -0.053 | 0.81% | -0.000 |
+| initial | 23909 | -0.065 | 0.82% | -0.038 |
+
+`after_failure` 约为其余上下文的 **4 倍**。按任务 `softmax_rows` 1.59% 最高（layernorm 0.33% 最低）。**最低的 token 几乎全是自然语言**（`' constants'` -17.75、`' backed'` -11.27），无一为代码 token。
+
+#### ★ 判读结论
+
+**判读 1 的两个条件同时成立**：
+
+1. CUDA/Triton token 的低概率率**不高于**其他（**反而显著更低**）；
+2. `after_failure` **明显高于** `initial`（3.22% vs 0.82%）。
+
+→ **CUDA Agent 的因果链起点不成立；"低概率来自多轮 agent 的分布外上下文"这一替代解释成立。**
+
+#### ★ 干预对照：预期的效果没有出现
+
+PLAN 第四节第 3 项分析预期"压缩工具反馈能消除低概率尾部"。实测 **full 0.94% vs truncated 0.89%，几乎无差**。→ 该预期**不成立**：低概率不来自反馈文本的长度或信息量。
+
+#### 对本项目原假设的最终状态
+
+用户 2026-09-13 调研稿的两条判断**均得到支持**：① "这些 token 非常固定、非常模式化"（故不该低概率）；② "更可能是长工具 Agent 吞入分布外上下文"。
+
+**仍在的边界**：模型为 `deepseek-chat`（非 Seed1.6，但已是可用 API 中与论文最接近的一档）；任务 4 道；`after_failure` 样本 2142 个 token（占全量 4.3%）。
+
+
 

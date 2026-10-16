@@ -39,21 +39,38 @@
 - **本地 vLLM 路线：通过。** 闭源 API 不返回工具调用参数的概率（厂商策略边界，证据见 [related-work.md](related-work.md)），故改用本机 vLLM + Qwen3-4B-AWQ。绕过的坑：`NO_PROXY` 未设导致回环请求被系统代理拦成 502；OpenCode 需显式声明模型、需精简 agent（`tools.skill=false`）否则 53 个 skill 撑爆 8192 窗口；`subprocess` 探针必须关 stdin 否则挂起；vLLM 需 `--default-chat-template-kwargs '{"enable_thinking": false}'` 否则 4B 把输出预算全烧在 `<think>` 上而不调用工具。
 - **Phase 1 首轮采集：完成**（`row_reduce` × 12，15987 token，对齐零失配）。
 
-## ★ 本轮结论（2026-10-17）
+## ★ 当前结论（2026-10-17，64 run / 49,450 content token）
 
-**判读 1 命中：CUDA Agent 的因果链起点不成立。**
+**判读 1 的两个条件同时成立：CUDA Agent 的因果链起点不成立，而"分布外上下文"这一替代解释成立。**
 
-在全部 content token 上按关键词表匹配（不从分类器的分段取子集）：
+| 分组 | n | mean | lowprob(≤-2) |
+|---|---|---|---|
+| CUDA/Triton API 名（宽松表） | 2287 | -0.030 | **0.35%** |
+| 其他 | 47163 | -0.069 | 0.95% |
+| CUDA/Triton（严格表） | 1198 | -0.014 | **0.17%** |
+| 其他 | 48252 | -0.068 | 0.94% |
 
-| 分组 | n | 低概率率(≤-2) |
+Fisher p = **0.0016 / 0.0019** —— **CUDA 相关 token 概率显著更高，不是更低**。两种定义边界方向一致。
+
+**上下文效应远强于 token 类型**：
+
+| context | n | lowprob |
 |---|---|---|
-| CUDA/Triton API 名 | 451 | **1.55%** |
-| 非 API | 15536 | **0.95%** |
+| **after_failure** | 2142 | **3.22%** |
+| after_success | 23399 | 0.81% |
+| initial | 23909 | 0.82% |
 
-**Fisher p = 0.211，不显著。** 逐 token 复核：`tl` 7 次全 -0.0、`.store` 12 次全 ≈ -0.0、`.load` 18 次仅 2 次低。→ **这些 token 不构成低概率尾部**，与 user 2026-09-13 调研稿的判断一致。
+**干预对照未出现预期效果**：`full` 0.94% vs `truncated` 0.89%——压缩反馈没有压低低概率率。
 
-**此前基于偏差子集报出的所有细分结论（triton_specific 10%、p=0.0156、"机制是 API 选择点"、分位数/工具维度/位置效应）全部撤回**——成因是 `classify.py` 在散文段刻意排除 `load`/`zeros`/`store`，使该类别只抓到 20/451 个 token 且恰好含极端值。详见 [PLAN.md](PLAN.md) 第 12 节。
+**低概率的 token 几乎全是自然语言**（`' constants'` -17.75、`' backed'` -11.27），无一为代码 token。
 
-**结论射程**：模型为 Qwen3-4B（本机可承载上限，环境约束下的既定条件），任务 1 道，无干预对照，12 次 trial。**不能直接外推到 Seed1.6。**
+**方法**：不走 agent 框架（工具参数无 logprob）。`scripts/loop_driver.py` 用多轮 plain chat 直接打 chat-completions，驱动自己写文件、跑独立评测器、拼反馈；模型把代码写在正文，logprob 全覆盖（最小验证 448/448）。模型 `deepseek-chat`（非推理，reasoning_tokens=0）。
+
+**射程**：模型 `deepseek-chat`（非 Seed1.6，但已是可用 API 中最接近的一档）；任务 4 道；`after_failure` 占 4.3% 的 token。
+
+### 此前 Qwen3-4B 一轮的结论（已由上述取代）
+
+本地 vLLM + Qwen3-4B：API 名 token 低概率率 1.55% vs 其他 0.95%，Fisher p = 0.211，**不显著**（方向同样是"不更高"）。该轮的**细分结论已全部撤回**——成因是 `classify.py` 在散文段刻意排除 `load`/`zeros`/`store`，使该类别只抓到 20/451 个 token 且恰好含极端值。详见 [RESULTS.md](RESULTS.md)。
+
 
 
