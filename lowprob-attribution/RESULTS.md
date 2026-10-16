@@ -1,79 +1,100 @@
-# 结果与撤回状态
+# 结果
 
-## 当前有效结论（2026-10-17）
+## 当前结论（2026-10-17）
 
-**判读 1 命中：CUDA Agent 因果链的起点不成立。**
+**问题**：CUDA Agent 声称的训练不稳定根因——"CUDA 语法稀有 → 大量低概率 token"——是否成立。
 
-在全部 content token 上按关键词表匹配（**不从分类器划定的分段取子集**）：
+**答案**：**不成立**。而且替代解释成立：**低概率来自多轮 agent 的失败反馈上下文，不是来自 CUDA 语法。**
 
-| 分组 | n | 平均 logprob | lowprob(≤-2) |
+### 数据
+
+64 run（4 任务 × 2 反馈条件 × 8 重复），**49,450 个 content token**，全部 complete。
+模型 `deepseek-chat`（非推理）；任务 `row_reduce` / `vector_affine` / `layernorm_rows` / `softmax_rows`。
+
+### 一、CUDA 语法 token 的概率反而更高
+
+按关键词表在**全部 content token** 上匹配（不从任何分段取子集），并在两种定义边界下各算一次：
+
+| 分组 | n | mean | lowprob(≤-2) |
 |---|---|---|---|
-| CUDA/Triton API 名（`tl`/`load`/`zeros`/`store`/…） | 451 | -0.122 | 1.55% |
-| 非 API | 15536 | -0.080 | 0.95% |
+| API 名（宽松表） | 2287 | -0.030 | **0.35%** |
+| 其他 | 47163 | -0.069 | 0.95% |
+| CUDA/Triton（严格表） | 1198 | -0.014 | **0.17%** |
+| 其他 | 48252 | -0.068 | 0.94% |
 
-**Fisher 精确检验 p = 0.211，不显著。**
+**Fisher p = 0.0016 / 0.0019。两种边界的**方向一致**——CUDA 相关 token 低概率率显著更低。**
 
-逐 token 复核（同一字符串在全部出现位置）：
+### 二、上下文效应远强于 token 类型
+
+| context | n | mean | lowprob | p10 |
+|---|---|---|---|---|
+| **after_failure** | 2142 | -0.237 | **3.22%** | -0.812 |
+| after_success | 23399 | -0.053 | 0.81% | -0.000 |
+| initial | 23909 | -0.065 | 0.82% | -0.038 |
+
+**`after_failure` 约为其余上下文的 4 倍。**
+
+按任务：`softmax_rows` 1.59% > `row_reduce` 1.01% > `vector_affine` 0.76% > `layernorm_rows` 0.33%。
+
+### 三、干预对照未出现预期效果
+
+PLAN 预期"压缩工具反馈能消除低概率尾部"。实测：
 
 ```
-'tl'      n= 7  全部 -0.0
-'.store'  n=12  全部 ≈ -0.0
-'.load'   n=18  仅 2 次低（-2.634 / -1.490）
-'.zeros'  n= 5  2 次低（-2.371 / -1.492）
-'.sum'    n= 7  mean -0.045
-'.arange' n=10  mean -0.352
+full       0.94%
+truncated  0.89%     ← 几乎无差
 ```
 
-→ **CUDA/Triton 专属 token 的概率绝大多数时候就是 1.0，不构成低概率尾部。**
+**该预期不成立**：低概率不来自反馈文本的长度或信息量。
 
-**独立于分类的一条观察**：同一 token 跨位置波动极大（`' for'` sd 0.565；`'\n'` sd 0.484、最低 -8.09；`'The'` sd 1.812）。→ **"低概率"是位置属性，不是 token 属性。**
+### 四、低概率落在自然语言上，不在代码上
+
+全库最低的 token：
+
+```
+' constants'   -17.746   row_reduce   full   after_success
+' backed'      -11.271   row_reduce   full   after_success
+' columns'      -9.527   layernorm    truncated  initial
+' wrong'       -10.056   softmax      full   after_success
+```
+
+**无一为代码 token。**
+
+## 方法
+
+**不走 agent 框架**：工具调用参数不被 `logprobs` 覆盖（厂商策略边界，证据见 [related-work.md](related-work.md)），而 `message.content` 覆盖。
+
+`scripts/loop_driver.py` 用多轮 plain chat 直接打 chat-completions：模型把代码写在正文，驱动自己写 `candidate.py`、跑独立评测器、拼反馈文本。**最小验证**（`check_plaintext_logprobs.py`）：448/448 个代码 token 带 logprob。
+
+```bash
+python scripts/loop_driver.py --tasks row_reduce vector_affine \
+    --conditions full truncated --repeats 8 \
+    --model deepseek-chat --max-tokens 8192 \
+    --runs-root lowprob-attribution/runs-formal
+python scripts/analyze_loop.py lowprob-attribution/runs-formal
+```
+
+**两个实现坑**：评测器 `argv[1]` 是 candidate **文件**而非目录（传目录 `PermissionError`）；评测器需带 torch 的解释器（`--python` 指向 anaconda）。**模型坑**：`deepseek-flash`（推理）会把预算烧在 reasoning 上、content 返空；必须用 `deepseek-chat`。
+
+## 射程
+
+- 模型 `deepseek-chat`，**不是 Seed1.6**（但已是可用 API 中最接近的一档）
+- 任务 4 道，均为元素级 / 归约级，没有融合、tiling、launch 配置类任务
+- `after_failure` 占 4.3% 的 token（2142 / 49450）
+- 未测：低概率是否真的导致 PPO 比值爆炸（需训练）；train-inference mismatch 的贡献（需双引擎）
 
 ## ⚠ 已撤回的产物
 
-以下文件是 2026-10-17 之前、基于**有偏子集**产出的，**其结论已作废，仅留存以便追溯**：
+2026-10-17 之前基于**本地 vLLM + Qwen3-4B** 的一轮，其细分结论**全部作废**：
 
 | 文件 | 状态 |
 |---|---|
-| `results/report-triton.html` | **作废**——图表基于 20 个 token 的子集 |
-| `results/deep-triton.json` | **作废**——同上 |
-| `results/tokens-triton.jsonl` | 数据本身有效，但其中 `token_type` 字段的**分段依赖**是偏差来源，使用时须自行按全量重算 |
+| `results/report-triton.html` | **作废** |
+| `results/deep-triton.json` | **作废** |
+| `results/tokens-triton.jsonl` | 数据有效，但 `token_type` 字段带分段依赖偏差 |
 
-**为什么作废**：`scripts/classify.py` 在散文段刻意排除了 `load`/`zeros`/`store`（怕误判英文散文），导致 `triton_specific` 只抓到 20 个 token（全量 API 名为 451 个），而这 20 个恰好含两个极端采样值。于是得到 `triton_specific` 低概率率 10%、`p=0.0156` 的假显著。
+**原因**：`scripts/classify.py` 在散文段刻意排除了 `load`/`zeros`/`store`（怕误判英文散文），使 `triton_specific` 只抓到 20 个 token（全量 451 个），而这 20 个恰好含两个极端采样值 → 假的 p=0.0156。同一个词 `load`：判进 `NL_reasoning` 的 6 个平均 -0.044、零低概率；判进 `triton_specific` 的 4 个平均 -1.034、25% 低概率。**组间差异由分类规则制造。**
 
-同一个词 `load` 的两面：
+**那轮唯一站得住的结论**（现已被新数据覆盖）：API 名 token 低概率率 1.55% vs 其他 0.95%，p = 0.211，**方向同样是"不更高"**。
 
-```
-判为 NL_reasoning     n=6  mean=-0.044  lowprob= 0.00%
-判为 triton_specific  n=4  mean=-1.034  lowprob=25.00%
-```
-
-**组间差异由分类规则制造，不是数据本身。**
-
-## 复现方式
-
-```bash
-# 采集（需先起 vLLM，见 PLAN.md 第 11 节）
-python scripts/collect.py --tasks row_reduce --repeats 12 \
-    --runs-root lowprob-attribution/runs-triton --timeout-s 900 \
-    --model deepseek/qwen3-4b --upstream http://127.0.0.1:8000 \
-    --opencode-config lowprob-attribution/opencode-proxy.jsonc \
-    --opencode-agent cuda-min
-
-# 对齐（产出 tokens.jsonl，注意 token_type 的分段依赖）
-python scripts/align.py lowprob-attribution/runs-triton \
-    --out lowprob-attribution/results/tokens-triton.jsonl
-
-# 全量重算（不依赖分类器的分段，这是当前有效结论的来源）
-#   按 . 前缀剥离后在全量 content token 上匹配关键词表，再做 Fisher 检验
-```
-
-**注意**：`deep_analyze.py` 与 `make_report.py` 输出的都是**已作废**的口径（它们消费 `token_type` 字段）。在分类器修好之前，不要用它们的结论。
-
-## 结论射程
-
-- **模型**：Qwen3-4B-AWQ（本机 8GB 显存可承载上限；改用本地是环境约束下的既定条件，非方法失误）
-- **任务**：1 道（`row_reduce`），原计划 6 道
-- **无干预对照**（完整反馈 vs 截断反馈）
-- **样本**：12 次 trial / 15987 token
-
-**不能直接外推到 Seed1.6。**
+`deep_analyze.py` / `make_report.py` 消费的 `token_type` 仍带该偏差，**不得据其下结论**。
