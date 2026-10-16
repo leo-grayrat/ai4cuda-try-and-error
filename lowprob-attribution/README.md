@@ -36,4 +36,24 @@
   - 调用须带 `--pure --auto --format json` 与 `OPENCODE_DISABLE_AUTOUPDATE=true`，stdin 给 EOF，否则挂起
   - 代理会额外录到 OpenCode 的"生成会话标题"辅助请求，对齐时须过滤
   - `events.jsonl` 不记录 reasoning 文本（`--thinking` 无效），而推理模型的 logprobs 几乎全在 reasoning 上，对齐单位待定
+- **本地 vLLM 路线：通过。** 闭源 API 不返回工具调用参数的概率（厂商策略边界，证据见 [related-work.md](related-work.md)），故改用本机 vLLM + Qwen3-4B-AWQ。绕过的坑：`NO_PROXY` 未设导致回环请求被系统代理拦成 502；OpenCode 需显式声明模型、需精简 agent（`tools.skill=false`）否则 53 个 skill 撑爆 8192 窗口；`subprocess` 探针必须关 stdin 否则挂起；vLLM 需 `--default-chat-template-kwargs '{"enable_thinking": false}'` 否则 4B 把输出预算全烧在 `<think>` 上而不调用工具。
+- **Phase 1 首轮采集：完成**（`row_reduce` × 12，15987 token，对齐零失配）。
+
+## ★ 本轮结论（2026-10-17）
+
+**判读 1 命中：CUDA Agent 的因果链起点不成立。**
+
+在全部 content token 上按关键词表匹配（不从分类器的分段取子集）：
+
+| 分组 | n | 低概率率(≤-2) |
+|---|---|---|
+| CUDA/Triton API 名 | 451 | **1.55%** |
+| 非 API | 15536 | **0.95%** |
+
+**Fisher p = 0.211，不显著。** 逐 token 复核：`tl` 7 次全 -0.0、`.store` 12 次全 ≈ -0.0、`.load` 18 次仅 2 次低。→ **这些 token 不构成低概率尾部**，与 user 2026-09-13 调研稿的判断一致。
+
+**此前基于偏差子集报出的所有细分结论（triton_specific 10%、p=0.0156、"机制是 API 选择点"、分位数/工具维度/位置效应）全部撤回**——成因是 `classify.py` 在散文段刻意排除 `load`/`zeros`/`store`，使该类别只抓到 20/451 个 token 且恰好含极端值。详见 [PLAN.md](PLAN.md) 第 12 节。
+
+**结论射程**：模型为 Qwen3-4B（本机可承载上限，环境约束下的既定条件），任务 1 道，无干预对照，12 次 trial。**不能直接外推到 Seed1.6。**
+
 
