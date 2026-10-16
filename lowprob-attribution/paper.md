@@ -158,10 +158,12 @@ Fisher 精确检验：宽松表 **p = 0.0070**，严格表 **p = 0.0007**。
 全库最低的 token：
 
 ```
-' constants'   -17.746   row_reduce    full       after_success
-' backed'      -11.271   row_reduce    full       after_success
-' wrong'       -10.056   softmax_rows  full       after_success
-' columns'      -9.527   layernorm_rows truncated initial
+' constants'   -17.746   row_reduce      full       after_success
+' backed'      -11.271   row_reduce      full       after_success
+' small'       -10.725   softmax_rows    full       after_success
+' computing'   -10.361   vector_affine   truncated  after_success
+' wrong'       -10.056   softmax_rows    full       after_success
+' weight'       -9.681   layernorm_rows  truncated  after_failure
 ```
 
 **无一为代码 token；全部为自然语言词。**
