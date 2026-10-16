@@ -60,13 +60,42 @@ CUDA Agent 未公开逐 token 的 Critic value、advantage 或生成概率，因
 
 ## 2. 相关工作
 
-**CUDA Agent**：提出上述因果链，但未公开可验证的逐 token 训练观测量。
+### 2.1 CUDA Agent 的因果链（本研究检验的对象）
 
-**Off-policy 与分布外上下文**：Liu 等人的工作指出 RL 框架可能因长轨迹中累积的分布外输入而使训练偏离。这为本研究 RQ2 的替代假设提供了理论依据。
+CUDA Agent 报告称直接 RL 训练在 17 步后崩溃，并给出如下因果链：
 
-**闭源 API 的概率可得性边界**：多项证据表明，工具调用参数不被 `logprobs` 覆盖是厂商的策略选择而非技术限制。三篇关于"闭源模型能否支持科学推断"的论文均将"隐藏完整概率分布"列为障碍之一。这解释了为何本研究采用无工具的多轮对话采集。
+> CUDA 代码仅占预训练数据的 0.01% → 基础模型的学习先验与 CUDA 内核编码所需分布偏差显著 → 采样出大量低概率 CUDA 代码 token → 当训练与推理引擎使用不同数值精度（BF16 vs FP16）时，在精度下限附近的微小误差导致重要性比率 ρₜ(θ) 剧烈波动或爆炸。
 
-**DeepSeek Harness / OpenCode 等 agent 框架**：这些框架提供工具调用能力，但其参数不受 `logprobs` 覆盖，因此不适合本研究的问题。
+原文给出的关键量级是 **πθ(aₜ|sₜ) ≈ 10⁻⁹**——即 CUDA token 的条件概率处于数值下限。其解法为三步预热（单轮 RL 热身 → 拒绝微调初始化 Actor → 价值预训练初始化 Critic），以绕开该数值崩溃点。
+
+**本研究的 RQ1 直接检验其中的"采样出大量低概率 CUDA 代码 token"这一环。**
+
+### 2.2 DR. KERNEL：训练–推理不匹配作为替代解释
+
+DR. KERNEL（Triton kernel 生成的 RL）独立研究了同类不稳定现象，并考察了两个假设：（1）训练–推理不匹配导致的优化不稳定；（2）优化目标与有意义的加速不匹配。
+
+其采用几何平均不匹配拒绝采样（MRS），仅保留几何平均重要性比 w ∈ [0.999, 1.001] 的样本，并施加严格的 token 级否决——若任一单个 token 的似然比 π_train/π_rollout 低于 10⁻⁴，则拒绝整个序列。
+
+**关键结论是**：MRS 成功稳定了训练动态，但**并未从根本上提升性能上限**。这说明训练–推理不匹配虽能解释不稳定性，但单独解决它并不充分。
+
+**该结论与本研究方向一致**：不稳定性更多来自训练/推理两侧的分布差异（一种上下文层面、而非词表层面的现象），而非"CUDA 词汇稀有"这一词表属性。
+
+### 2.3 精度不匹配与 off-policy 漂移
+
+CUDA Agent 引用的相关工作包括：Jet-RL、*Precision Mismatch in Reasoning Models*、*First-Order Approximation for Stable LLM-RL Training*，以及 Liu 等人关于"高效 RL 框架会引入 off-policy 训练"的分析。这些工作共同刻画了一类机制：**当 token 概率处于数值下限时，微小的数值差异在 PPO 的比值意义上不再微小**。
+
+本研究补充的是该机制的前提检验：在本研究的条件下，CUDA 词汇的条件概率**并不处于下限**。
+
+### 2.4 闭源 API 的概率可得性边界
+
+多项证据表明，工具调用参数不被 `logprobs` 覆盖是厂商的策略选择而非技术限制：OpenAI 论坛上该问题持续两年未获答复；Anthropic、Gemini 等接受 `logprobs` 参数但静默返回 none；三篇关于"闭源模型能否支持科学推断"的论文均将"隐藏完整概率分布"列为障碍（其中一篇直接引用 Carlini 等从概率分布反推模型规模的工作作为厂商动机的解释）。
+
+这解释了本研究为何采用无工具的多轮对话采集架构。
+
+### 2.5 与本研究的分工
+
+上述工作均从**训练侧**观测或干预不稳定性。本研究不做训练，而是从**推理侧**直接测量条件概率分布，检验因果链的第一个环节是否成立。
+
 
 ---
 
@@ -153,7 +182,29 @@ Fisher 精确检验：宽松表 **p = 0.0070**，严格表 **p = 0.0007**。
 
 截断反馈不仅未降低低概率率，反而略高（0.95% vs 0.71%）。**该干预无效。**
 
-### 4.4 低概率 token 的构成
+### 4.5 跨模型复现：本地 Qwen3-4B 一轮
+
+在 DeepSeek 路线之前，另用**完全不同的技术栈**做过一轮：本地 vLLM 服务 + `Qwen3-4B-AWQ`（4-bit 量化）+ agent 框架（OpenCode）+ 记录代理。该轮采得 `row_reduce` 单任务的 12 次运行、15,987 个 token。
+
+**全量匹配下的结果**：
+
+| 分组 | n | 低概率率(≤-2) |
+|---|---|---|
+| CUDA/Triton API 名 | 451 | **1.55%** |
+| 其他 | 15,536 | 0.95% |
+
+**Fisher p = 0.211（不显著）**，方向与 DeepSeek 轮一致——**CUDA 词汇不低于其他 token**。
+
+**该轮的意义与局限**：
+
+- 它是**跨模型、跨推理引擎、跨采集架构的独立复现**：模型（4B 量化 vs 商用 API）、推理后端（本地 vLLM vs 官方 API）、采集路径（agent 工具调用 vs 纯对话）三者全不相同，方向仍然一致。
+- 但样本量小（451 个 API 名 token，仅 1 道任务），**未达显著**。
+- 该轮的**细分结论（分位数、工具维度、位置效应、"API 选择点"机制）全部撤回**——原因是分类偏差，详见 5.4。
+
+**结论**：两轮数据在"CUDA 词汇不构成低概率尾部"这一点上方向一致，DeepSeek 轮提供了统计显著性，Qwen 轮提供了跨栈稳健性。
+
+
+### 4.6 低概率 token 的构成
 
 全库最低的 token：
 
@@ -178,17 +229,30 @@ RQ1 的答案是否定的，且方向与假设相反。CUDA/Triton 专属词汇�
 
 可能的机制是：这些 token 高度模式化、上下文约束极强（`tl.load` 的后续位置几乎确定），因而模型在它们上的条件概率接近 1。这与引言中"非常固定、非常模式化"的观察一致。
 
-### 5.2 低概率来自失败反馈后的上下文
+### 5.2 与 CUDA Agent 原文量级的对照（须谨慎解读）
+
+CUDA Agent 原文给出的关键量级是 **πθ(aₜ|sₜ) ≈ 10⁻⁹**，即 CUDA token 的条件概率处于数值下限。本研究测得的是**接近 1.0**。两者相差约九个数量级，这个差异**不能**直接解读为对原文的否证，因为至少有两处条件不同：
+
+1. **模型状态**：原文测的是**未经过任何微调的基础模型**在训练 rollout 中的行为；本研究测的是**已对齐的商用模型**（`deepseek-chat`）在推理 API 下的行为。对齐过程（SFT + RLHF）本身就会大幅提升常用代码模式的概率。
+2. **采样条件**：原文是训练 rollout（含特定温度、截断、精度）；本研究是标准推理请求。
+
+因此本研究的结论应当表述为：**在已对齐模型的推理条件下，CUDA 词汇不构成低概率尾部**。这对原文的"根因"叙事构成一个**待解释的张力**——若该叙事成立，则需要说明为何已对齐模型上该现象完全消失；若不成立，则原文的不稳定更可能来自 5.3 所述的上下文因素。
+
+**一个可检验的区分**：若在未微调的基础模型上重复本实验，CUDA token 的低概率率应当显著升高。本研究未能执行该对照（需要基础模型权重）。
+
+### 5.3 低概率来自失败反馈后的上下文
 
 RQ2 显示上下文效应强于 token 类型一个数量级。`after_failure` 的低概率率是 `initial` 的 4.6 倍，这与"长 agent 轨迹中累积的分布外输入导致偏离"的解释一致：评测失败的反馈文本（编译错误、不匹配的输出）本身是训练分布中稀有的输入形态。
 
+**这一结果与 DR. KERNEL 的发现方向一致**：该工作用几何平均不匹配拒绝采样与 token 级否决处理训练–推理不匹配，稳定了训练动态，但未能提升性能上限。本研究从推理侧补充了一条独立证据：**不稳定性更可能与上下文分布有关，而非词表属性**。
+
 值得注意的是，`after_success` 反而低于 `initial`——成功反馈收窄了后续的候选空间。
 
-### 5.3 干预无效的含义
+### 5.4 干预无效的含义
 
-RQ3 表明，压缩反馈的**信息量**并不减少低概率。结合 5.2，低概率的来源是"失败这一事件本身改变了上下文分布"，而非"反馈文本太长"。因此针对反馈长度的压缩并非有效干预。
+RQ3 表明，压缩反馈的**信息量**并不减少低概率。结合 5.3，低概率的来源是"失败这一事件本身改变了上下文分布"，而非"反馈文本太长"。因此针对反馈长度的压缩并非有效干预。
 
-### 5.4 方法启示
+### 5.5 方法启示
 
 本研究早期的一轮（本地 vLLM + 4B 模型）曾得出"CUDA token 低概率率 10%、p = 0.0156"的结论，后经核查为**分类偏差**：分类器在散文段刻意排除了若干 Triton 关键词（以避免与英文散文混淆），使该类别仅捕获 20/451 个 token，而其中恰含两个极端采样值。同一个词 `load` 因此被切进两类：归入散文的 6 次平均 -0.044、零低概率；归入 Triton 的 4 次平均 -1.034、25% 低概率。
 
@@ -220,11 +284,23 @@ RQ3 表明，压缩反馈的**信息量**并不减少低概率。结合 5.2，�
 
 ## 参考文献
 
-1. CUDA Agent: *The Root Cause of Training Instability*（原文标题所引论断）
-2. Liu et al. *Your Efficient RL Framework Secretly Brings You Off-Policy RL Training*
-3. Carlini et al. *Stealing Part of a Production Language Model*
-4. *How Open Must Language Models be to Enable Reliable Scientific Inference?* (2026)
-5. *Log Probability Tracking of LLM APIs* (INRIA, OpenReview)
+1. **CUDA Agent: Large-Scale Agentic RL for High-Performance CUDA Kernel Generation.** arXiv:2602.24286. （本研究检验其因果链；其给出的量级为 πθ(aₜ|sₜ) ≈ 10⁻⁹）
+2. **DR. KERNEL: Reinforcement Learning Done Right for Triton Kernel Generations.** arXiv:2602.05885. （独立的同类不稳定研究；提出几何平均不匹配拒绝采样与 token 级否决，发现稳定化不能提升性能上限）
+3. Liu et al. *Your Efficient RL Framework Secretly Brings You Off-Policy RL Training.* （off-policy 漂移机制）
+4. Jet-RL.（精度不匹配导致的重要性比率爆炸）
+5. *Precision Mismatch in Reasoning Models.*（CUDA Agent 引用）
+6. *First-Order Approximation for Stable LLM-RL Training.*（稳定性分析）
+7. Carlini et al. *Stealing Part of a Production Language Model.*（从概率分布反推模型细节，厂商限制 logprobs 的动机）
+8. *How Open Must Language Models be to Enable Reliable Scientific Inference?* (2026).（闭源模型作为科学仪器的三项障碍）
+9. *Surrogate Fidelity: When Can Open LLMs Explain Closed Ones?* (Meta).（指出主流 API 至多暴露 output token 的 log-probabilities）
+10. *Log Probability Tracking of LLM APIs* (INRIA, OpenReview).（首 token logprobs 用于监控 API 漂移；审稿意见点明"多数提供方不提供 logprobs"这一根本限制）
+
+## 附录 A：局限补充
+
+**缺失的关键对照**：本研究未能在**未微调的基础模型**上重复实验（需要基础模型权重）。5.2 指出，这是区分"CUDA 词汇本身稀有"与"对齐后该现象消失"的唯一直接办法。若条件允许，该对照应优先补上。
+
+**未测**：低概率是否真的导致 PPO 重要性比率爆炸（需实际训练）；train-inference mismatch 的贡献比重（需双引擎对照）。
+
 
 ---
 
