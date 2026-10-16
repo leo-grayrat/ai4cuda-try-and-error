@@ -194,7 +194,7 @@ def stop_process_tree(proc: subprocess.Popen, windows: bool | None = None) -> No
 def run_trial(
     task: Path, skill: Path | None, model: str, output: Path, timeout_s: int,
     backend: str = "opencode", env_extra: dict[str, str] | None = None,
-    prompt_suffix: str | None = None,
+    prompt_suffix: str | None = None, opencode_agent: str | None = None,
 ) -> dict:
     if output.exists():
         raise FileExistsError(output)
@@ -202,7 +202,7 @@ def run_trial(
     with isolated_task_workspace(task, output) as (work, task_hashes):
         return _run_trial_in_workspace(
             task, skill, model, output, timeout_s, backend, work, task_hashes,
-            env_extra, prompt_suffix,
+            env_extra, prompt_suffix, opencode_agent,
         )
 
 
@@ -211,6 +211,7 @@ def _run_trial_in_workspace(
     backend: str, work: Path, task_hashes: dict[str, str],
     env_extra: dict[str, str] | None = None,
     prompt_suffix: str | None = None,
+    opencode_agent: str | None = None,
 ) -> dict:
     skill_text = skill.read_text(encoding="utf-8") if skill else ""
     prompt = (task / "task.md").read_text(encoding="utf-8")
@@ -226,6 +227,9 @@ def _run_trial_in_workspace(
             "--model", model, "--format", "json", "--dir", str(work), "--title",
             f"AI4CUDA {task.name} {skill.name if skill else 'none'}", prompt,
         ]
+        if opencode_agent:
+            command.insert(5, opencode_agent)
+            command.insert(5, "--agent")
     elif backend == "codex":
         command = [
             "codex.cmd" if os.name == "nt" else "codex", "exec", "--json", "--ephemeral",
@@ -354,6 +358,9 @@ def main() -> None:
     run.add_argument("--timeout-s", type=int, default=300)
     run.add_argument("--opencode-config", type=Path,
                      help="path exported as OPENCODE_CONFIG to the child process")
+    run.add_argument("--opencode-agent", default=None,
+                     help="OpenCode agent name passed via --agent (e.g. a minimal "
+                          "agent with skills disabled)")
     run.add_argument("--prompt-suffix", default=None,
                      help="extra instruction appended to the assembled task prompt")
     evaluate = commands.add_parser("evaluate")
@@ -372,6 +379,7 @@ def main() -> None:
             args.task.resolve(), args.skill.resolve() if args.skill else None,
             model, args.output.resolve(), args.timeout_s, args.backend,
             env_extra=env_extra, prompt_suffix=args.prompt_suffix,
+            opencode_agent=args.opencode_agent,
         )
         print(json.dumps(summary, ensure_ascii=False))
         raise SystemExit(run_exit_code(summary))

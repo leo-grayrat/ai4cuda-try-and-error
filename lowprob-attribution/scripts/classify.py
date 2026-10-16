@@ -183,13 +183,18 @@ def segment_bounds(text: str) -> list[tuple[int, int, str]]:
 
 
 def annotate_tokens(logprobs: list[dict], text: str, field: str,
-                    turn_index: int, context_type: str) -> list[dict]:
+                    turn_index: int, context_type: str,
+                    tool_start: int | None = None) -> list[dict]:
     """One annotated record per token.
 
     The token is located in `text` by advancing a cursor, so segment assignment
     follows the token stream rather than substring search (the earlier version
     matched any segment merely containing the token, which misfiled most code
     tokens as natural language).
+
+    `tool_start` is the character offset where tool-call arguments begin, for
+    fields that carry them after the visible text (vLLM puts both in one
+    logprob stream). Tokens at or past that offset are tool output, not prose.
     """
     if field == "reasoning_content":
         # Reasoning is the model thinking; it is not a code artifact even when it
@@ -197,6 +202,15 @@ def annotate_tokens(logprobs: list[dict], text: str, field: str,
         bounds = [(0, max(len(text or ""), 1), "nl")]
     else:
         bounds = segment_bounds(text or "")
+        if tool_start is not None:
+            # Truncate the prose segments at the argument boundary, then append
+            # the tool region. Appending without truncating would leave a
+            # full-text prose span starting at 0 that always matches first and
+            # shadows the tool span entirely.
+            bounds = [(start, min(end, tool_start), kind)
+                      for start, end, kind in bounds if start < tool_start]
+            bounds.append((tool_start, max(len(text or ""), tool_start + 1), "tool"))
+            bounds.sort()
 
     annotated = []
     cursor = 0

@@ -38,6 +38,10 @@ RECORD_FIELDS = (
     "model",
     "content_text",
     "reasoning_text",
+    # vLLM logs tool-call arguments as ordinary generated tokens, but they are
+    # NOT part of message.content. Without this field the alignment step cannot
+    # locate argument tokens and files every one of them as prose.
+    "tool_call_text",
     "content_logprobs",
     "reasoning_logprobs",
     "finish_reason",
@@ -45,6 +49,15 @@ RECORD_FIELDS = (
     "temperature",
     "first_user_message",
 )
+
+
+def tool_call_text(message: dict) -> str:
+    """Concatenated function name + arguments for every tool call in a message."""
+    parts = []
+    for call in message.get("tool_calls") or []:
+        fn = call.get("function") or {}
+        parts.append((fn.get("name") or "") + (fn.get("arguments") or ""))
+    return "".join(parts)
 
 
 def first_user_text(payload: dict | None) -> str | None:
@@ -125,6 +138,7 @@ def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int,
                 "model": data.get("model"),
                 "content_text": msg.get("content"),
                 "reasoning_text": msg.get("reasoning_content"),
+                "tool_call_text": tool_call_text(msg) or None,
                 "content_logprobs": lp.get("content") or [],
                 "reasoning_logprobs": lp.get("reasoning_content") or [],
                 "finish_reason": choice.get("finish_reason"),
@@ -178,6 +192,7 @@ def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int,
 
             content_text = []
             reasoning_text = []
+            tool_text = []
             content_lp = []
             reasoning_lp = []
             finish_reason = None
@@ -228,6 +243,7 @@ def build_handler(state: ProxyState, upstream_base: str, top_logprobs: int,
                     "model": model,
                     "content_text": "".join(content_text) or None,
                     "reasoning_text": "".join(reasoning_text) or None,
+                    "tool_call_text": "".join(tool_text) or None,
                     "content_logprobs": content_lp,
                     "reasoning_logprobs": reasoning_lp,
                     "finish_reason": finish_reason,

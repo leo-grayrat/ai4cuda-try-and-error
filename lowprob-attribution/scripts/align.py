@@ -38,6 +38,10 @@ TITLE_MARKERS = (
     "conversation title",
 )
 
+# Qwen/Hermes-style tool call envelope. Everything from here on is a tool call,
+# not prose, and its tokens are the code the study wants to measure.
+TOOL_CALL_MARKER = "<tool_call>"
+
 
 def load_jsonl(path: Path) -> list[dict]:
     if not path.exists():
@@ -132,13 +136,26 @@ def align_run(run_dir: Path, run_id: str, strict: bool = False) -> tuple[list[di
 
     tokens = []
     for record, turn, context in pairs:
-        for logprobs, text, field in (
-            (record.get("reasoning_logprobs") or [], record.get("reasoning_text") or "", "reasoning_content"),
-            (record.get("content_logprobs") or [], record.get("content_text") or "", "content"),
+        # Align against the text the tokens themselves spell out, not
+        # message.content. vLLM reports tool calls inside the same `content`
+        # logprob stream, wrapped as `<tool_call>{...}</tool_call>`, while
+        # message.content stays empty; aligning on content would therefore leave
+        # every argument token without a carrier and misfile it as prose.
+        content_lp = record.get("content_logprobs") or []
+        content_text = "".join(entry.get("token") or "" for entry in content_lp)
+        tool_start = content_text.find(TOOL_CALL_MARKER)
+        if tool_start < 0:
+            tool_start = None
+        reasoning_lp = record.get("reasoning_logprobs") or []
+        reasoning_text = record.get("reasoning_text") or ""
+
+        for logprobs, text, field, start in (
+            (reasoning_lp, reasoning_text, "reasoning_content", None),
+            (content_lp, content_text, "content", tool_start),
         ):
             if not logprobs:
                 continue
-            for token in annotate_tokens(logprobs, text, field, turn, context):
+            for token in annotate_tokens(logprobs, text, field, turn, context, start):
                 token["run_id"] = run_id
                 token["temperature"] = record.get("temperature")
                 tokens.append(token)

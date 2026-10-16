@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import socket
 import subprocess
 import sys
@@ -62,6 +63,9 @@ def main() -> None:
     ap.add_argument("--prompt-suffix", default=None,
                     help="extra instruction appended to the task prompt; used to make the "
                          "model print code in the reply body so it carries logprobs")
+    ap.add_argument("--opencode-agent", default=None,
+                    help="OpenCode agent to pass via --agent; use a minimal agent with "
+                         "skills disabled so the system prompt fits the local window")
     args = ap.parse_args()
 
     args.runs_root.mkdir(parents=True, exist_ok=True)
@@ -80,6 +84,9 @@ def main() -> None:
          "--top-logprobs", "20",
          "--temperature-override", "1.0"],
         stdout=log_handle, stderr=subprocess.STDOUT,
+        env={**os.environ,
+             "NO_PROXY": "127.0.0.1,localhost,::1",
+             "no_proxy": "127.0.0.1,localhost,::1"},
     )
     if not wait_for_port("127.0.0.1", args.port):
         proxy.terminate()
@@ -90,7 +97,16 @@ def main() -> None:
     if PROXY_RECORDS.exists():
         seen = len(PROXY_RECORDS.read_text(encoding="utf-8").splitlines())
 
-    env_extra = {"OPENCODE_CONFIG": str(args.opencode_config.resolve())}
+    # Both OpenCode and the proxy talk to 127.0.0.1. This machine exports
+    # HTTP_PROXY/HTTPS_PROXY for a local proxy program and leaves NO_PROXY
+    # unset, so loopback requests get sent to that proxy and come back 502.
+    # Every subprocess in this pipeline must be told to bypass it for loopback.
+    loopback_bypass = "127.0.0.1,localhost,::1"
+    env_extra = {
+        "OPENCODE_CONFIG": str(args.opencode_config.resolve()),
+        "NO_PROXY": loopback_bypass,
+        "no_proxy": loopback_bypass,
+    }
     results = []
     try:
         for task_name in args.tasks:
@@ -104,6 +120,7 @@ def main() -> None:
                     (args.tasks_root / task_name).resolve(), None, args.model,
                     run_dir, args.timeout_s, "opencode", env_extra=env_extra,
                     prompt_suffix=args.prompt_suffix,
+                    opencode_agent=args.opencode_agent,
                 )
                 lines = (PROXY_RECORDS.read_text(encoding="utf-8").splitlines()
                          if PROXY_RECORDS.exists() else [])
