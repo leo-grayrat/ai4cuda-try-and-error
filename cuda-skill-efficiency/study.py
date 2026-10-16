@@ -252,10 +252,21 @@ def _run_trial_in_workspace(
         extra=env_extra,
     )
     env["OPENCODE_DISABLE_AUTOUPDATE"] = "true"
-    version = subprocess.run(
-        [command[0], "--version"], cwd=work, env=env,
-        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10,
-    )
+    # stdin must be closed. This probe runs inside a chain of pipes, and
+    # OpenCode's launcher can block waiting for input, which stalls the whole
+    # batch (observed: opencode.exe --version alive for 40+ minutes). On
+    # Windows the timeout alone does not reap the children the .cmd wrapper
+    # spawns, so kill the process tree explicitly when it fires.
+    try:
+        version = subprocess.run(
+            [command[0], "--version"], cwd=work, env=env, stdin=subprocess.DEVNULL,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=20,
+        )
+    except subprocess.TimeoutExpired as exc:
+        if exc.process is not None:
+            stop_process_tree(exc.process)
+        version = None
     with (output / "events.jsonl").open("w", encoding="utf-8") as raw, (output / "stderr.txt").open("w", encoding="utf-8") as err:
         proc = subprocess.Popen(
             command, stdin=subprocess.PIPE if backend == "codex" else subprocess.DEVNULL,

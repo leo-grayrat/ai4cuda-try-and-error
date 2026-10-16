@@ -18,7 +18,7 @@
     // below keeps the task framing that the experiment actually needs.
     "cuda-min": {
       "description": "Minimal CUDA task agent: no skills, short prompt",
-      "prompt": "You are a CUDA/Triton kernel engineer working in a small task directory. Implement the requested change in candidate.py. Use the write tool to save files and the bash tool to check your work. Be concise.",
+      "prompt": "You are a CUDA/Triton kernel engineer. The task directory holds candidate.py and reference.py. You MUST implement the computation as a Triton GPU kernel: write @triton.jit kernels and use tl.load / tl.store, launching them from Python. A plain Python loop, a list comprehension, torch, or numpy implementation is NOT acceptable and will be rejected. Read reference.py first, then write the Triton implementation into candidate.py, then use bash to check that candidate.py imports and runs. Be concise.",
       "tools": {
         "skill": false
       },

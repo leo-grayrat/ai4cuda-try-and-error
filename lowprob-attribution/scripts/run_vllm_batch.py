@@ -48,7 +48,10 @@ def wait_for_gpu(poll_seconds: int, timeout_s: int) -> bool:
 
 def start_vllm() -> subprocess.Popen:
     cmd = [
-        "wsl", "-d", "Ubuntu", "--",
+        # The distro holding the vLLM install. It must be named explicitly:
+        # the previous C-drive "Ubuntu" distro was migrated to this one and
+        # unregistered, and the WSL default is now the user's own distro.
+        "wsl", "-d", "Ubuntu-D", "--",
         "env", "VLLM_USE_FLASHINFER_SAMPLER=0", VLLM, "serve", MODEL_DIR,
         "--port", str(PORT),
         "--max-model-len", "8192",
@@ -56,6 +59,9 @@ def start_vllm() -> subprocess.Popen:
         "--served-model-name", "qwen3-4b",
         "--enable-auto-tool-choice",
         "--tool-call-parser", "hermes",
+        # Without this the 4B model spends its whole output budget inside
+        # <think> and never emits a tool call.
+        "--default-chat-template-kwargs", '{"enable_thinking": false}',
     ]
     log = open(REPO / "lowprob-attribution" / "vllm-serve.log", "a", encoding="utf-8")
     return subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT)
@@ -78,6 +84,7 @@ def wait_ready(timeout_s: int) -> bool:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tasks", default="row_reduce")
+    ap.add_argument("--runs-root", default=str(LOWPROB / "runs-triton"))
     ap.add_argument("--repeats", type=int, default=1)
     ap.add_argument("--timeout-s", type=int, default=1800)
     ap.add_argument("--wait-timeout-s", type=int, default=6 * 3600)
@@ -99,11 +106,17 @@ def main() -> int:
         cmd = [
             sys.executable, str(LOWPROB / "scripts" / "collect.py"),
             "--tasks", args.tasks,
+            # No --tasks-root here on purpose: collect.py defaults to
+            # cuda-skill-efficiency/tasks, which is where row_reduce lives.
+            # lowprob-attribution/tasks holds only the kb_* KernelBench tasks,
+            # which use an incompatible Model-class interface.
             "--repeats", str(args.repeats),
+            "--runs-root", str(args.runs_root),
             "--timeout-s", str(args.timeout_s),
-            "--model", "vllm/qwen3-4b",
+            "--model", "deepseek/qwen3-4b",
             "--upstream", f"http://127.0.0.1:{PORT}",
-            "--opencode-config", str(LOWPROB / "opencode-vllm-proxy.jsonc"),
+            "--opencode-config", str(LOWPROB / "opencode-proxy.jsonc"),
+            "--opencode-agent", "cuda-min",
         ]
         subprocess.run(cmd, cwd=str(REPO), timeout=args.timeout_s * args.repeats + 600)
     finally:
