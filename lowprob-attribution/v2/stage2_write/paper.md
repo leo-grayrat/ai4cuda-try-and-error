@@ -12,11 +12,11 @@ CUDA Agent explains its policy collapse at training step 17 with a chain whose s
 
 Two collections support the test. The first uses four elementwise/reduction tasks (128 runs, 98,533 tokens). The second uses five KernelBench Level 2 operator chains — ConvTranspose3d + GroupNorm + GELU + Sum and similar — where an implementer must decide what to fuse, whether to materialise intermediates, and how to tile (40 runs, 542,611 tokens; **87.5% of these tokens come from runs that ended in failure**, a selection effect noted wherever their numbers are quoted). In both, the kernel is written in the reply body rather than through tool calls, so every code token falls under `logprobs`; a pre-flight check confirmed 448/448 code tokens carry a probability.
 
-Four results. **First**, CUDA/Triton vocabulary carries a *lower* low-probability rate than the surrounding text — 0.26% vs 0.84% under a strict vocabulary (Fisher $p = 0.0007$), 0.49% vs 0.84% under a loose one ($p = 0.0070$). **Second**, the cost is spatially concentrated: inside fenced code blocks the rate is 0.60% (0.33% with in-block comments excluded), outside it 13.56% — a 22.4× difference that rises to 41× once comments are removed from the code region. The worst 5% of code tokens carry 98.1% of the code's total negative log-probability while the worst 5% of prose tokens carry only 30.3% of prose's. **Third**, raising task difficulty does not move the code-side rate: 0.67% on reduction tasks, 0.60% on fusion tasks, with per-task values spanning 0.25–0.93%. **Fourth**, the absolute probabilities do not approach the claimed floor: the lowest code token in 322,375 measured has logprob −13.02 (2.2×10⁻⁶), the lowest prose token −16.65 (5.9×10⁻⁸), while 10⁻⁹ corresponds to −20.7 — 400× below anything observed.
+Four results. **First**, CUDA/Triton vocabulary carries a *lower* low-probability rate than the surrounding text — 0.26% vs 0.84% under a strict vocabulary (Fisher $p = 0.0007$), 0.49% vs 0.84% under a loose one ($p = 0.0070$). **Second**, the cost is spatially concentrated: inside fenced code blocks the rate is 0.60% (0.33% with in-block comments excluded), outside it 13.56% — a 22.4× difference that rises to 41× once comments are removed from the code region. The worst 5% of code tokens carry 98.1% of the code's total negative log-probability while the worst 5% of prose tokens carry only 30.3% of prose's. **Third**, raising task difficulty does not move the code-side rate: 0.67% on reduction tasks, 0.60% on fusion tasks, with per-task values spanning 0.25–0.93%. **Fourth**, the absolute probabilities do not approach the claimed floor: the lowest code token in 322,375 measured has logprob −13.02 (2.2×$10^{-6}$), the lowest prose token −16.65 (5.9×$10^{-8}$), while $10^{-9}$ corresponds to −20.7 — 400× below anything observed.
 
 Reading all 816 low-probability tokens from the first collection and all 189 high-cost non-comment code tokens from the second, in context and without a keyword table, yields a consistent picture: the cost sits in comments, identifier naming, punctuation and occasional slips, not in implementation choices. We find no case in which the model's uncertainty at a token corresponds to choosing between two ways of implementing a kernel.
 
-We read this as evidence that **whatever the reported 10⁻⁹ measures, it is not a property of the domain's vocabulary** — alignment cannot change corpus statistics, so a rarity-driven floor would survive alignment if it existed. The causal chain's attribution therefore points at the wrong object. The uncertainty tracks *what the model is writing* (prose or debug reasoning vs templated code), not *which vocabulary the domain uses*. The gap between 10⁻⁹ and our measurements is not presented as a refutation, since the source measures a base model during rollout and we measure an aligned model at inference; it is presented as a tension the source must explain, with the resolving experiment named.
+We read this as evidence that **whatever the reported $10^{-9}$ measures, it is not a property of the domain's vocabulary** — alignment cannot change corpus statistics, so a rarity-driven floor would survive alignment if it existed. The causal chain's attribution therefore points at the wrong object. The uncertainty tracks *what the model is writing* (prose or debug reasoning vs templated code), not *which vocabulary the domain uses*. The gap between $10^{-9}$ and our measurements is not presented as a refutation, since the source measures a base model during rollout and we measure an aligned model at inference; it is presented as a tension the source must explain, with the resolving experiment named.
 
 **Keywords:** CUDA Agent; training instability; conditional probability; log-probability distribution; fusion kernels
 
@@ -51,7 +51,7 @@ We measure per-token conditional probabilities inside a real multi-turn kernel-w
 - **RQ1** — Is CUDA/Triton vocabulary more likely to be low-probability than other tokens?
 - **RQ2** — Does the low-probability rate vary with *where* the token sits (fenced code vs prose)?
 - **RQ3** — Does raising task difficulty from reduction to fusion move the code-side rate?
-- **RQ4** — Do the measured absolute probabilities approach the claimed 10⁻⁹ floor?
+- **RQ4** — Do the measured absolute probabilities approach the claimed $10^{-9}$ floor?
 
 ### 1.5 Summary of results
 
@@ -60,13 +60,13 @@ We measure per-token conditional probabilities inside a real multi-turn kernel-w
 | RQ1 | No — CUDA vocabulary is *less* likely to be low-probability (0.26% vs 0.84%, $p=0.0007$) |
 | RQ2 | Yes, by an order of magnitude: code 0.60% vs prose 13.56% |
 | RQ3 | No — 0.67% on reductions, 0.60% on fusion chains |
-| RQ4 | No — minimum code logprob −13.02 (2.2×10⁻⁶) vs the claimed −20.7 |
+| RQ4 | No — minimum code logprob −13.02 (2.2×$10^{-6}$) vs the claimed −20.7 |
 
 ### 1.6 Scope
 
 We measure an **aligned commercial model at inference**, not the un-finetuned base model during rollout. That difference is material and is treated at length in §5.2. It is the reason this paper reports a tension rather than a refutation.
 
-We also do not claim the code-side rate is zero. It is 0.60%, not 0. What we claim is that it does not move with difficulty and does not concentrate at implementation decisions.
+The code-side rate is 0.60%, which is small but nonzero, and two properties of it are claimed: that it does not vary with task difficulty, and that it does not concentrate at implementation decisions.
 
 ---
 
@@ -78,19 +78,25 @@ CUDA Agent's mechanism, quoted in §1.1, has the shape: rarity → low probabili
 
 **An independent reading of the paper is relevant here.** A third-party overview reports that the authors attribute the instability to the base model's distribution mismatch, and then records what the paper actually establishes: two observed associations — reward collapse accompanied by a rise in policy entropy when RFT is removed, and lower explained variance accompanied by longer trajectories when value pretraining is removed — which, in the overview's assessment, are associations together with the authors' interpretation rather than evidence for a single cause [11].
 
-That distinction matters for our purpose. **What was observed is entropy rising; what was claimed is a specific token-level probability near 10⁻⁹.** These are different objects: entropy is a property of a whole distribution flattening, a near-floor token probability is a point in that distribution. The second does not follow from the first, and the first does not require the second.
+That distinction matters for our purpose. **What was observed is entropy rising; what was claimed is a specific token-level probability near $10^{-9}$.** These are different objects: entropy is a property of a whole distribution flattening, a near-floor token probability is a point in that distribution. The second does not follow from the first, and the first does not require the second.
 
 ### 2.2 DR. KERNEL: the same instability, attributed to mismatch
 
 DR. KERNEL studies RL for Triton kernel generation and reaches the same instability from the training side [3]. It states two hypotheses — saturation from training instability caused by train/inference mismatch, and an objective misaligned with meaningful speedup — monitors entropy, gradient norms and perplexity, finds "excessively high values across these metrics", and applies geometric Mismatch Rejection Sampling: keep samples whose geometric-mean importance ratio $w = \exp(\frac{1}{|T|}\sum_t \log\frac{\pi_{train}(a_t|s_t)}{\pi_{rollout}(a_t|s_t)})$ lies in $[0.999, 1.001]$, plus a token-level veto rejecting any sequence containing a token whose likelihood ratio falls below $10^{-4}$ [3, Sec. 5.1].
 
-Its key negative finding: MRS "successfully stabilizes the training dynamics", but "it does not fundamentally lift the performance ceiling" [3, Sec. 5.1]. Stability and capability are separable, and the thing MRS corrects is a *distributional* discrepancy between two engines — a property of the trajectory's context, not of the vocabulary.
+Its key negative finding is that MRS "successfully stabilizes the training dynamics" while failing to "fundamentally lift the performance ceiling" [3, Sec. 5.1], which separates stability from capability. What MRS corrects is a distributional discrepancy between two inference engines, a property of the trajectory's context rather than of the domain's vocabulary.
 
 ### 2.3 Precision mismatch and off-policy drift
 
-Jet-RL, *Precision Mismatch in Reasoning Models* and *First-Order Approximation for Stable LLM-RL Training* all concern the sensitivity of the PPO ratio when probabilities sit near the numerical floor; once $\pi_\theta$ is at $10^{-9}$, a small absolute difference is a large relative one [1, 2]. Liu et al. characterise the complementary phenomenon where an RL framework's efficiency machinery makes training data off-policy [4].
+Three lines of work converge on the sensitivity of the PPO ratio when probabilities sit near the numerical floor, at which point a small absolute difference becomes a large relative one [1, 2]:
 
-**These papers assume the floor condition.** Our contribution is to check whether it holds at generation time — a precondition, not a competing mechanism.
+- Jet-RL treats the train/inference precision mismatch as the operative difference;
+- *Precision Mismatch in Reasoning Models* examines the same effect in the reasoning setting;
+- *First-Order Approximation for Stable LLM-RL Training* analyses it as a stability property of the objective.
+
+Liu et al. characterise the complementary phenomenon in which an RL framework's efficiency machinery renders the training data off-policy [4].
+
+All three take the floor condition as given. The contribution of the present study is to test whether it holds at generation time, which makes the two lines of work complementary rather than competing.
 
 ### 2.4 Logprob availability in closed APIs
 
@@ -134,7 +140,13 @@ Termination: correctness after at least one revision, no fenced block, or a turn
 | `17_conv2d_instancenorm_divide` | Conv2d → InstanceNorm → divide |
 | `19_convtranspose2d_gelu_groupnorm` | ConvTranspose2d → GELU → GroupNorm |
 
-Each chain admits at least three implementation strategies: fuse everything into one kernel; fuse the elementwise tail and keep the convolution separate; or implement the sequence as written. Choosing among them requires deciding what to fuse, whether intermediates go to global memory, and how to tile. This is exactly the decision space that the reduction tasks lack.
+Each chain admits at least three implementation strategies:
+
+- fuse the entire chain into one kernel;
+- fuse the elementwise tail into the epilogue of the heavy operation and keep that operation separate;
+- or implement the sequence as written, with an intermediate tensor per step.
+
+Selecting among them requires deciding what to fuse, whether an intermediate is materialised to global memory, and how to tile the heavy operation — precisely the decision space that the reduction tasks lack.
 
 Family B tasks were generated mechanically (`scripts/make_kb2_tasks.py`): the KernelBench `Model` class is wrapped into the `run(x)` entry point, the model is seeded so that reference and candidate see identical weights, and the model is exported as `MODEL` for the candidate to import. Evaluators check correctness on two shapes at tolerance $10^{-4}$.
 
@@ -143,7 +155,7 @@ Family B tasks were generated mechanically (`scripts/make_kb2_tasks.py`): the Ke
 - **full** — the evaluator's verbatim output.
 - **truncated** — one line: `compilation failed`, `output mismatch`, or `correct`.
 
-Fixed before collection, not varied afterwards.
+Both conditions were implemented before collection began and were held constant thereafter, so the comparison between them is not confounded by any later change of procedure.
 
 ### 3.5 Model selection
 
@@ -151,13 +163,18 @@ The API offers reasoning and non-reasoning models. Under the reasoning model the
 
 ### 3.6 Observables
 
-We report the distribution, not only a threshold.
+Because a rate cannot be compared against a probability, the observables below are stated as a distribution rather than a single number:
+
+1. **Threshold rate** $R_{-2}$, for comparability with earlier work;
+2. **Quantiles** at $p_{0.1}, p_1, p_5, p_{50}$, for the shape of each region's distribution;
+3. **Minimum logprob**, converted to an absolute probability, for the comparison against the claimed floor;
+4. **Mass concentration**, the share of a region's total negative logprob carried by its worst $0.1\%$, $1\%$ and $5\%$ of tokens.
 
 **Low-probability rate** at threshold $\tau$:
 
 $$R_\tau(G) = \frac{1}{|G|}\sum_{i \in G}\mathbb{1}\left[\log\pi_\theta(a_i \mid s_i) \le \tau\right]$$
 
-with $\tau = -2$ as the headline. **Quantiles** of the logprob distribution per region. **Minimum logprob** per region, converted to absolute probability for comparison against 10⁻⁹. **Probability-mass concentration**: what fraction of a region's total negative logprob is carried by its worst 0.1%, 1%, 5% of tokens.
+with $\tau = -2$ as the headline. **Quantiles** of the logprob distribution per region. **Minimum logprob** per region, converted to absolute probability for comparison against $10^{-9}$. **Probability-mass concentration**: what fraction of a region's total negative logprob is carried by its worst 0.1%, 1%, 5% of tokens.
 
 Region assignment is by fenced-code-block state: a token is in `code` if an odd number of ``` delimiters precede it, else `prose`. No keyword tables are used for the primary results.
 
@@ -256,16 +273,22 @@ Family B, quantiles of logprob by region:
 Converting to absolute probability:
 
 ```
-code min   −13.02  →  2.2 × 10⁻⁶
-prose min  −16.65  →  5.9 × 10⁻⁸
-claimed    10⁻⁹     ⇔  logprob −20.7
+code min   −13.02  →  2.2 × $10^{-6}$
+prose min  −16.65  →  5.9 × $10^{-8}$
+claimed    $10^{-9}$     ⇔  logprob −20.7
 ```
 
-**The lowest code token in 322,375 is 2.2×10⁻⁶, four hundred times more probable than the claimed floor.** 99% of code tokens sit above 0.26, and the median is 1.0.
+**The lowest code token in 322,375 is 2.2×$10^{-6}$, four hundred times more probable than the claimed floor.** 99% of code tokens sit above 0.26, and the median is 1.0.
 
-For completeness, the joint logprob of a whole completion (n=215) has mean −903.3 and median −414.8, i.e. $e^{-414.8} \approx 7\times10^{-181}$. That number is far *below* 10⁻⁹, but it is the product of two thousand tokens, not a single token's probability — the two quantities are not the same object, and the source's quotation is explicitly of the latter.
+For completeness, the joint logprob of a whole completion (n=215) has mean −903.3 and median −414.8, i.e. $e^{-414.8} \approx 7\times10^{-181}$. That number is far *below* $10^{-9}$, but it is the product of two thousand tokens, not a single token's probability — the two quantities are not the same object, and the source's quotation is explicitly of the latter.
 
 ### 4.5 Concentration of probability mass
+
+For a region $G$ with cost $C(G) = -\sum_{i\in G}\log\pi_\theta(a_i|s_i)$, sort its tokens by logprob ascending and let $G_{q}$ be the worst fraction $q$ of them. The concentration statistic is
+
+$$\kappa_q(G) = \frac{C(G_q)}{C(G)}$$
+
+so that $\kappa_{0.05} = 0.981$ means the worst 5% of a region's tokens generate 98.1% of that region's total cost.
 
 | region | tokens | Σ logprob | worst 0.1% | worst 1% | worst 5% |
 |---|---|---|---|---|---|
@@ -318,7 +341,7 @@ Aggregate rates say where cost is; they do not say what the model was doing. So 
 
 The most extreme values illustrate the character of the tail. The single lowest code token is `' //'` at −13.02, inside `tl.arange(0, BLOCK // 1)` — an expression with no plausible intent behind it. The lowest prose token is `'|='` at −16.65, inside `` `allow_tf32|=|True` `` — where `=` was intended. Others in the extreme set: `' bi'` in `biasp_ptr`, `' rt'` in `rtne`, `' tir'` in `tirual`, `'?,'` in `atol=?, rtol=?` (placeholder left unreplaced).
 
-**These are slips and placeholder artefacts, not design uncertainty.**
+The character of these values is mechanical rather than deliberative: each is a position at which a specific token was intended and a neighbouring string was produced instead, so the low probability reflects competition between surface forms rather than a choice among implementation strategies.
 
 A second example makes the distinction concrete: the identifier `y` in `y = torch.empty_like(x)` is repeatedly low-probability across runs, because nothing in the context determines whether the output should be called `y` or `out`. The *implementation* at that position — allocate an output tensor — is not in question.
 
@@ -330,13 +353,13 @@ A second example makes the distinction concrete: the identifier `y` in `y = torc
 
 RQ1–RQ4 converge: CUDA vocabulary carries less low-probability mass than the surrounding text; the cost is spatially located outside code blocks; it does not respond to task difficulty; and its absolute magnitude is 400× above the claimed floor even at the extreme.
 
-The claim "CUDA is rare in pretraining, therefore CUDA tokens sit at 10⁻⁹" does not survive this measurement **in any condition we can observe**.
+The claim "CUDA is rare in pretraining, therefore CUDA tokens sit at $10^{-9}$" does not survive this measurement **in any condition we can observe**.
 
-What follows is narrower and, we think, harder to escape: **alignment cannot change what is in a pretraining corpus.** If a near-floor probability were a consequence of corpus rarity, it would persist across alignment, because the model would still be the same model with the same exposure frequency. We measure ≈1.0 on an aligned model. Either the alignment step moved a token probability by nine orders of magnitude — which would mean the quantity is not a function of the corpus at all — or the 10⁻⁹ was never a corpus consequence. Both readings leave the attribution without its stated mechanism.
+A narrower claim survives, and it is harder to escape than the original: alignment cannot change what is in a pretraining corpus, so if a near-floor probability were a consequence of corpus rarity it would persist across alignment, the model retaining both its weights and its exposure frequency. We measure ≈1.0 on an aligned model. Either the alignment step moved a token probability by nine orders of magnitude — which would mean the quantity is not a function of the corpus at all — or the $10^{-9}$ was never a corpus consequence. Both readings leave the attribution without its stated mechanism.
 
 ### 5.2 The magnitude gap and its interpretation
 
-We measure ≈1.0 where the source reports 10⁻⁹. We decline to read that as a refutation, because conditions differ: the source measures an un-finetuned base model during training rollout; we measure an aligned model through an inference API. Alignment raises the probability of common code patterns substantially.
+We measure ≈1.0 where the source reports $10^{-9}$. We decline to read that as a refutation, because conditions differ: the source measures an un-finetuned base model during training rollout; we measure an aligned model through an inference API. Alignment raises the probability of common code patterns substantially.
 
 But the difference must not be used to *dismiss* the result either. The claim, as stated, is a consequence of corpus statistics — CUDA is 0.01% of pretraining — and corpus statistics do not depend on which organisation trained the model or whether it was later aligned. **If rarity implied a near-floor conditional probability, it would do so for any model pretrained on comparable data**; a nine-order-of-magnitude difference between two such models is better explained by the claim being false than by one model having a qualitatively different corpus.
 
@@ -409,7 +432,7 @@ Excluding the fragment runs, the success rate on complete files is 28% (7/25). T
 
 ## 7. Conclusion
 
-Whatever the reported 10⁻⁹ measures, it is not a property of the domain's vocabulary. Over 98,533 tokens on reduction tasks and 542,611 on operator chains, CUDA/Triton vocabulary carries *less* low-probability mass than the surrounding text; inside code fences the rate is 0.33% once comments are removed, outside 13.56%, a 41× difference; the worst 5% of code tokens carry 98.1% of the code's cost against 30.3% for prose; and the absolute minimum across 322,375 code tokens is 2.2×10⁻⁶, four hundred times above the claimed floor.
+Whatever the reported $10^{-9}$ measures, it is not a property of the domain's vocabulary. Over 98,533 tokens on reduction tasks and 542,611 on operator chains, CUDA/Triton vocabulary carries *less* low-probability mass than the surrounding text; inside code fences the rate is 0.33% once comments are removed, outside 13.56%, a 41× difference; the worst 5% of code tokens carry 98.1% of the code's cost against 30.3% for prose; and the absolute minimum across 322,375 code tokens is 2.2×$10^{-6}$, four hundred times above the claimed floor.
 
 Because alignment cannot alter corpus statistics, a rarity-driven floor would have survived it. It did not. That leaves the causal chain's attribution without its stated mechanism.
 

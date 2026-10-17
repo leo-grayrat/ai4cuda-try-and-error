@@ -20,3 +20,5 @@ paper/main.blg
 paper/main.bbl
 paper/main.pdf
 paper/*.png
+v2/stage5_finalize/build/
+v2/stage5_finalize/main.old.pdf

@@ -169,9 +169,9 @@ negative log-probability while the worst 5\% of prose tokens carry only
 the code-side rate: 0.67\% on reduction tasks, 0.60\% on fusion tasks,
 with per-task values spanning 0.25--0.93\%. \textbf{Fourth}, the
 absolute probabilities do not approach the claimed floor: the lowest
-code token in 322,375 measured has logprob −13.02 (2.2×10⁻⁶), the lowest
-prose token −16.65 (5.9×10⁻⁸), while 10⁻⁹ corresponds to −20.7 --- 400×
-below anything observed.
+code token in 322,375 measured has logprob −13.02 (2.2×\(10^{-6}\)), the
+lowest prose token −16.65 (5.9×\(10^{-8}\)), while \(10^{-9}\)
+corresponds to −20.7 --- 400× below anything observed.
 
 Reading all 816 low-probability tokens from the first collection and all
 189 high-cost non-comment code tokens from the second, in context and
@@ -181,17 +181,17 @@ implementation choices. We find no case in which the model's uncertainty
 at a token corresponds to choosing between two ways of implementing a
 kernel.
 
-We read this as evidence that \textbf{whatever the reported 10⁻⁹
+We read this as evidence that \textbf{whatever the reported \(10^{-9}\)
 measures, it is not a property of the domain's vocabulary} --- alignment
 cannot change corpus statistics, so a rarity-driven floor would survive
 alignment if it existed. The causal chain's attribution therefore points
 at the wrong object. The uncertainty tracks \emph{what the model is
 writing} (prose or debug reasoning vs templated code), not \emph{which
-vocabulary the domain uses}. The gap between 10⁻⁹ and our measurements
-is not presented as a refutation, since the source measures a base model
-during rollout and we measure an aligned model at inference; it is
-presented as a tension the source must explain, with the resolving
-experiment named.
+vocabulary the domain uses}. The gap between \(10^{-9}\) and our
+measurements is not presented as a refutation, since the source measures
+a base model during rollout and we measure an aligned model at
+inference; it is presented as a tension the source must explain, with
+the resolving experiment named.
 
 \textbf{Keywords:} CUDA Agent; training instability; conditional
 probability; log-probability distribution; fusion kernels
@@ -292,7 +292,7 @@ ask:
   move the code-side rate?
 \item
   \textbf{RQ4} --- Do the measured absolute probabilities approach the
-  claimed 10⁻⁹ floor?
+  claimed \(10^{-9}\) floor?
 \end{itemize}
 
 \hypertarget{summary-of-results}{%
@@ -309,8 +309,8 @@ RQ1 & No --- CUDA vocabulary is \emph{less} likely to be low-probability
 (0.26\% vs 0.84\%, \(p=0.0007\)) \\
 RQ2 & Yes, by an order of magnitude: code 0.60\% vs prose 13.56\% \\
 RQ3 & No --- 0.67\% on reductions, 0.60\% on fusion chains \\
-RQ4 & No --- minimum code logprob −13.02 (2.2×10⁻⁶) vs the claimed
-−20.7 \\
+RQ4 & No --- minimum code logprob −13.02 (2.2×\(10^{-6}\)) vs the
+claimed −20.7 \\
 \bottomrule
 \end{longtable}
 
@@ -322,9 +322,10 @@ un-finetuned base model during rollout. That difference is material and
 is treated at length in §5.2. It is the reason this paper reports a
 tension rather than a refutation.
 
-We also do not claim the code-side rate is zero. It is 0.60\%, not 0.
-What we claim is that it does not move with difficulty and does not
-concentrate at implementation decisions.
+The code-side rate is 0.60\%, which is small but nonzero, and two
+properties of it are claimed: that it does not vary with task
+difficulty, and that it does not concentrate at implementation
+decisions.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -360,10 +361,10 @@ evidence for a single cause ({``Log Probability Tracking of {LLM}
 
 That distinction matters for our purpose. \textbf{What was observed is
 entropy rising; what was claimed is a specific token-level probability
-near 10⁻⁹.} These are different objects: entropy is a property of a
-whole distribution flattening, a near-floor token probability is a point
-in that distribution. The second does not follow from the first, and the
-first does not require the second.
+near \(10^{-9}\).} These are different objects: entropy is a property of
+a whole distribution flattening, a near-floor token probability is a
+point in that distribution. The second does not follow from the first,
+and the first does not require the second.
 
 \hypertarget{dr.-kernel-the-same-instability-attributed-to-mismatch}{%
 \subsubsection{2.2 DR. KERNEL: the same instability, attributed to
@@ -384,32 +385,45 @@ sequence containing a token whose likelihood ratio falls below
 \(10^{-4}\) ({``{DR. KERNEL}: Reinforcement Learning Done Right for
 {Triton} Kernel Generations''} 2026, Sec. 5.1).
 
-Its key negative finding: MRS ``successfully stabilizes the training
-dynamics,'' but ``it does not fundamentally lift the performance
-ceiling'' ({``{DR. KERNEL}: Reinforcement Learning Done Right for
-{Triton} Kernel Generations''} 2026, Sec. 5.1). Stability and capability
-are separable, and the thing MRS corrects is a \emph{distributional}
-discrepancy between two engines --- a property of the trajectory's
-context, not of the vocabulary.
+Its key negative finding is that MRS ``successfully stabilizes the
+training dynamics'' while failing to ``fundamentally lift the
+performance ceiling'' ({``{DR. KERNEL}: Reinforcement Learning Done
+Right for {Triton} Kernel Generations''} 2026, Sec. 5.1), which
+separates stability from capability. What MRS corrects is a
+distributional discrepancy between two inference engines, a property of
+the trajectory's context rather than of the domain's vocabulary.
 
 \hypertarget{precision-mismatch-and-off-policy-drift}{%
 \subsubsection{2.3 Precision mismatch and off-policy
 drift}\label{precision-mismatch-and-off-policy-drift}}
 
-Jet-RL, \emph{Precision Mismatch in Reasoning Models} and
-\emph{First-Order Approximation for Stable LLM-RL Training} all concern
-the sensitivity of the PPO ratio when probabilities sit near the
-numerical floor; once \(\pi_\theta\) is at \(10^{-9}\), a small absolute
-difference is a large relative one ({``{CUDA Agent}: Large-Scale Agentic
-{RL} for High-Performance {CUDA} Kernel Generation''} 2026; {``{CUDA
-Agent}: Agentic {RL} for High-Performance {CUDA} Kernel Generation''}
-2026). Liu et al.~characterise the complementary phenomenon where an RL
-framework's efficiency machinery makes training data off-policy (Liu and
-others 2025).
+Three lines of work converge on the sensitivity of the PPO ratio when
+probabilities sit near the numerical floor, at which point a small
+absolute difference becomes a large relative one ({``{CUDA Agent}:
+Large-Scale Agentic {RL} for High-Performance {CUDA} Kernel
+Generation''} 2026; {``{CUDA Agent}: Agentic {RL} for High-Performance
+{CUDA} Kernel Generation''} 2026):
 
-\textbf{These papers assume the floor condition.} Our contribution is to
-check whether it holds at generation time --- a precondition, not a
-competing mechanism.
+\begin{itemize}
+\tightlist
+\item
+  Jet-RL treats the train/inference precision mismatch as the operative
+  difference;
+\item
+  \emph{Precision Mismatch in Reasoning Models} examines the same effect
+  in the reasoning setting;
+\item
+  \emph{First-Order Approximation for Stable LLM-RL Training} analyses
+  it as a stability property of the objective.
+\end{itemize}
+
+Liu et al.~characterise the complementary phenomenon in which an RL
+framework's efficiency machinery renders the training data off-policy
+(Liu and others 2025).
+
+All three take the floor condition as given. The contribution of the
+present study is to test whether it holds at generation time, which
+makes the two lines of work complementary rather than competing.
 
 \hypertarget{logprob-availability-in-closed-apis}{%
 \subsubsection{2.4 Logprob availability in closed
@@ -507,12 +521,24 @@ GroupNorm \\
 \bottomrule
 \end{longtable}
 
-Each chain admits at least three implementation strategies: fuse
-everything into one kernel; fuse the elementwise tail and keep the
-convolution separate; or implement the sequence as written. Choosing
-among them requires deciding what to fuse, whether intermediates go to
-global memory, and how to tile. This is exactly the decision space that
-the reduction tasks lack.
+Each chain admits at least three implementation strategies:
+
+\begin{itemize}
+\tightlist
+\item
+  fuse the entire chain into one kernel;
+\item
+  fuse the elementwise tail into the epilogue of the heavy operation and
+  keep that operation separate;
+\item
+  or implement the sequence as written, with an intermediate tensor per
+  step.
+\end{itemize}
+
+Selecting among them requires deciding what to fuse, whether an
+intermediate is materialised to global memory, and how to tile the heavy
+operation --- precisely the decision space that the reduction tasks
+lack.
 
 Family B tasks were generated mechanically
 (\texttt{scripts/make\_kb2\_tasks.py}): the KernelBench \texttt{Model}
@@ -533,7 +559,9 @@ Evaluators check correctness on two shapes at tolerance \(10^{-4}\).
   \texttt{output\ mismatch}, or \texttt{correct}.
 \end{itemize}
 
-Fixed before collection, not varied afterwards.
+Both conditions were implemented before collection began and were held
+constant thereafter, so the comparison between them is not confounded by
+any later change of procedure.
 
 \hypertarget{model-selection}{%
 \subsubsection{3.5 Model selection}\label{model-selection}}
@@ -550,7 +578,25 @@ seconds. All reported runs use the non-reasoning model with
 \hypertarget{observables}{%
 \subsubsection{3.6 Observables}\label{observables}}
 
-We report the distribution, not only a threshold.
+Because a rate cannot be compared against a probability, the observables
+below are stated as a distribution rather than a single number:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Threshold rate} \(R_{-2}\), for comparability with earlier
+  work;
+\item
+  \textbf{Quantiles} at \(p_{0.1}, p_1, p_5, p_{50}\), for the shape of
+  each region's distribution;
+\item
+  \textbf{Minimum logprob}, converted to an absolute probability, for
+  the comparison against the claimed floor;
+\item
+  \textbf{Mass concentration}, the share of a region's total negative
+  logprob carried by its worst \(0.1\%\), \(1\%\) and \(5\%\) of tokens.
+\end{enumerate}
 
 \textbf{Low-probability rate} at threshold \(\tau\):
 
@@ -558,7 +604,7 @@ We report the distribution, not only a threshold.
 
 with \(\tau = -2\) as the headline. \textbf{Quantiles} of the logprob
 distribution per region. \textbf{Minimum logprob} per region, converted
-to absolute probability for comparison against 10⁻⁹.
+to absolute probability for comparison against \(10^{-9}\).
 \textbf{Probability-mass concentration}: what fraction of a region's
 total negative logprob is carried by its worst 0.1\%, 1\%, 5\% of
 tokens.
@@ -756,25 +802,35 @@ p50.0 & −0.000 & −0.240 \\
 Converting to absolute probability:
 
 \begin{verbatim}
-code min   −13.02  →  2.2 × 10⁻⁶
-prose min  −16.65  →  5.9 × 10⁻⁸
-claimed    10⁻⁹     ⇔  logprob −20.7
+code min   −13.02  →  2.2 × $10^{-6}$
+prose min  −16.65  →  5.9 × $10^{-8}$
+claimed    $10^{-9}$     =  logprob −20.7
 \end{verbatim}
 
-\textbf{The lowest code token in 322,375 is 2.2×10⁻⁶, four hundred times
-more probable than the claimed floor.} 99\% of code tokens sit above
-0.26, and the median is 1.0.
+\textbf{The lowest code token in 322,375 is 2.2×\(10^{-6}\), four
+hundred times more probable than the claimed floor.} 99\% of code tokens
+sit above 0.26, and the median is 1.0.
 
 For completeness, the joint logprob of a whole completion (n=215) has
 mean −903.3 and median −414.8,
 i.e.~\(e^{-414.8} \approx 7\times10^{-181}\). That number is far
-\emph{below} 10⁻⁹, but it is the product of two thousand tokens, not a
-single token's probability --- the two quantities are not the same
+\emph{below} \(10^{-9}\), but it is the product of two thousand tokens,
+not a single token's probability --- the two quantities are not the same
 object, and the source's quotation is explicitly of the latter.
 
 \hypertarget{concentration-of-probability-mass}{%
 \subsubsection{4.5 Concentration of probability
 mass}\label{concentration-of-probability-mass}}
+
+For a region \(G\) with cost
+\(C(G) = -\sum_{i\in G}\log\pi_\theta(a_i|s_i)\), sort its tokens by
+logprob ascending and let \(G_{q}\) be the worst fraction \(q\) of them.
+The concentration statistic is
+
+\[\kappa_q(G) = \frac{C(G_q)}{C(G)}\]
+
+so that \(\kappa_{0.05} = 0.981\) means the worst 5\% of a region's
+tokens generate 98.1\% of that region's total cost.
 
 \begin{longtable}[]{@{}llllll@{}}
 \toprule
@@ -899,8 +955,11 @@ in \texttt{rtne}, \texttt{\textquotesingle{}\ tir\textquotesingle{}} in
 \texttt{tirual}, \texttt{\textquotesingle{}?,\textquotesingle{}} in
 \texttt{atol=?,\ rtol=?} (placeholder left unreplaced).
 
-\textbf{These are slips and placeholder artefacts, not design
-uncertainty.}
+The character of these values is mechanical rather than deliberative:
+each is a position at which a specific token was intended and a
+neighbouring string was produced instead, so the low probability
+reflects competition between surface forms rather than a choice among
+implementation strategies.
 
 A second example makes the distinction concrete: the identifier
 \texttt{y} in \texttt{y\ =\ torch.empty\_like(x)} is repeatedly
@@ -924,28 +983,28 @@ blocks; it does not respond to task difficulty; and its absolute
 magnitude is 400× above the claimed floor even at the extreme.
 
 The claim ``CUDA is rare in pretraining, therefore CUDA tokens sit at
-10⁻⁹'' does not survive this measurement \textbf{in any condition we can
-observe}.
+\(10^{-9}\)'' does not survive this measurement \textbf{in any condition
+we can observe}.
 
-What follows is narrower and, we think, harder to escape:
-\textbf{alignment cannot change what is in a pretraining corpus.} If a
-near-floor probability were a consequence of corpus rarity, it would
-persist across alignment, because the model would still be the same
-model with the same exposure frequency. We measure ≈1.0 on an aligned
-model. Either the alignment step moved a token probability by nine
-orders of magnitude --- which would mean the quantity is not a function
-of the corpus at all --- or the 10⁻⁹ was never a corpus consequence.
+A narrower claim survives, and it is harder to escape than the original:
+alignment cannot change what is in a pretraining corpus, so if a
+near-floor probability were a consequence of corpus rarity it would
+persist across alignment, the model retaining both its weights and its
+exposure frequency. We measure a value near 1.0 on an aligned model.
+Either the alignment step moved a token probability by nine orders of
+magnitude --- which would mean the quantity is not a function of the
+corpus at all --- or the \(10^{-9}\) was never a corpus consequence.
 Both readings leave the attribution without its stated mechanism.
 
 \hypertarget{the-magnitude-gap-and-its-interpretation}{%
 \subsubsection{5.2 The magnitude gap and its
 interpretation}\label{the-magnitude-gap-and-its-interpretation}}
 
-We measure ≈1.0 where the source reports 10⁻⁹. We decline to read that
-as a refutation, because conditions differ: the source measures an
-un-finetuned base model during training rollout; we measure an aligned
-model through an inference API. Alignment raises the probability of
-common code patterns substantially.
+We measure a value near 1.0 where the source reports \(10^{-9}\). We
+decline to read that as a refutation, because conditions differ: the
+source measures an un-finetuned base model during training rollout; we
+measure an aligned model through an inference API. Alignment raises the
+probability of common code patterns substantially.
 
 But the difference must not be used to \emph{dismiss} the result either.
 The claim, as stated, is a consequence of corpus statistics --- CUDA is
@@ -1018,8 +1077,9 @@ policy on them removes precisely the region where the probability cost
 lives.
 
 If this reading is right, then ``feed more CUDA data'' targets an object
-we measured at probability ≈1.0, while the actionable lever is what the
-environment says after failure and how the policy is asked to recover.
+we measured at probability near 1.0, while the actionable lever is what
+the environment says after failure and how the policy is asked to
+recover.
 
 \textbf{A competing account we cannot rule out.} The prose may be a
 \emph{symptom} of confusion rather than a \emph{source} of instability:
@@ -1160,14 +1220,14 @@ share of \texttt{after\_failure} in the corpus.
 \hypertarget{conclusion}{%
 \subsection{7. Conclusion}\label{conclusion}}
 
-Whatever the reported 10⁻⁹ measures, it is not a property of the
+Whatever the reported \(10^{-9}\) measures, it is not a property of the
 domain's vocabulary. Over 98,533 tokens on reduction tasks and 542,611
 on operator chains, CUDA/Triton vocabulary carries \emph{less}
 low-probability mass than the surrounding text; inside code fences the
 rate is 0.33\% once comments are removed, outside 13.56\%, a 41×
 difference; the worst 5\% of code tokens carry 98.1\% of the code's cost
 against 30.3\% for prose; and the absolute minimum across 322,375 code
-tokens is 2.2×10⁻⁶, four hundred times above the claimed floor.
+tokens is 2.2×\(10^{-6}\), four hundred times above the claimed floor.
 
 Because alignment cannot alter corpus statistics, a rarity-driven floor
 would have survived it. It did not. That leaves the causal chain's
