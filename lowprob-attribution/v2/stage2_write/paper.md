@@ -76,7 +76,7 @@ We also do not claim the code-side rate is zero. It is 0.60%, not 0. What we cla
 
 CUDA Agent's mechanism, quoted in §1.1, has the shape: rarity → low probability → precision amplification → ratio explosion [1, Sec. 5.1]. The remedy is staged warm-up with rejection fine-tuning (keep only positive-reward trajectories, discard looping or malformed tool use) and value pretraining with GAE targets ($\gamma=1$, $\lambda=0.95$), after which PPO runs with asymmetric clipping ($\varepsilon_{lower}=0.2$, $\varepsilon_{higher}=0.28$) for 150 steps [1, 2].
 
-**An independent reading of the paper is worth quoting here.** A third-party overview notes that the authors describe the instability as attributable to the base model's distribution mismatch, and then states plainly: "论文报告了两种观察到的关联：未使用 RFT 时，奖励崩溃伴随着策略模型熵上升…这些是关联及作者的解读，并不能证明存在单一原因" — the paper reports two observed associations (reward collapse with entropy rise when RFT is removed; lower explained variance with longer trajectories when value pretraining is removed), and these are associations plus the authors' interpretation, not proof of a single cause [11].
+**An independent reading of the paper is relevant here.** A third-party overview reports that the authors attribute the instability to the base model's distribution mismatch, and then records what the paper actually establishes: two observed associations — reward collapse accompanied by a rise in policy entropy when RFT is removed, and lower explained variance accompanied by longer trajectories when value pretraining is removed — which, in the overview's assessment, are associations together with the authors' interpretation rather than evidence for a single cause [11].
 
 That distinction matters for our purpose. **What was observed is entropy rising; what was claimed is a specific token-level probability near 10⁻⁹.** These are different objects: entropy is a property of a whole distribution flattening, a near-floor token probability is a point in that distribution. The second does not follow from the first, and the first does not require the second.
 
@@ -94,7 +94,7 @@ Jet-RL, *Precision Mismatch in Reasoning Models* and *First-Order Approximation 
 
 ### 2.4 Logprob availability in closed APIs
 
-See §1.3. The short version: tool-call arguments carry no logprob, so a framework-based measurement cannot see the tokens that write the kernel.
+The constraint described in §1.3 has a methodological consequence worth separating from the engineering one. Because tool-call arguments carry no logprob, any measurement built on an agent framework is limited to the tokens the model emits outside its tool calls — that is, to its narration, not to the code. Studies that report probability statistics from framework-based collection are therefore measuring a different object from the one this paper measures, and comparisons across the two should be made with that in mind.
 
 ### 2.5 Position of this work
 
@@ -189,7 +189,9 @@ Family A, 98,533 content tokens:
 | loose | CUDA/Triton | 4,524 | −0.038 | **0.49%** | **0.0070** |
 | loose | other | 94,009 | −0.062 | 0.84% | |
 
-Both boundaries agree in direction, and the direction is opposite to the hypothesis. A third reference class sharpens it: structural tokens (`for`, `if`, `def`, `return`, `in`, `not`) show 1.54% against 0.81% — tokens with *no* choice are more often low-probability than tokens with a domain-specific name.
+Both boundaries agree in direction, and the direction is opposite to the hypothesis. A third reference class initially appeared to sharpen it: structural tokens (`for`, `if`, `def`, `return`, `in`, `not`) showed 1.54% against 0.81%, which would suggest that positions with no lexical choice carry more uncertainty than positions with a domain-specific name.
+
+**That reading does not survive the manual check in §4.7.** Of the 40 low-probability structural tokens in Family A, 16 are ordinary English words used in prose — `If you want to push speed further`, `Key design points for why`, `(pass BLOCK_COLS >= n_cols)`. A keyword table cannot tell `for` the preposition from `for` the loop. The apparent inversion is therefore an artefact of the same kind as the one described in §5.5, and the only defensible statement about structural tokens is the one that comes from reading them (§4.7).
 
 ### 4.2 RQ2: spatial distribution of the probability cost
 
@@ -217,7 +219,7 @@ Comments inside code fences count as code in the table above, and they are high-
 | `1_conv2d_relu_biasadd` | 0.52% | **0.37%** |
 | **total (310,935 tokens)** | 0.60% | **0.33%** |
 
-**With comments removed the contrast against prose is 41×, not 22.4×.** The earlier figure was a blend.
+**With comments removed the contrast against prose is 41× rather than 22.4×.** The 22.4× figure includes in-block comments in the code region and is reported only for comparability with Family A's 0.67%, which used the same rule.
 
 The highest-frequency low-probability tokens in the whole collection are `the` (118), `` ` `` (116), `,` (70), `.` (64), `and` (63), `I` (55) — prose function words and punctuation.
 
@@ -314,7 +316,7 @@ Aggregate rates say where cost is; they do not say what the model was doing. So 
 
 **Not one token, in either collection, corresponds to choosing between two ways of implementing the kernel.** No position of the form "fuse or don't fuse", "materialise or keep in registers", "this precision or that" appears among the low-probability set.
 
-The most extreme values illustrate the character of the tail. The single lowest code token is `' //'` at −13.02, inside `tl.arange(0, BLOCK // 1)` — an expression nobody writes on purpose. The lowest prose token is `'|='` at −16.65, inside `` `allow_tf32|=|True` `` — where `=` was intended. Others in the extreme set: `' bi'` in `biasp_ptr`, `' rt'` in `rtne`, `' tir'` in `tirual`, `'?,'` in `atol=?, rtol=?` (placeholder left unreplaced).
+The most extreme values illustrate the character of the tail. The single lowest code token is `' //'` at −13.02, inside `tl.arange(0, BLOCK // 1)` — an expression with no plausible intent behind it. The lowest prose token is `'|='` at −16.65, inside `` `allow_tf32|=|True` `` — where `=` was intended. Others in the extreme set: `' bi'` in `biasp_ptr`, `' rt'` in `rtne`, `' tir'` in `tirual`, `'?,'` in `atol=?, rtol=?` (placeholder left unreplaced).
 
 **These are slips and placeholder artefacts, not design uncertainty.**
 
@@ -344,7 +346,7 @@ But the difference must not be used to *dismiss* the result either. The claim, a
 
 The strongest regularity in both collections concerns not domain vocabulary but **the type of text being produced**.
 
-Code blocks: 0.60%. Prose: 13.56%. The ratio is stable across five very different tasks, and it survives a five-fold increase in implementation complexity.
+The rate is 0.60% inside code fences and 13.56% outside, and the ratio is stable across five very different tasks, and it survives a five-fold increase in implementation complexity.
 
 The mechanism is visible in the token inventory. In code, the model writes from templates — `tl.load(x_ptr + offs, mask=mask, other=0.0)` has a nearly determined continuation, and 95% of code tokens are effectively free. In prose, it composes — "let me reconsider whether the stride is wrong" has an enormous continuation space, and the cost spreads over most tokens.
 
@@ -400,7 +402,7 @@ Excluding the fragment runs, the success rate on complete files is 28% (7/25). T
 5. **Statistical dependence.** Tokens within a completion are not independent, so exact tests are anti-conservative (§3.7). No cluster-level analysis is reported.
 6. **No training.** We do not measure whether low probability causes importance-ratio explosion, nor the relative contribution of precision mismatch.
 7. **One collection path.** A single driver against a single endpoint; no cross-engine replication.
-8. **Region assignment by fence state.** A token is `code` or `prose` by fenced-block parity. This misclassifies fenced blocks used for non-code content (we found a few), and comments inside code blocks are counted as code — which biases the code-side rate *upward*, not downward.
+8. **Region assignment by fence state.** A token is `code` or `prose` by fenced-block parity. Fenced blocks used for non-code content (tracebacks, shell commands) are counted as code; we did not enumerate how many. Comments inside code blocks are also counted as code, which biases the code-side rate *upward*; §4.2 quantifies the effect (0.60% → 0.33%) rather than leaving it as a caveat.
 9. **An unseparated alternative for the context effect.** `after_failure` may reflect *responding to bad news* or simply *writing new content* (after a failure the model rewrites; after a success it refines). Truncating the message does not distinguish these. Separating them requires a condition that asks for a rewrite after a success.
 
 ---

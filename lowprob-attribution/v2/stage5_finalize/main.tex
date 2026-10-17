@@ -347,16 +347,16 @@ for 150 steps ({``{CUDA Agent}: Large-Scale Agentic {RL} for
 High-Performance {CUDA} Kernel Generation''} 2026; {``{CUDA Agent}:
 Agentic {RL} for High-Performance {CUDA} Kernel Generation''} 2026).
 
-\textbf{An independent reading of the paper is worth quoting here.} A
-third-party overview notes that the authors describe the instability as
-attributable to the base model's distribution mismatch, and then states
-plainly: ``论文报告了两种观察到的关联：未使用 RFT
-时，奖励崩溃伴随着策略模型熵上升\ldots 这些是关联及作者的解读，并不能证明存在单一原因''
---- the paper reports two observed associations (reward collapse with
-entropy rise when RFT is removed; lower explained variance with longer
-trajectories when value pretraining is removed), and these are
-associations plus the authors' interpretation, not proof of a single
-cause ({``Log Probability Tracking of {LLM} {APIs}''} 2026).
+\textbf{An independent reading of the paper is relevant here.} A
+third-party overview reports that the authors attribute the instability
+to the base model's distribution mismatch, and then records what the
+paper actually establishes: two observed associations --- reward
+collapse accompanied by a rise in policy entropy when RFT is removed,
+and lower explained variance accompanied by longer trajectories when
+value pretraining is removed --- which, in the overview's assessment,
+are associations together with the authors' interpretation rather than
+evidence for a single cause ({``Log Probability Tracking of {LLM}
+{APIs}''} 2026).
 
 That distinction matters for our purpose. \textbf{What was observed is
 entropy rising; what was claimed is a specific token-level probability
@@ -415,8 +415,14 @@ competing mechanism.
 \subsubsection{2.4 Logprob availability in closed
 APIs}\label{logprob-availability-in-closed-apis}}
 
-See §1.3. The short version: tool-call arguments carry no logprob, so a
-framework-based measurement cannot see the tokens that write the kernel.
+The constraint described in §1.3 has a methodological consequence worth
+separating from the engineering one. Because tool-call arguments carry
+no logprob, any measurement built on an agent framework is limited to
+the tokens the model emits outside its tool calls --- that is, to its
+narration, not to the code. Studies that report probability statistics
+from framework-based collection are therefore measuring a different
+object from the one this paper measures, and comparisons across the two
+should be made with that in mind.
 
 \hypertarget{position-of-this-work}{%
 \subsubsection{2.5 Position of this work}\label{position-of-this-work}}
@@ -617,11 +623,22 @@ loose & other & 94,009 & −0.062 & 0.84\% & \\
 \end{longtable}
 
 Both boundaries agree in direction, and the direction is opposite to the
-hypothesis. A third reference class sharpens it: structural tokens
-(\texttt{for}, \texttt{if}, \texttt{def}, \texttt{return}, \texttt{in},
-\texttt{not}) show 1.54\% against 0.81\% --- tokens with \emph{no}
-choice are more often low-probability than tokens with a domain-specific
-name.
+hypothesis. A third reference class initially appeared to sharpen it:
+structural tokens (\texttt{for}, \texttt{if}, \texttt{def},
+\texttt{return}, \texttt{in}, \texttt{not}) showed 1.54\% against
+0.81\%, which would suggest that positions with no lexical choice carry
+more uncertainty than positions with a domain-specific name.
+
+\textbf{That reading does not survive the manual check in §4.7.} Of the
+40 low-probability structural tokens in Family A, 16 are ordinary
+English words used in prose ---
+\texttt{If\ you\ want\ to\ push\ speed\ further},
+\texttt{Key\ design\ points\ for\ why},
+\texttt{(pass\ BLOCK\_COLS\ \textgreater{}=\ n\_cols)}. A keyword table
+cannot tell \texttt{for} the preposition from \texttt{for} the loop. The
+apparent inversion is therefore an artefact of the same kind as the one
+described in §5.5, and the only defensible statement about structural
+tokens is the one that comes from reading them (§4.7).
 
 \hypertarget{rq2-spatial-distribution-of-the-probability-cost}{%
 \subsubsection{4.2 RQ2: spatial distribution of the probability
@@ -670,8 +687,10 @@ Task & all code & pure code \\
 \bottomrule
 \end{longtable}
 
-\textbf{With comments removed the contrast against prose is 41×, not
-22.4×.} The earlier figure was a blend.
+\textbf{With comments removed the contrast against prose is 41× rather
+than 22.4×.} The 22.4× figure includes in-block comments in the code
+region and is reported only for comparability with Family A's 0.67\%,
+which used the same rule.
 
 The highest-frequency low-probability tokens in the whole collection are
 \texttt{the} (118), \texttt{\textasciigrave{}} (116), \texttt{,} (70),
@@ -869,7 +888,7 @@ precision or that'' appears among the low-probability set.
 The most extreme values illustrate the character of the tail. The single
 lowest code token is \texttt{\textquotesingle{}\ //\textquotesingle{}}
 at −13.02, inside \texttt{tl.arange(0,\ BLOCK\ //\ 1)} --- an expression
-nobody writes on purpose. The lowest prose token is
+with no plausible intent behind it. The lowest prose token is
 \texttt{\textquotesingle{}\textbar{}=\textquotesingle{}} at −16.65,
 inside
 \texttt{\textasciigrave{}allow\_tf32\textbar{}=\textbar{}True\textasciigrave{}}
@@ -953,9 +972,9 @@ finding}\label{regional-distribution-as-the-supported-finding}}
 The strongest regularity in both collections concerns not domain
 vocabulary but \textbf{the type of text being produced}.
 
-Code blocks: 0.60\%. Prose: 13.56\%. The ratio is stable across five
-very different tasks, and it survives a five-fold increase in
-implementation complexity.
+The rate is 0.60\% inside code fences and 13.56\% outside, and the ratio
+is stable across five very different tasks, and it survives a five-fold
+increase in implementation complexity.
 
 The mechanism is visible in the token inventory. In code, the model
 writes from templates ---
@@ -1122,10 +1141,11 @@ share of \texttt{after\_failure} in the corpus.
   endpoint; no cross-engine replication.
 \item
   \textbf{Region assignment by fence state.} A token is \texttt{code} or
-  \texttt{prose} by fenced-block parity. This misclassifies fenced
-  blocks used for non-code content (we found a few), and comments inside
-  code blocks are counted as code --- which biases the code-side rate
-  \emph{upward}, not downward.
+  \texttt{prose} by fenced-block parity. Fenced blocks used for non-code
+  content (tracebacks, shell commands) are counted as code; we did not
+  enumerate how many. Comments inside code blocks are also counted as
+  code, which biases the code-side rate \emph{upward}; §4.2 quantifies
+  the effect (0.60\% → 0.33\%) rather than leaving it as a caveat.
 \item
   \textbf{An unseparated alternative for the context effect.}
   \texttt{after\_failure} may reflect \emph{responding to bad news} or
