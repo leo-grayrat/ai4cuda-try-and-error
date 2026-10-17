@@ -159,7 +159,17 @@ Both conditions were implemented before collection began and were held constant 
 
 ### Model selection
 
-The API offers reasoning and non-reasoning models. Under the reasoning model the budget is consumed inside the reasoning channel: at `max_tokens=4000` the probe produced 14,042 characters of reasoning and zero of code, `finish_reason=length`. The non-reasoning model puts everything in `content`, reports zero reasoning tokens, and solved `row_reduce` in two turns in 22 seconds. All reported runs use the non-reasoning model with `max_tokens=8192`.
+The collection route and the model were settled together, through three attempts.
+
+**First attempt: a consumer API with an agent framework.** The model writes the kernel through tool calls, and the API returns no logprob for tool-call arguments (Section~\ref{logprob-availability-in-closed-apis}), so the tokens of interest are unmeasurable. This route was abandoned.
+
+**Second attempt: a local model served by vLLM.** A cross-backend comparison showed vLLM to be the only serving stack that records tool-call arguments as ordinary generated tokens in `logprobs`, so collection was moved to a local server. The machine available has 8~GB of VRAM (RTX 5060, sm_120), which caps a locally served model at roughly 4B parameters; `Qwen3-4B-AWQ` was therefore served under vLLM 0.31.0 with torch 2.13.0+cu130, the pairing required for Blackwell. Two engineering obstacles were met and bypassed: vLLM compiles kernels with torch.compile and so needs a C compiler, and its flashinfer sampler needs nvcc, which was avoided by disabling that sampler instead of installing a multi-gigabyte CUDA toolkit.
+
+This route produced data, but the 4B model skips tool calls unless `tool_choice=required`, and forcing tool use distorts the trajectories. More decisively, the measurements from this route are the ones withdrawn in Section~\ref{classification-bias-in-the-first-pass}: the classification rule of the first pass interacted with the model's output so as to manufacture a significant result. No measurement from the local route is reported in this paper.
+
+**Third attempt, adopted: a consumer API without tools.** Removing the tools (Section~\ref{collection-without-an-agent-framework}) removes the reason to run locally. The kernel is then written in `message.content`, which the consumer API does cover with `logprobs`, and a far larger model becomes available than the 8~GB card could serve. All reported runs use a non-reasoning model through that API with `max_tokens=8192`; the reasoning variant of the same API spends the entire budget inside the reasoning channel, producing zero content at `max_tokens=4000` with `finish_reason=length`.
+
+The cost of this choice is that the model is aligned and served, so the base-model condition named in Section~\ref{the-magnitude-gap-and-its-interpretation} cannot be reached from here. That is why this paper reports a tension rather than a refutation.
 
 ### Observables
 
