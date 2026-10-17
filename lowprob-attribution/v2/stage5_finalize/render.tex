@@ -207,8 +207,8 @@ probability; log-probability distribution; fusion kernels
 Agentic reinforcement learning now produces GPU kernels that beat
 compiler autotuning. CUDA Agent reports pass rates of 100\%, 100\% and
 92\% across the KernelBench difficulty splits and
-faster-than-\texttt{torch.compile} rates of 97\%, 97\% and 92\% (Dai et
-al. 2026, Tab. 2). It reaches there by running a language model inside a
+faster-than-\texttt{torch.compile} rates of 97\%, 97\% and 92\% {[}1,
+Tab. 2{]}. It reaches there by running a language model inside a
 development sandbox and optimising a policy over multi-turn trajectories
 with PPO.
 
@@ -219,9 +219,9 @@ CUDA coding data ``accounts for less than 0.01\% of pretraining data,''
 producing a ``severe domain distribution mismatch'' in which the policy
 must put mass on very rare token sequences ``sometimes at probabilities
 near the numerical floor,
-e.g.~\(\pi_\theta(a_t \mid s_t) \approx 10^{-9}\)'' (Dai et al. 2026,
-Sec. 5.1--5.2; Huang 2026). The consequence is that ``even small
-train-rollout precision differences can explode the importance ratio
+e.g.~\(\pi_\theta(a_t \mid s_t) \approx 10^{-9}\)'' {[}1, Sec. 5.1--5.2,
+2{]}. The consequence is that ``even small train-rollout precision
+differences can explode the importance ratio
 \(\rho_t(\theta) = \pi_\theta(a_t|s_t)/\pi_{\theta_{old}}(a_t|s_t)\).''
 The fix is a three-stage warm-up: single-turn RL, rejection fine-tuning
 of the actor on positive-reward trajectories, and value pretraining of
@@ -262,8 +262,7 @@ channel and return empty content, which is a trap we hit ourselves
 (Section\textasciitilde{}\ref{model-selection}). Three papers that
 examine closed models as scientific instruments converge on the same
 obstacle and identify it as a policy choice motivated by distillation
-concerns (Carlini and others 2024; How Open Authors 2026; Surrogate
-Fidelity Authors 2026).
+concerns {[}3--5{]}.
 
 The practical consequence is architectural
 (Section\textasciitilde{}\ref{collection-without-an-agent-framework}):
@@ -337,13 +336,13 @@ test}\label{the-causal-chain-under-test}}
 
 CUDA Agent's mechanism, quoted in
 Section\textasciitilde{}\ref{the-claim}, has the shape: rarity → low
-probability → precision amplification → ratio explosion (Dai et al.
-2026, Sec. 5.1). The remedy is staged warm-up with rejection fine-tuning
-(keep only positive-reward trajectories, discard looping or malformed
-tool use) and value pretraining with GAE targets (\(\gamma=1\),
+probability → precision amplification → ratio explosion {[}1, Sec.
+5.1{]}. The remedy is staged warm-up with rejection fine-tuning (keep
+only positive-reward trajectories, discard looping or malformed tool
+use) and value pretraining with GAE targets (\(\gamma=1\),
 \(\lambda=0.95\)), after which PPO runs with asymmetric clipping
 (\(\varepsilon_{lower}=0.2\), \(\varepsilon_{higher}=0.28\)) for 150
-steps (Dai et al. 2026; Huang 2026).
+steps {[}1, 2{]}.
 
 \textbf{An independent reading of the paper is relevant here.} A
 third-party overview reports that the authors attribute the instability
@@ -353,7 +352,7 @@ collapse accompanied by a rise in policy entropy when RFT is removed,
 and lower explained variance accompanied by longer trajectories when
 value pretraining is removed --- which, in the overview's assessment,
 are associations together with the authors' interpretation rather than
-evidence for a single cause (INRIA Authors 2026).
+evidence for a single cause {[}6{]}.
 
 That distinction matters for our purpose. \textbf{What was observed is
 entropy rising; what was claimed is a specific token-level probability
@@ -367,24 +366,23 @@ and the first does not require the second.
 mismatch}\label{dr.-kernel-the-same-instability-attributed-to-mismatch}}
 
 DR. KERNEL studies RL for Triton kernel generation and reaches the same
-instability from the training side (DR. KERNEL Authors 2026). It states
-two hypotheses --- saturation from training instability caused by
-train/inference mismatch, and an objective misaligned with meaningful
-speedup --- monitors entropy, gradient norms and perplexity, finds
-``excessively high values across these metrics,'' and applies geometric
-Mismatch Rejection Sampling: keep samples whose geometric-mean
-importance ratio
+instability from the training side {[}7{]}. It states two hypotheses ---
+saturation from training instability caused by train/inference mismatch,
+and an objective misaligned with meaningful speedup --- monitors
+entropy, gradient norms and perplexity, finds ``excessively high values
+across these metrics,'' and applies geometric Mismatch Rejection
+Sampling: keep samples whose geometric-mean importance ratio
 \(w = \exp(\frac{1}{|T|}\sum_t \log\frac{\pi_{train}(a_t|s_t)}{\pi_{rollout}(a_t|s_t)})\)
 lies in \([0.999, 1.001]\), plus a token-level veto rejecting any
 sequence containing a token whose likelihood ratio falls below
-\(10^{-4}\) (DR. KERNEL Authors 2026, Sec. 5.1).
+\(10^{-4}\) {[}7, Sec. 5.1{]}.
 
 Its key negative finding is that MRS ``successfully stabilizes the
 training dynamics'' while failing to ``fundamentally lift the
-performance ceiling'' (DR. KERNEL Authors 2026, Sec. 5.1), which
-separates stability from capability. What MRS corrects is a
-distributional discrepancy between two inference engines, a property of
-the trajectory's context rather than of the domain's vocabulary.
+performance ceiling'' {[}7, Sec. 5.1{]}, which separates stability from
+capability. What MRS corrects is a distributional discrepancy between
+two inference engines, a property of the trajectory's context rather
+than of the domain's vocabulary.
 
 \hypertarget{precision-mismatch-and-off-policy-drift}{%
 \subsubsection{Precision mismatch and off-policy
@@ -392,8 +390,7 @@ drift}\label{precision-mismatch-and-off-policy-drift}}
 
 Three lines of work converge on the sensitivity of the PPO ratio when
 probabilities sit near the numerical floor, at which point a small
-absolute difference becomes a large relative one (Dai et al. 2026; Huang
-2026):
+absolute difference becomes a large relative one {[}1, 2{]}:
 
 \begin{itemize}
 \tightlist
@@ -410,7 +407,7 @@ absolute difference becomes a large relative one (Dai et al. 2026; Huang
 
 Liu et al.~characterise the complementary phenomenon in which an RL
 framework's efficiency machinery renders the training data off-policy
-(Liu 2025).
+{[}8{]}.
 
 All three take the floor condition as given. The contribution of the
 present study is to test whether it holds at generation time, which
@@ -497,7 +494,7 @@ reduction; the kernel logic is two or three lines and the control flow
 is one bounds check.
 
 \textbf{Family B --- operator chains (n=5).} From KernelBench Level 2
-(Omsk and others 2025):
+{[}9{]}:
 
 \begin{longtable}[]{@{}ll@{}}
 \toprule
@@ -1247,44 +1244,52 @@ Section\textasciitilde{}\ref{a-context-distribution-account-of-the-collapse}.
 \hypertarget{references}{%
 \subsection{References}\label{references}}
 
-\begin{CSLReferences}{1}{0}
-\leavevmode\vadjust pre{\hypertarget{ref-carlini}{}}%
-Carlini, Nicholas, and others. 2024. {``Stealing Part of a Production
-Language Model.''} In \emph{International Conference on Machine
-Learning}.
-
+\begin{CSLReferences}{0}{0}
 \leavevmode\vadjust pre{\hypertarget{ref-cudaagent}{}}%
-Dai, Weinan, Hanlin Wu, Qiying Yu, and others. 2026. {``{CUDA Agent}:
-Large-Scale Agentic {RL} for High-Performance {CUDA} Kernel
-Generation.''} \url{https://arxiv.org/abs/2602.24286}.
-
-\leavevmode\vadjust pre{\hypertarget{ref-drkernel}{}}%
-DR. KERNEL Authors. 2026. {``{DR. KERNEL}: Reinforcement Learning Done
-Right for {Triton} Kernel Generations.''}
-\url{https://arxiv.org/abs/2602.05885}.
-
-\leavevmode\vadjust pre{\hypertarget{ref-howopen}{}}%
-How Open Authors. 2026. {``How Open Must Language Models Be to Enable
-Reliable Scientific Inference?''}
+\CSLLeftMargin{{[}1{]} }
+\CSLRightInline{Dai, Weinan, Wu, Hanlin, Yu, Qiying, others. {CUDA
+Agent}: Large-scale agentic {RL} for high-performance {CUDA} kernel
+generation.}
 
 \leavevmode\vadjust pre{\hypertarget{ref-cudaagentblog}{}}%
-Huang, Jianyu. 2026. {``{CUDA Agent}: Agentic {RL} for High-Performance
-{CUDA} Kernel Generation.''} Technical blog.
+\CSLLeftMargin{{[}2{]} }
+\CSLRightInline{Huang, Jianyu. {CUDA Agent}: Agentic {RL} for
+high-performance {CUDA} kernel generation. Technical blog.}
 
-\leavevmode\vadjust pre{\hypertarget{ref-logprobtracking}{}}%
-INRIA Authors. 2026. {``Log Probability Tracking of {LLM} {APIs}.''}
+\leavevmode\vadjust pre{\hypertarget{ref-carlini}{}}%
+\CSLLeftMargin{{[}3{]} }
+\CSLRightInline{Carlini, Nicholas, others. Stealing part of a production
+language model. \emph{International conference on machine learning}.}
 
-\leavevmode\vadjust pre{\hypertarget{ref-liuoffpolicy}{}}%
-Liu, et al. 2025. {``Your Efficient {RL} Framework Secretly Brings You
-Off-Policy {RL} Training.''}
-
-\leavevmode\vadjust pre{\hypertarget{ref-kernelbench}{}}%
-Omsk, Keren, and others. 2025. {``{KernelBench}: Can {LLMs} Write
-Efficient {GPU} Kernels?''} \url{https://arxiv.org/abs/2501.11067}.
+\leavevmode\vadjust pre{\hypertarget{ref-howopen}{}}%
+\CSLLeftMargin{{[}4{]} }
+\CSLRightInline{How Open Authors. How open must language models be to
+enable reliable scientific inference?}
 
 \leavevmode\vadjust pre{\hypertarget{ref-surrogate}{}}%
-Surrogate Fidelity Authors. 2026. {``Surrogate Fidelity: When Can Open
-{LLMs} Explain Closed Ones?''}
+\CSLLeftMargin{{[}5{]} }
+\CSLRightInline{Surrogate Fidelity Authors. Surrogate fidelity: When can
+open {LLMs} explain closed ones?}
+
+\leavevmode\vadjust pre{\hypertarget{ref-logprobtracking}{}}%
+\CSLLeftMargin{{[}6{]} }
+\CSLRightInline{INRIA Authors. Log probability tracking of {LLM}
+{APIs}.}
+
+\leavevmode\vadjust pre{\hypertarget{ref-drkernel}{}}%
+\CSLLeftMargin{{[}7{]} }
+\CSLRightInline{DR. KERNEL Authors. {DR. KERNEL}: Reinforcement learning
+done right for {Triton} kernel generations.}
+
+\leavevmode\vadjust pre{\hypertarget{ref-liuoffpolicy}{}}%
+\CSLLeftMargin{{[}8{]} }
+\CSLRightInline{Liu, et al. Your efficient {RL} framework secretly
+brings you off-policy {RL} training.}
+
+\leavevmode\vadjust pre{\hypertarget{ref-kernelbench}{}}%
+\CSLLeftMargin{{[}9{]} }
+\CSLRightInline{Omsk, Keren, others. {KernelBench}: Can {LLMs} write
+efficient {GPU} kernels?}
 
 \end{CSLReferences}
 
