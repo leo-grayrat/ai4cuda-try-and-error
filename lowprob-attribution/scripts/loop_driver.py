@@ -122,7 +122,9 @@ def one_run(task_dir: Path, condition: str, out_dir: Path, model: str,
             max_turns: int, max_tokens: int, python: str) -> dict:
     reference = (task_dir / "reference.py").read_text(encoding="utf-8")
     candidate_template = (task_dir / "candidate.py").read_text(encoding="utf-8")
-    evaluator = task_dir / "evaluate.py"
+    # absolute: the evaluator runs with cwd set to a temp dir, so a relative
+    # path resolved against the original cwd would not be found
+    evaluator = (task_dir / "evaluate.py").resolve()
 
     out_dir.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix="loop-"))
@@ -215,6 +217,8 @@ def main() -> int:
                     default=["row_reduce", "vector_affine"])
     ap.add_argument("--heldout", action="store_true",
                     help="tasks live under tasks/heldout/")
+    ap.add_argument("--tasks-root", type=Path, default=None,
+                    help="override the task root (e.g. tasks-kb2 for KernelBench level 2)")
     ap.add_argument("--conditions", nargs="+", default=["full", "truncated"])
     ap.add_argument("--repeats", type=int, default=1)
     ap.add_argument("--max-turns", type=int, default=5)
@@ -225,7 +229,8 @@ def main() -> int:
     ap.add_argument("--runs-root", type=Path, default=LOWPROB / "runs-loop")
     args = ap.parse_args()
 
-    root = DEFAULT_TASKS / ("heldout" if args.heldout else "")
+    root = args.tasks_root or (DEFAULT_TASKS / ("heldout" if args.heldout else ""))
+    root = root.resolve()
     summaries = []
     for task in args.tasks:
         for condition in args.conditions:
