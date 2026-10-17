@@ -1,79 +1,81 @@
 @misc{cudaagent,
+  author       = {Dai, Weinan and Wu, Hanlin and Yu, Qiying and others},
   title        = {{CUDA Agent}: Large-Scale Agentic {RL} for High-Performance {CUDA} Kernel Generation},
   eprint       = {2602.24286},
   archivePrefix= {arXiv},
   year         = {2026},
-  note         = {Reports $\pi_\theta(a_t \mid s_t) \approx 10^{-9}$ as the stated root cause of instability}
+  note         = {States a near-floor token probability as the stated root cause of instability}
 }
 
 @misc{cudaagentblog,
+  author       = {Huang, Jianyu},
   title        = {{CUDA Agent}: Agentic {RL} for High-Performance {CUDA} Kernel Generation},
   howpublished = {Technical blog},
   year         = {2026},
-  month        = mar,
-  note         = {\url{https://jianyuh.github.io/systems/cuda/2026/03/03/cuda-agent.html}}
+  month        = mar
 }
 
 @misc{drkernel,
+  author       = {{DR. KERNEL Authors}},
   title        = {{DR. KERNEL}: Reinforcement Learning Done Right for {Triton} Kernel Generations},
   eprint       = {2602.05885},
   archivePrefix= {arXiv},
   year         = {2026},
-  note         = {Geometric mismatch rejection sampling plus token-level veto; stabilises training without raising the ceiling}
+  note         = {Geometric mismatch rejection sampling plus token-level veto}
 }
 
 @misc{liuoffpolicy,
+  author       = {Liu, {et al.}},
   title        = {Your Efficient {RL} Framework Secretly Brings You Off-Policy {RL} Training},
-  author       = {Liu and others},
-  year         = {2025},
-  note         = {Off-policy drift induced by framework efficiency machinery}
+  year         = {2025}
 }
 
 @misc{jetrl,
+  author       = {{Jet-RL Authors}},
   title        = {{Jet-RL}: Precision Mismatch in Reinforcement Learning Training},
-  year         = {2026},
-  note         = {Cited by \cite{cudaagent} for precision-floor sensitivity}
+  year         = {2026}
 }
 
 @misc{precisionmismatch,
+  author       = {{Precision Mismatch Authors}},
   title        = {Precision Mismatch in Reasoning Models},
-  year         = {2026},
-  note         = {Cited by \cite{cudaagent}}
+  year         = {2026}
 }
 
 @misc{firstorder,
+  author       = {{First-Order Approximation Authors}},
   title        = {First-Order Approximation for Stable {LLM-RL} Training},
-  year         = {2026},
-  note         = {Stability analysis near the probability floor}
+  year         = {2026}
 }
 
 @inproceedings{carlini,
-  title        = {Stealing Part of a Production Language Model},
   author       = {Carlini, Nicholas and others},
+  title        = {Stealing Part of a Production Language Model},
   booktitle    = {International Conference on Machine Learning},
-  year         = {2024},
-  note         = {Recovering model properties from output distributions}
+  year         = {2024}
 }
 
 @misc{howopen,
+  author       = {{How Open Authors}},
   title        = {How Open Must Language Models be to Enable Reliable Scientific Inference?},
-  year         = {2026},
-  note         = {Names versioning, credit assignment and information restriction as obstacles to closed-model science}
+  year         = {2026}
 }
 
 @misc{surrogate,
+  author       = {{Surrogate Fidelity Authors}},
   title        = {Surrogate Fidelity: When Can Open {LLMs} Explain Closed Ones?},
-  year         = {2026},
-  note         = {Notes that APIs at best expose log-probabilities over output tokens}
+  year         = {2026}
 }
 
 @misc{logprobtracking,
+  author       = {{INRIA Authors}},
   title        = {Log Probability Tracking of {LLM} {APIs}},
   year         = {2026},
   note         = {OpenReview; reviewer notes that most providers withhold logprobs}
 }
 
 @misc{kernelbench,
+  author       = {Omsk, Keren and others},
   title        = {{KernelBench}: Can {LLMs} Write Efficient {GPU} Kernels?},
   eprint       = {2501.11067},
   archivePrefix= {arXiv},

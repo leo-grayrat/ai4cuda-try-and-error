@@ -325,7 +325,7 @@ Aggregate rates say where cost is; they do not say what the model was doing. So 
 | conversational prose | ~4% | `If`, `Odd`, `Summary`, `verified` |
 | **control-flow decisions** | **~1%** | `if not x.is_contiguous()`, `for col_start in range(...)` |
 
-**Family B: all 189 non-comment code tokens with logprob ≤ −4.5.**
+**Family B: all 189 non-comment code tokens with logprob $\le -4.5$.**
 
 | category | count | examples |
 |---|---|---|

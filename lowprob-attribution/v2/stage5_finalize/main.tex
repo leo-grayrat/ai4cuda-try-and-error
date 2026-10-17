@@ -92,30 +92,12 @@
 \setlength{\emergencystretch}{3em} % prevent overfull lines
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\setcounter{secnumdepth}{5}
 \ifLuaTeX
   \usepackage{selnolig}  % disable illegal ligatures
 \fi
-\newlength{\cslhangindent}
-\setlength{\cslhangindent}{1.5em}
-\newlength{\csllabelwidth}
-\setlength{\csllabelwidth}{3em}
-\newenvironment{CSLReferences}[2] % #1 hanging-ident, #2 entry spacing
- {% don't indent paragraphs
-  \setlength{\parindent}{0pt}
-  % turn on hanging indent if param 1 is 1
-  \ifodd #1 \everypar{\setlength{\hangindent}{\cslhangindent}}\ignorespaces\fi
-  % set entry spacing
-  \ifnum #2 > 0
-  \setlength{\parskip}{#2\baselineskip}
-  \fi
- }%
- {}
-\usepackage{calc}
-\newcommand{\CSLBlock}[1]{#1\hfill\break}
-\newcommand{\CSLLeftMargin}[1]{\parbox[t]{\csllabelwidth}{#1}}
-\newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{#1}\break}
-\newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}
+\usepackage[]{natbib}
+\bibliographystyle{plainnat}
 
 \author{}
 \date{}
@@ -139,7 +121,7 @@ CUDA Agent explains its policy collapse at training step 17 with a chain
 whose second link is an explicit empirical claim: CUDA code is under
 0.01\% of pretraining data, therefore the policy assigns near-floor
 probability to CUDA tokens,
-``e.g.~\(\pi_\theta(a_t \mid s_t) \approx 10^{-9}\),'' and small
+``e.g.~\(\pi_\theta(a_t \mid s_t) \approx 10^{-9}\)'', and small
 precision differences are consequently amplified into exploding
 importance ratios. We test that link where it can be tested: at
 generation time, against a live model, with per-token conditional
@@ -199,40 +181,37 @@ probability; log-probability distribution; fusion kernels
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \hypertarget{introduction}{%
-\subsection{1. Introduction}\label{introduction}}
+\subsection{Introduction}\label{introduction}}
 
 \hypertarget{the-claim}{%
-\subsubsection{1.1 The claim}\label{the-claim}}
+\subsubsection{The claim}\label{the-claim}}
 
 Agentic reinforcement learning now produces GPU kernels that beat
 compiler autotuning. CUDA Agent reports pass rates of 100\%, 100\% and
 92\% across the KernelBench difficulty splits and
 faster-than-\texttt{torch.compile} rates of 97\%, 97\% and 92\%
-({``{CUDA Agent}: Large-Scale Agentic {RL} for High-Performance {CUDA}
-Kernel Generation''} 2026, Tab. 2). It reaches there by running a
-language model inside a development sandbox and optimising a policy over
-multi-turn trajectories with PPO.
+\citep[Tab. 2]{cudaagent}. It reaches there by running a language model
+inside a development sandbox and optimising a policy over multi-turn
+trajectories with PPO.
 
 Its account of the training recipe names one failure and one fix. The
 failure: ``the first run could only train stably for 17 steps before the
 model's performance collapsed.'' The diagnosis is distributional ---
-CUDA coding data ``accounts for less than 0.01\% of pretraining data,''
+CUDA coding data ``accounts for less than 0.01\% of pretraining data'',
 producing a ``severe domain distribution mismatch'' in which the policy
 must put mass on very rare token sequences ``sometimes at probabilities
 near the numerical floor,
-e.g.~\(\pi_\theta(a_t \mid s_t) \approx 10^{-9}\)'' ({``{CUDA Agent}:
-Large-Scale Agentic {RL} for High-Performance {CUDA} Kernel
-Generation''} 2026, Sec. 5.1--5.2; {``{CUDA Agent}: Agentic {RL} for
-High-Performance {CUDA} Kernel Generation''} 2026). The consequence is
-that ``even small train-rollout precision differences can explode the
-importance ratio
-\(\rho_t(\theta) = \pi_\theta(a_t|s_t)/\pi_{\theta_{old}}(a_t|s_t)\).''
+e.g.~\(\pi_\theta(a_t \mid s_t) \approx 10^{-9}\)''
+\citetext{\citealp[Sec. 5.1--5.2]{cudaagent}; \citealp{cudaagentblog}}.
+The consequence is that ``even small train-rollout precision differences
+can explode the importance ratio
+\(\rho_t(\theta) = \pi_\theta(a_t|s_t)/\pi_{\theta_{old}}(a_t|s_t)\)''.
 The fix is a three-stage warm-up: single-turn RL, rejection fine-tuning
 of the actor on positive-reward trajectories, and value pretraining of
 the critic.
 
 \hypertarget{selection-of-the-second-link}{%
-\subsubsection{1.2 Selection of the second
+\subsubsection{Selection of the second
 link}\label{selection-of-the-second-link}}
 
 The chain has four links: (i) CUDA is rare in pretraining; (ii) that
@@ -253,8 +232,7 @@ requires training runs. This asymmetry determines which link is tested
 first.
 
 \hypertarget{measurement-constraints}{%
-\subsubsection{1.3 Measurement
-constraints}\label{measurement-constraints}}
+\subsubsection{Measurement constraints}\label{measurement-constraints}}
 
 Under an agent framework, the kernel is written through tool calls, and
 \textbf{tool-call arguments are not covered by \texttt{logprobs}}. The
@@ -264,16 +242,18 @@ pattern is consistent across vendors: OpenAI returns
 Gemini and Grok accept the parameter and silently return none; several
 reasoning models spend the entire token budget inside the reasoning
 channel and return empty content, which is a trap we hit ourselves
-(§3.5). Three papers that examine closed models as scientific
-instruments converge on the same obstacle and identify it as a policy
-choice motivated by distillation concerns {[}8, 9, 10{]}.
+(Section\textasciitilde{}\ref{model-selection}). Three papers that
+examine closed models as scientific instruments converge on the same
+obstacle and identify it as a policy choice motivated by distillation
+concerns \citep{carlini, howopen, surrogate}.
 
-The practical consequence is architectural (§3.1): an agent-framework
-experiment cannot measure the tokens that matter, so the framework has
-to be removed.
+The practical consequence is architectural
+(Section\textasciitilde{}\ref{collection-without-an-agent-framework}):
+an agent-framework experiment cannot measure the tokens that matter, so
+the framework has to be removed.
 
 \hypertarget{design-of-this-study}{%
-\subsubsection{1.4 Design of this study}\label{design-of-this-study}}
+\subsubsection{Design of this study}\label{design-of-this-study}}
 
 We measure per-token conditional probabilities inside a real multi-turn
 kernel-writing loop, on two task families of different difficulty, and
@@ -296,7 +276,7 @@ ask:
 \end{itemize}
 
 \hypertarget{summary-of-results}{%
-\subsubsection{1.5 Summary of results}\label{summary-of-results}}
+\subsubsection{Summary of results}\label{summary-of-results}}
 
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.50}}
@@ -315,12 +295,13 @@ claimed −20.7 \\
 \end{longtable}
 
 \hypertarget{scope}{%
-\subsubsection{1.6 Scope}\label{scope}}
+\subsubsection{Scope}\label{scope}}
 
 We measure an \textbf{aligned commercial model at inference}, not the
 un-finetuned base model during rollout. That difference is material and
-is treated at length in §5.2. It is the reason this paper reports a
-tension rather than a refutation.
+is treated at length in
+Section\textasciitilde{}\ref{the-magnitude-gap-and-its-interpretation}.
+It is the reason this paper reports a tension rather than a refutation.
 
 The code-side rate is 0.60\%, which is small but nonzero, and two
 properties of it are claimed: that it does not vary with task
@@ -330,23 +311,21 @@ decisions.
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \hypertarget{related-work}{%
-\subsection{2. Related Work}\label{related-work}}
+\subsection{Related Work}\label{related-work}}
 
 \hypertarget{the-causal-chain-under-test}{%
-\subsubsection{2.1 The causal chain under
+\subsubsection{The causal chain under
 test}\label{the-causal-chain-under-test}}
 
-CUDA Agent's mechanism, quoted in §1.1, has the shape: rarity → low
-probability → precision amplification → ratio explosion ({``{CUDA
-Agent}: Large-Scale Agentic {RL} for High-Performance {CUDA} Kernel
-Generation''} 2026, Sec. 5.1). The remedy is staged warm-up with
-rejection fine-tuning (keep only positive-reward trajectories, discard
-looping or malformed tool use) and value pretraining with GAE targets
-(\(\gamma=1\), \(\lambda=0.95\)), after which PPO runs with asymmetric
-clipping (\(\varepsilon_{lower}=0.2\), \(\varepsilon_{higher}=0.28\))
-for 150 steps ({``{CUDA Agent}: Large-Scale Agentic {RL} for
-High-Performance {CUDA} Kernel Generation''} 2026; {``{CUDA Agent}:
-Agentic {RL} for High-Performance {CUDA} Kernel Generation''} 2026).
+CUDA Agent's mechanism, quoted in
+Section\textasciitilde{}\ref{the-claim}, has the shape: rarity → low
+probability → precision amplification → ratio explosion \citep[Sec.
+5.1]{cudaagent}. The remedy is staged warm-up with rejection fine-tuning
+(keep only positive-reward trajectories, discard looping or malformed
+tool use) and value pretraining with GAE targets (\(\gamma=1\),
+\(\lambda=0.95\)), after which PPO runs with asymmetric clipping
+(\(\varepsilon_{lower}=0.2\), \(\varepsilon_{higher}=0.28\)) for 150
+steps \citep{cudaagent, cudaagentblog}.
 
 \textbf{An independent reading of the paper is relevant here.} A
 third-party overview reports that the authors attribute the instability
@@ -356,8 +335,7 @@ collapse accompanied by a rise in policy entropy when RFT is removed,
 and lower explained variance accompanied by longer trajectories when
 value pretraining is removed --- which, in the overview's assessment,
 are associations together with the authors' interpretation rather than
-evidence for a single cause ({``Log Probability Tracking of {LLM}
-{APIs}''} 2026).
+evidence for a single cause \citep{logprobtracking}.
 
 That distinction matters for our purpose. \textbf{What was observed is
 entropy rising; what was claimed is a specific token-level probability
@@ -367,42 +345,37 @@ point in that distribution. The second does not follow from the first,
 and the first does not require the second.
 
 \hypertarget{dr.-kernel-the-same-instability-attributed-to-mismatch}{%
-\subsubsection{2.2 DR. KERNEL: the same instability, attributed to
+\subsubsection{DR. KERNEL: the same instability, attributed to
 mismatch}\label{dr.-kernel-the-same-instability-attributed-to-mismatch}}
 
 DR. KERNEL studies RL for Triton kernel generation and reaches the same
-instability from the training side ({``{DR. KERNEL}: Reinforcement
-Learning Done Right for {Triton} Kernel Generations''} 2026). It states
-two hypotheses --- saturation from training instability caused by
+instability from the training side \citep{drkernel}. It states two
+hypotheses --- saturation from training instability caused by
 train/inference mismatch, and an objective misaligned with meaningful
 speedup --- monitors entropy, gradient norms and perplexity, finds
-``excessively high values across these metrics,'' and applies geometric
+``excessively high values across these metrics'', and applies geometric
 Mismatch Rejection Sampling: keep samples whose geometric-mean
 importance ratio
 \(w = \exp(\frac{1}{|T|}\sum_t \log\frac{\pi_{train}(a_t|s_t)}{\pi_{rollout}(a_t|s_t)})\)
 lies in \([0.999, 1.001]\), plus a token-level veto rejecting any
 sequence containing a token whose likelihood ratio falls below
-\(10^{-4}\) ({``{DR. KERNEL}: Reinforcement Learning Done Right for
-{Triton} Kernel Generations''} 2026, Sec. 5.1).
+\(10^{-4}\) \citep[Sec. 5.1]{drkernel}.
 
 Its key negative finding is that MRS ``successfully stabilizes the
 training dynamics'' while failing to ``fundamentally lift the
-performance ceiling'' ({``{DR. KERNEL}: Reinforcement Learning Done
-Right for {Triton} Kernel Generations''} 2026, Sec. 5.1), which
-separates stability from capability. What MRS corrects is a
-distributional discrepancy between two inference engines, a property of
-the trajectory's context rather than of the domain's vocabulary.
+performance ceiling'' \citep[Sec. 5.1]{drkernel}, which separates
+stability from capability. What MRS corrects is a distributional
+discrepancy between two inference engines, a property of the
+trajectory's context rather than of the domain's vocabulary.
 
 \hypertarget{precision-mismatch-and-off-policy-drift}{%
-\subsubsection{2.3 Precision mismatch and off-policy
+\subsubsection{Precision mismatch and off-policy
 drift}\label{precision-mismatch-and-off-policy-drift}}
 
 Three lines of work converge on the sensitivity of the PPO ratio when
 probabilities sit near the numerical floor, at which point a small
-absolute difference becomes a large relative one ({``{CUDA Agent}:
-Large-Scale Agentic {RL} for High-Performance {CUDA} Kernel
-Generation''} 2026; {``{CUDA Agent}: Agentic {RL} for High-Performance
-{CUDA} Kernel Generation''} 2026):
+absolute difference becomes a large relative one
+\citep{cudaagent, cudaagentblog}:
 
 \begin{itemize}
 \tightlist
@@ -419,27 +392,28 @@ Generation''} 2026; {``{CUDA Agent}: Agentic {RL} for High-Performance
 
 Liu et al.~characterise the complementary phenomenon in which an RL
 framework's efficiency machinery renders the training data off-policy
-(Liu and others 2025).
+\citep{liuoffpolicy}.
 
 All three take the floor condition as given. The contribution of the
 present study is to test whether it holds at generation time, which
 makes the two lines of work complementary rather than competing.
 
 \hypertarget{logprob-availability-in-closed-apis}{%
-\subsubsection{2.4 Logprob availability in closed
+\subsubsection{Logprob availability in closed
 APIs}\label{logprob-availability-in-closed-apis}}
 
-The constraint described in §1.3 has a methodological consequence worth
-separating from the engineering one. Because tool-call arguments carry
-no logprob, any measurement built on an agent framework is limited to
-the tokens the model emits outside its tool calls --- that is, to its
-narration, not to the code. Studies that report probability statistics
-from framework-based collection are therefore measuring a different
-object from the one this paper measures, and comparisons across the two
-should be made with that in mind.
+The constraint described in
+Section\textasciitilde{}\ref{measurement-constraints} has a
+methodological consequence worth separating from the engineering one.
+Because tool-call arguments carry no logprob, any measurement built on
+an agent framework is limited to the tokens the model emits outside its
+tool calls --- that is, to its narration, not to the code. Studies that
+report probability statistics from framework-based collection are
+therefore measuring a different object from the one this paper measures,
+and comparisons across the two should be made with that in mind.
 
 \hypertarget{position-of-this-work}{%
-\subsubsection{2.5 Position of this work}\label{position-of-this-work}}
+\subsubsection{Position of this work}\label{position-of-this-work}}
 
 The works above study instability from the training side. This paper
 does not train. It measures the generation-time distribution that the
@@ -451,20 +425,21 @@ than a threshold.
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \hypertarget{method}{%
-\subsection{3. Method}\label{method}}
+\subsection{Method}\label{method}}
 
 \hypertarget{collection-without-an-agent-framework}{%
-\subsubsection{3.1 Collection without an agent
+\subsubsection{Collection without an agent
 framework}\label{collection-without-an-agent-framework}}
 
 An agent writes the kernel through \texttt{write} or \texttt{edit} tool
 calls; the kernel text lives in the tool arguments; those tokens carry
-no logprob (§1.3). Two workarounds fail. Asking the model, via prompt
-suffix, to first print the code and then call the tool produced
-compliance in 0 of 6 trials --- the model's policy is to act. Replaying
-saved conversations afterwards cannot recover \(\pi_\theta(a_t|s_t)\)
-either, because the chat template and special tokens applied at
-generation are not reproducible from a plain reconstruction.
+no logprob (Section\textasciitilde{}\ref{measurement-constraints}). Two
+workarounds fail. Asking the model, via prompt suffix, to first print
+the code and then call the tool produced compliance in 0 of 6 trials ---
+the model's policy is to act. Replaying saved conversations afterwards
+cannot recover \(\pi_\theta(a_t|s_t)\) either, because the chat template
+and special tokens applied at generation are not reproducible from a
+plain reconstruction.
 
 So the tools are removed. The driver sends a task description plus
 \texttt{reference.py} and asks for the complete \texttt{candidate.py}
@@ -479,7 +454,7 @@ containing \texttt{@triton.jit} and \texttt{tl.load}, with \textbf{448
 of 448} tokens inside that block carrying a logprob.
 
 \hypertarget{the-loop}{%
-\subsubsection{3.2 The loop}\label{the-loop}}
+\subsubsection{The loop}\label{the-loop}}
 
 At turn \(t\) the driver holds message list \(M_t\), requests
 completions with
@@ -495,7 +470,7 @@ Termination: correctness after at least one revision, no fenced block,
 or a turn cap of 6 (level 2) / 8 (reductions).
 
 \hypertarget{two-task-families}{%
-\subsubsection{3.3 Two task families}\label{two-task-families}}
+\subsubsection{Two task families}\label{two-task-families}}
 
 \textbf{Family A --- reductions (n=4).} \texttt{row\_reduce},
 \texttt{vector\_affine}, \texttt{layernorm\_rows},
@@ -504,7 +479,7 @@ reduction; the kernel logic is two or three lines and the control flow
 is one bounds check.
 
 \textbf{Family B --- operator chains (n=5).} From KernelBench Level 2
-({``{KernelBench}: Can {LLMs} Write Efficient {GPU} Kernels?''} 2025):
+\citep{kernelbench}:
 
 \begin{longtable}[]{@{}ll@{}}
 \toprule
@@ -548,7 +523,7 @@ model is exported as \texttt{MODEL} for the candidate to import.
 Evaluators check correctness on two shapes at tolerance \(10^{-4}\).
 
 \hypertarget{feedback-conditions}{%
-\subsubsection{3.4 Feedback conditions}\label{feedback-conditions}}
+\subsubsection{Feedback conditions}\label{feedback-conditions}}
 
 \begin{itemize}
 \tightlist
@@ -564,7 +539,7 @@ constant thereafter, so the comparison between them is not confounded by
 any later change of procedure.
 
 \hypertarget{model-selection}{%
-\subsubsection{3.5 Model selection}\label{model-selection}}
+\subsubsection{Model selection}\label{model-selection}}
 
 The API offers reasoning and non-reasoning models. Under the reasoning
 model the budget is consumed inside the reasoning channel: at
@@ -576,7 +551,7 @@ seconds. All reported runs use the non-reasoning model with
 \texttt{max\_tokens=8192}.
 
 \hypertarget{observables}{%
-\subsubsection{3.6 Observables}\label{observables}}
+\subsubsection{Observables}\label{observables}}
 
 Because a rate cannot be compared against a probability, the observables
 below are stated as a distribution rather than a single number:
@@ -615,7 +590,7 @@ Region assignment is by fenced-code-block state: a token is in
 used for the primary results.
 
 \hypertarget{statistics}{%
-\subsubsection{3.7 Statistics}\label{statistics}}
+\subsubsection{Statistics}\label{statistics}}
 
 Fisher's exact test (two-sided) on the \(2\times2\) table of
 (low-probability, not) × (in group, not). Exact rather than asymptotic
@@ -627,7 +602,7 @@ should not be read as a statement about 322,375 independent draws. A
 cluster-level analysis with run as the unit is not reported.
 
 \hypertarget{collection-scale}{%
-\subsubsection{3.8 Collection scale}\label{collection-scale}}
+\subsubsection{Collection scale}\label{collection-scale}}
 
 \begin{longtable}[]{@{}lll@{}}
 \toprule
@@ -641,15 +616,15 @@ B (chains) & 40 & 542,611 \\
 
 Family B success rate is 7/40 (17.5\%), and its \texttt{after\_failure}
 context carries 87.5\% of the tokens --- a selection effect discussed in
-§6.
+Section\textasciitilde{}\ref{limitations}.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \hypertarget{results}{%
-\subsection{4. Results}\label{results}}
+\subsection{Results}\label{results}}
 
 \hypertarget{rq1-cuda-vocabulary-is-not-the-low-probability-tail}{%
-\subsubsection{4.1 RQ1: CUDA vocabulary is not the low-probability
+\subsubsection{RQ1: CUDA vocabulary is not the low-probability
 tail}\label{rq1-cuda-vocabulary-is-not-the-low-probability-tail}}
 
 Family A, 98,533 content tokens:
@@ -675,19 +650,23 @@ structural tokens (\texttt{for}, \texttt{if}, \texttt{def},
 0.81\%, which would suggest that positions with no lexical choice carry
 more uncertainty than positions with a domain-specific name.
 
-\textbf{That reading does not survive the manual check in §4.7.} Of the
-40 low-probability structural tokens in Family A, 16 are ordinary
+\textbf{That reading does not survive the manual check in
+Section\textasciitilde{}\ref{manual-classification-of-low-probability-tokens}.}
+Of the 40 low-probability structural tokens in Family A, 16 are ordinary
 English words used in prose ---
 \texttt{If\ you\ want\ to\ push\ speed\ further},
 \texttt{Key\ design\ points\ for\ why},
 \texttt{(pass\ BLOCK\_COLS\ \textgreater{}=\ n\_cols)}. A keyword table
 cannot tell \texttt{for} the preposition from \texttt{for} the loop. The
 apparent inversion is therefore an artefact of the same kind as the one
-described in §5.5, and the only defensible statement about structural
-tokens is the one that comes from reading them (§4.7).
+described in
+Section\textasciitilde{}\ref{classification-bias-in-the-first-pass}, and
+the only defensible statement about structural tokens is the one that
+comes from reading them
+(Section\textasciitilde{}\ref{manual-classification-of-low-probability-tokens}).
 
 \hypertarget{rq2-spatial-distribution-of-the-probability-cost}{%
-\subsubsection{4.2 RQ2: spatial distribution of the probability
+\subsubsection{RQ2: spatial distribution of the probability
 cost}\label{rq2-spatial-distribution-of-the-probability-cost}}
 
 Family B, 542,611 tokens, split by fenced-block state:
@@ -744,7 +723,7 @@ The highest-frequency low-probability tokens in the whole collection are
 words and punctuation.
 
 \hypertarget{rq3-effect-of-task-difficulty}{%
-\subsubsection{4.3 RQ3: effect of task
+\subsubsection{RQ3: effect of task
 difficulty}\label{rq3-effect-of-task-difficulty}}
 
 Comparing the two families directly is confounded: they differ in task
@@ -781,7 +760,7 @@ What rose is the prose share of the stream (from negligible in Family A
 to 40.6\% in Family B) and prose's own rate (12--14\%).
 
 \hypertarget{rq4-proximity-to-the-claimed-probability-floor}{%
-\subsubsection{4.4 RQ4: proximity to the claimed probability
+\subsubsection{RQ4: proximity to the claimed probability
 floor}\label{rq4-proximity-to-the-claimed-probability-floor}}
 
 Family B, quantiles of logprob by region:
@@ -804,7 +783,7 @@ Converting to absolute probability:
 \begin{verbatim}
 code min   −13.02  →  2.2 × $10^{-6}$
 prose min  −16.65  →  5.9 × $10^{-8}$
-claimed    $10^{-9}$     =  logprob −20.7
+claimed    $10^{-9}$     ⇔  logprob −20.7
 \end{verbatim}
 
 \textbf{The lowest code token in 322,375 is 2.2×\(10^{-6}\), four
@@ -819,7 +798,7 @@ not a single token's probability --- the two quantities are not the same
 object, and the source's quotation is explicitly of the latter.
 
 \hypertarget{concentration-of-probability-mass}{%
-\subsubsection{4.5 Concentration of probability
+\subsubsection{Concentration of probability
 mass}\label{concentration-of-probability-mass}}
 
 For a region \(G\) with cost
@@ -851,7 +830,7 @@ In absolute terms, prose carries \textbf{12.6× the total negative
 logprob of code on 68\% as many tokens} --- a per-token cost 18× higher.
 
 \hypertarget{context-type}{%
-\subsubsection{4.6 Context type}\label{context-type}}
+\subsubsection{Context type}\label{context-type}}
 
 \begin{longtable}[]{@{}lll@{}}
 \toprule
@@ -870,10 +849,11 @@ families: a failed evaluation raises the rate, a successful one does
 not.
 
 Note the composition: 87.5\% of Family B's tokens sit in
-\texttt{after\_failure}. This is a selection effect (§6.5).
+\texttt{after\_failure}. This is a selection effect
+(Limitation\textasciitilde5).
 
 \hypertarget{manual-classification-of-low-probability-tokens}{%
-\subsubsection{4.7 Manual classification of low-probability
+\subsubsection{Manual classification of low-probability
 tokens}\label{manual-classification-of-low-probability-tokens}}
 
 Aggregate rates say where cost is; they do not say what the model was
@@ -938,7 +918,7 @@ operators & \textasciitilde6 & \texttt{+=}, \texttt{-}, \texttt{*} \\
 
 \textbf{Not one token, in either collection, corresponds to choosing
 between two ways of implementing the kernel.} No position of the form
-``fuse or don't fuse,'' ``materialise or keep in registers,'' ``this
+``fuse or don't fuse'', ``materialise or keep in registers'', ``this
 precision or that'' appears among the low-probability set.
 
 The most extreme values illustrate the character of the tail. The single
@@ -971,10 +951,10 @@ is not in question.
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \hypertarget{discussion}{%
-\subsection{5. Discussion}\label{discussion}}
+\subsection{Discussion}\label{discussion}}
 
 \hypertarget{status-of-the-second-link}{%
-\subsubsection{5.1 Status of the second
+\subsubsection{Status of the second
 link}\label{status-of-the-second-link}}
 
 RQ1--RQ4 converge: CUDA vocabulary carries less low-probability mass
@@ -990,21 +970,21 @@ A narrower claim survives, and it is harder to escape than the original:
 alignment cannot change what is in a pretraining corpus, so if a
 near-floor probability were a consequence of corpus rarity it would
 persist across alignment, the model retaining both its weights and its
-exposure frequency. We measure a value near 1.0 on an aligned model.
-Either the alignment step moved a token probability by nine orders of
-magnitude --- which would mean the quantity is not a function of the
-corpus at all --- or the \(10^{-9}\) was never a corpus consequence.
-Both readings leave the attribution without its stated mechanism.
+exposure frequency. We measure ≈1.0 on an aligned model. Either the
+alignment step moved a token probability by nine orders of magnitude ---
+which would mean the quantity is not a function of the corpus at all ---
+or the \(10^{-9}\) was never a corpus consequence. Both readings leave
+the attribution without its stated mechanism.
 
 \hypertarget{the-magnitude-gap-and-its-interpretation}{%
-\subsubsection{5.2 The magnitude gap and its
+\subsubsection{The magnitude gap and its
 interpretation}\label{the-magnitude-gap-and-its-interpretation}}
 
-We measure a value near 1.0 where the source reports \(10^{-9}\). We
-decline to read that as a refutation, because conditions differ: the
-source measures an un-finetuned base model during training rollout; we
-measure an aligned model through an inference API. Alignment raises the
-probability of common code patterns substantially.
+We measure ≈1.0 where the source reports \(10^{-9}\). We decline to read
+that as a refutation, because conditions differ: the source measures an
+un-finetuned base model during training rollout; we measure an aligned
+model through an inference API. Alignment raises the probability of
+common code patterns substantially.
 
 But the difference must not be used to \emph{dismiss} the result either.
 The claim, as stated, is a consequence of corpus statistics --- CUDA is
@@ -1025,7 +1005,7 @@ run this control --- it requires base-model weights --- and it is the
 single highest-value follow-up.
 
 \hypertarget{regional-distribution-as-the-supported-finding}{%
-\subsubsection{5.3 Regional distribution as the supported
+\subsubsection{Regional distribution as the supported
 finding}\label{regional-distribution-as-the-supported-finding}}
 
 The strongest regularity in both collections concerns not domain
@@ -1049,7 +1029,7 @@ most tokens.
 substantially more text, and that text is where the uncertainty lives.
 
 \hypertarget{a-context-distribution-account-of-the-collapse}{%
-\subsubsection{5.4 A context-distribution account of the
+\subsubsection{A context-distribution account of the
 collapse}\label{a-context-distribution-account-of-the-collapse}}
 
 \textbf{What follows is a hypothesis, not a finding.} We state it first
@@ -1077,9 +1057,8 @@ policy on them removes precisely the region where the probability cost
 lives.
 
 If this reading is right, then ``feed more CUDA data'' targets an object
-we measured at probability near 1.0, while the actionable lever is what
-the environment says after failure and how the policy is asked to
-recover.
+we measured at probability ≈1.0, while the actionable lever is what the
+environment says after failure and how the policy is asked to recover.
 
 \textbf{A competing account we cannot rule out.} The prose may be a
 \emph{symptom} of confusion rather than a \emph{source} of instability:
@@ -1095,13 +1074,13 @@ keep the content of a failure message but change its formatting (a
 compiler with a different diagnostic style): the prose distribution
 should shift while the code should not. Second, ask for a rewrite after
 a \emph{success}: that produces prose of similar length without the
-diagnostic content, separating ``more prose'' from ``bad news.''
+diagnostic content, separating ``more prose'' from ``bad news''.
 
 \textbf{Confirming the account at all} requires logging entropy and
 token probabilities through a training run, which we cannot do.
 
 \hypertarget{classification-bias-in-the-first-pass}{%
-\subsubsection{5.5 Classification bias in the first
+\subsubsection{Classification bias in the first
 pass}\label{classification-bias-in-the-first-pass}}
 
 Our first pass, using a local 4B model, produced a headline of 10.00\%
@@ -1130,13 +1109,14 @@ definition} so that a result holding under only one boundary is visible
 as such.
 
 A third rule came later: \textbf{aggregate rates are not enough.} The
-816-token and 189-token readings in §4.7 exist because rates cannot
-distinguish ``the model was choosing an implementation'' from ``the
-model was choosing a word,'' and that distinction is the entire
-question.
+816-token and 189-token readings in
+Section\textasciitilde{}\ref{manual-classification-of-low-probability-tokens}
+exist because rates cannot distinguish ``the model was choosing an
+implementation'' from ``the model was choosing a word'', and that
+distinction is the entire question.
 
 \hypertarget{collection-driver-defect}{%
-\subsubsection{5.6 Collection driver
+\subsubsection{Collection driver
 defect}\label{collection-driver-defect}}
 
 Family B's success rate of 17.5\% is not a model property. Of 32
@@ -1156,25 +1136,27 @@ share of \texttt{after\_failure} in the corpus.
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \hypertarget{limitations}{%
-\subsection{6. Limitations}\label{limitations}}
+\subsection{Limitations}\label{limitations}}
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
 \tightlist
 \item
   \textbf{Model state.} The measurement is on an aligned model at
-  inference. The base-model control (§5.2) is missing. The stated scope
-  of this paper is conditional on that difference.
+  inference. The base-model control
+  (Section\textasciitilde{}\ref{the-magnitude-gap-and-its-interpretation})
+  is missing. The stated scope of this paper is conditional on that
+  difference.
 \item
   \textbf{Single model family.} All API runs use one model; the 4B
   replication in Family A used a different family but a weaker stack.
 \item
   \textbf{Task scope and class of fusion.} The relevant distinction is
   not ``reduction versus chain'' but ``\textbf{chain with a trivial
-  organisational choice versus chain with a non-obvious one}.'' All five
+  organisational choice versus chain with a non-obvious one}''. All five
   Family B tasks belong to the former class: a heavy op followed by
   elementwise passes, where the fusion decision is ``fuse the tail into
-  the epilogue or do a second pass,'' and both options are easy to write
+  the epilogue or do a second pass'', and both options are easy to write
   once the convolution is correct. The genuinely hard organisational
   decisions --- a tiling that keeps an intermediate in shared memory, a
   transpose that changes the access pattern, split-K versus two-pass
@@ -1190,8 +1172,9 @@ share of \texttt{after\_failure} in the corpus.
   this corpus.
 \item
   \textbf{Statistical dependence.} Tokens within a completion are not
-  independent, so exact tests are anti-conservative (§3.7). No
-  cluster-level analysis is reported.
+  independent, so exact tests are anti-conservative
+  (Section\textasciitilde{}\ref{statistics}). No cluster-level analysis
+  is reported.
 \item
   \textbf{No training.} We do not measure whether low probability causes
   importance-ratio explosion, nor the relative contribution of precision
@@ -1204,8 +1187,10 @@ share of \texttt{after\_failure} in the corpus.
   \texttt{prose} by fenced-block parity. Fenced blocks used for non-code
   content (tracebacks, shell commands) are counted as code; we did not
   enumerate how many. Comments inside code blocks are also counted as
-  code, which biases the code-side rate \emph{upward}; §4.2 quantifies
-  the effect (0.60\% → 0.33\%) rather than leaving it as a caveat.
+  code, which biases the code-side rate \emph{upward};
+  Section\textasciitilde{}\ref{rq2-spatial-distribution-of-the-probability-cost}
+  quantifies the effect (0.60\% → 0.33\%) rather than leaving it as a
+  caveat.
 \item
   \textbf{An unseparated alternative for the context effect.}
   \texttt{after\_failure} may reflect \emph{responding to bad news} or
@@ -1218,7 +1203,7 @@ share of \texttt{after\_failure} in the corpus.
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \hypertarget{conclusion}{%
-\subsection{7. Conclusion}\label{conclusion}}
+\subsection{Conclusion}\label{conclusion}}
 
 Whatever the reported \(10^{-9}\) measures, it is not a property of the
 domain's vocabulary. Over 98,533 tokens on reduction tasks and 542,611
@@ -1236,55 +1221,8 @@ attribution without its stated mechanism.
 What the data support is that the cost tracks the type of text being
 written, and that composed text concentrates where the model is failing.
 Whether that makes the prose a cause of instability or a symptom of it
-is open, and the experiments that would decide it are named in §5.4.
-
-\hypertarget{references}{%
-\subsection{References}\label{references}}
-
-({``{CUDA Agent}: Large-Scale Agentic {RL} for High-Performance {CUDA}
-Kernel Generation''} 2026) CUDA Agent: Large-Scale Agentic RL for
-High-Performance CUDA Kernel Generation. arXiv:2602.24286.
-
-({``{CUDA Agent}: Agentic {RL} for High-Performance {CUDA} Kernel
-Generation''} 2026) CUDA Agent: Agentic RL for High-Performance CUDA
-Kernel Generation. Technical blog, 2026-03.
-
-({``{DR. KERNEL}: Reinforcement Learning Done Right for {Triton} Kernel
-Generations''} 2026) DR. KERNEL: Reinforcement Learning Done Right for
-Triton Kernel Generations. arXiv:2602.05885.
-
-(Liu and others 2025) Liu et al.~Your Efficient RL Framework Secretly
-Brings You Off-Policy RL Training.
-
-({``{Jet-RL}: Precision Mismatch in Reinforcement Learning Training''}
-2026) Jet-RL: precision mismatch in RL training.
-
-({``Precision Mismatch in Reasoning Models''} 2026) Precision Mismatch
-in Reasoning Models.
-
-({``First-Order Approximation for Stable {LLM-RL} Training''} 2026)
-First-Order Approximation for Stable LLM-RL Training.
-
-(Carlini and others 2024) Carlini et al.~Stealing Part of a Production
-Language Model.
-
-({``How Open Must Language Models Be to Enable Reliable Scientific
-Inference?''} 2026) How Open Must Language Models be to Enable Reliable
-Scientific Inference? (2026).
-
-({``Surrogate Fidelity: When Can Open {LLMs} Explain Closed Ones?''}
-2026) Surrogate Fidelity: When Can Open LLMs Explain Closed Ones?
-(Meta).
-
-({``Log Probability Tracking of {LLM} {APIs}''} 2026) alphaXiv overview
-of arXiv:2602.24286 (independent reading; notes the entropy observation
-and that the association does not establish a single cause).
-
-({``{KernelBench}: Can {LLMs} Write Efficient {GPU} Kernels?''} 2025)
-KernelBench: Can LLMs Write Efficient GPU Kernels? (level 2 operator
-chains).
-
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+is open, and the experiments that would decide it are named in
+Section\textasciitilde{}\ref{a-context-distribution-account-of-the-collapse}.
 
 \hypertarget{appendix-a-reproducibility}{%
 \subsection{Appendix A ---
@@ -1331,54 +1269,6 @@ that v1 had only measured reduction-shaped tasks; the KernelBench
 level-2 directory had been present locally throughout and had never been
 opened.
 
-\hypertarget{refs}{}
-\begin{CSLReferences}{1}{0}
-\leavevmode\vadjust pre{\hypertarget{ref-carlini}{}}%
-Carlini, Nicholas, and others. 2024. {``Stealing Part of a Production
-Language Model.''} In \emph{International Conference on Machine
-Learning}.
-
-\leavevmode\vadjust pre{\hypertarget{ref-cudaagentblog}{}}%
-{``{CUDA Agent}: Agentic {RL} for High-Performance {CUDA} Kernel
-Generation.''} 2026. Technical blog.
-
-\leavevmode\vadjust pre{\hypertarget{ref-cudaagent}{}}%
-{``{CUDA Agent}: Large-Scale Agentic {RL} for High-Performance {CUDA}
-Kernel Generation.''} 2026. \url{https://arxiv.org/abs/2602.24286}.
-
-\leavevmode\vadjust pre{\hypertarget{ref-drkernel}{}}%
-{``{DR. KERNEL}: Reinforcement Learning Done Right for {Triton} Kernel
-Generations.''} 2026. \url{https://arxiv.org/abs/2602.05885}.
-
-\leavevmode\vadjust pre{\hypertarget{ref-firstorder}{}}%
-{``First-Order Approximation for Stable {LLM-RL} Training.''} 2026.
-
-\leavevmode\vadjust pre{\hypertarget{ref-howopen}{}}%
-{``How Open Must Language Models Be to Enable Reliable Scientific
-Inference?''} 2026.
-
-\leavevmode\vadjust pre{\hypertarget{ref-jetrl}{}}%
-{``{Jet-RL}: Precision Mismatch in Reinforcement Learning Training.''}
-2026.
-
-\leavevmode\vadjust pre{\hypertarget{ref-kernelbench}{}}%
-{``{KernelBench}: Can {LLMs} Write Efficient {GPU} Kernels?''} 2025.
-\url{https://arxiv.org/abs/2501.11067}.
-
-\leavevmode\vadjust pre{\hypertarget{ref-liuoffpolicy}{}}%
-Liu, and others. 2025. {``Your Efficient {RL} Framework Secretly Brings
-You Off-Policy {RL} Training.''}
-
-\leavevmode\vadjust pre{\hypertarget{ref-logprobtracking}{}}%
-{``Log Probability Tracking of {LLM} {APIs}.''} 2026.
-
-\leavevmode\vadjust pre{\hypertarget{ref-precisionmismatch}{}}%
-{``Precision Mismatch in Reasoning Models.''} 2026.
-
-\leavevmode\vadjust pre{\hypertarget{ref-surrogate}{}}%
-{``Surrogate Fidelity: When Can Open {LLMs} Explain Closed Ones?''}
-2026.
-
-\end{CSLReferences}
+  \bibliography{references.bib}
 
 \end{document}

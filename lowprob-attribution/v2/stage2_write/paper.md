@@ -22,15 +22,15 @@ We read this as evidence that **whatever the reported $10^{-9}$ measures, it is 
 
 ---
 
-## 1. Introduction
+## Introduction
 
-### 1.1 The claim
+### The claim
 
-Agentic reinforcement learning now produces GPU kernels that beat compiler autotuning. CUDA Agent reports pass rates of 100%, 100% and 92% across the KernelBench difficulty splits and faster-than-`torch.compile` rates of 97%, 97% and 92% [1, Tab. 2]. It reaches there by running a language model inside a development sandbox and optimising a policy over multi-turn trajectories with PPO.
+Agentic reinforcement learning now produces GPU kernels that beat compiler autotuning. CUDA Agent reports pass rates of 100%, 100% and 92% across the KernelBench difficulty splits and faster-than-`torch.compile` rates of 97%, 97% and 92% [@cudaagent, Tab. 2]. It reaches there by running a language model inside a development sandbox and optimising a policy over multi-turn trajectories with PPO.
 
-Its account of the training recipe names one failure and one fix. The failure: "the first run could only train stably for 17 steps before the model's performance collapsed." The diagnosis is distributional — CUDA coding data "accounts for less than 0.01% of pretraining data", producing a "severe domain distribution mismatch" in which the policy must put mass on very rare token sequences "sometimes at probabilities near the numerical floor, e.g. $\pi_\theta(a_t \mid s_t) \approx 10^{-9}$" [1, Sec. 5.1–5.2; 2]. The consequence is that "even small train-rollout precision differences can explode the importance ratio $\rho_t(\theta) = \pi_\theta(a_t|s_t)/\pi_{\theta_{old}}(a_t|s_t)$". The fix is a three-stage warm-up: single-turn RL, rejection fine-tuning of the actor on positive-reward trajectories, and value pretraining of the critic.
+Its account of the training recipe names one failure and one fix. The failure: "the first run could only train stably for 17 steps before the model's performance collapsed." The diagnosis is distributional — CUDA coding data "accounts for less than 0.01% of pretraining data", producing a "severe domain distribution mismatch" in which the policy must put mass on very rare token sequences "sometimes at probabilities near the numerical floor, e.g. $\pi_\theta(a_t \mid s_t) \approx 10^{-9}$" [@cudaagent, Sec. 5.1–5.2; @cudaagentblog]. The consequence is that "even small train-rollout precision differences can explode the importance ratio $\rho_t(\theta) = \pi_\theta(a_t|s_t)/\pi_{\theta_{old}}(a_t|s_t)$". The fix is a three-stage warm-up: single-turn RL, rejection fine-tuning of the actor on positive-reward trajectories, and value pretraining of the critic.
 
-### 1.2 Selection of the second link
+### Selection of the second link
 
 The chain has four links: (i) CUDA is rare in pretraining; (ii) that rarity yields near-floor token probabilities; (iii) near-floor probabilities amplify precision differences into importance-ratio variance; (iv) the ratio explodes and training collapses.
 
@@ -38,13 +38,13 @@ Links (iii) and (iv) require training runs and are outside our reach. But **link
 
 A second consideration favours (ii) over (iii) and (iv): (ii) is falsifiable at low cost. A conditional probability can be measured with a single `logprobs` request, whereas testing (iii) and (iv) requires training runs. This asymmetry determines which link is tested first.
 
-### 1.3 Measurement constraints
+### Measurement constraints
 
-Under an agent framework, the kernel is written through tool calls, and **tool-call arguments are not covered by `logprobs`**. The pattern is consistent across vendors: OpenAI returns `ChoiceLogprobs(content=None)` when `functions` is set (forum threads from 2024 through 2025, no official answer); Claude, Gemini and Grok accept the parameter and silently return none; several reasoning models spend the entire token budget inside the reasoning channel and return empty content, which is a trap we hit ourselves (§3.5). Three papers that examine closed models as scientific instruments converge on the same obstacle and identify it as a policy choice motivated by distillation concerns [8, 9, 10].
+Under an agent framework, the kernel is written through tool calls, and **tool-call arguments are not covered by `logprobs`**. The pattern is consistent across vendors: OpenAI returns `ChoiceLogprobs(content=None)` when `functions` is set (forum threads from 2024 through 2025, no official answer); Claude, Gemini and Grok accept the parameter and silently return none; several reasoning models spend the entire token budget inside the reasoning channel and return empty content, which is a trap we hit ourselves (Section~\ref{model-selection}). Three papers that examine closed models as scientific instruments converge on the same obstacle and identify it as a policy choice motivated by distillation concerns [@carlini; @howopen; @surrogate].
 
-The practical consequence is architectural (§3.1): an agent-framework experiment cannot measure the tokens that matter, so the framework has to be removed.
+The practical consequence is architectural (Section~\ref{collection-without-an-agent-framework}): an agent-framework experiment cannot measure the tokens that matter, so the framework has to be removed.
 
-### 1.4 Design of this study
+### Design of this study
 
 We measure per-token conditional probabilities inside a real multi-turn kernel-writing loop, on two task families of different difficulty, and ask:
 
@@ -53,7 +53,7 @@ We measure per-token conditional probabilities inside a real multi-turn kernel-w
 - **RQ3** — Does raising task difficulty from reduction to fusion move the code-side rate?
 - **RQ4** — Do the measured absolute probabilities approach the claimed $10^{-9}$ floor?
 
-### 1.5 Summary of results
+### Summary of results
 
 | Question | Answer |
 |---|---|
@@ -62,63 +62,63 @@ We measure per-token conditional probabilities inside a real multi-turn kernel-w
 | RQ3 | No — 0.67% on reductions, 0.60% on fusion chains |
 | RQ4 | No — minimum code logprob −13.02 (2.2×$10^{-6}$) vs the claimed −20.7 |
 
-### 1.6 Scope
+### Scope
 
-We measure an **aligned commercial model at inference**, not the un-finetuned base model during rollout. That difference is material and is treated at length in §5.2. It is the reason this paper reports a tension rather than a refutation.
+We measure an **aligned commercial model at inference**, not the un-finetuned base model during rollout. That difference is material and is treated at length in Section~\ref{the-magnitude-gap-and-its-interpretation}. It is the reason this paper reports a tension rather than a refutation.
 
 The code-side rate is 0.60%, which is small but nonzero, and two properties of it are claimed: that it does not vary with task difficulty, and that it does not concentrate at implementation decisions.
 
 ---
 
-## 2. Related Work
+## Related Work
 
-### 2.1 The causal chain under test
+### The causal chain under test
 
-CUDA Agent's mechanism, quoted in §1.1, has the shape: rarity → low probability → precision amplification → ratio explosion [1, Sec. 5.1]. The remedy is staged warm-up with rejection fine-tuning (keep only positive-reward trajectories, discard looping or malformed tool use) and value pretraining with GAE targets ($\gamma=1$, $\lambda=0.95$), after which PPO runs with asymmetric clipping ($\varepsilon_{lower}=0.2$, $\varepsilon_{higher}=0.28$) for 150 steps [1, 2].
+CUDA Agent's mechanism, quoted in Section~\ref{the-claim}, has the shape: rarity → low probability → precision amplification → ratio explosion [@cudaagent, Sec. 5.1]. The remedy is staged warm-up with rejection fine-tuning (keep only positive-reward trajectories, discard looping or malformed tool use) and value pretraining with GAE targets ($\gamma=1$, $\lambda=0.95$), after which PPO runs with asymmetric clipping ($\varepsilon_{lower}=0.2$, $\varepsilon_{higher}=0.28$) for 150 steps [@cudaagent; @cudaagentblog].
 
-**An independent reading of the paper is relevant here.** A third-party overview reports that the authors attribute the instability to the base model's distribution mismatch, and then records what the paper actually establishes: two observed associations — reward collapse accompanied by a rise in policy entropy when RFT is removed, and lower explained variance accompanied by longer trajectories when value pretraining is removed — which, in the overview's assessment, are associations together with the authors' interpretation rather than evidence for a single cause [11].
+**An independent reading of the paper is relevant here.** A third-party overview reports that the authors attribute the instability to the base model's distribution mismatch, and then records what the paper actually establishes: two observed associations — reward collapse accompanied by a rise in policy entropy when RFT is removed, and lower explained variance accompanied by longer trajectories when value pretraining is removed — which, in the overview's assessment, are associations together with the authors' interpretation rather than evidence for a single cause [@logprobtracking].
 
 That distinction matters for our purpose. **What was observed is entropy rising; what was claimed is a specific token-level probability near $10^{-9}$.** These are different objects: entropy is a property of a whole distribution flattening, a near-floor token probability is a point in that distribution. The second does not follow from the first, and the first does not require the second.
 
-### 2.2 DR. KERNEL: the same instability, attributed to mismatch
+### DR. KERNEL: the same instability, attributed to mismatch
 
-DR. KERNEL studies RL for Triton kernel generation and reaches the same instability from the training side [3]. It states two hypotheses — saturation from training instability caused by train/inference mismatch, and an objective misaligned with meaningful speedup — monitors entropy, gradient norms and perplexity, finds "excessively high values across these metrics", and applies geometric Mismatch Rejection Sampling: keep samples whose geometric-mean importance ratio $w = \exp(\frac{1}{|T|}\sum_t \log\frac{\pi_{train}(a_t|s_t)}{\pi_{rollout}(a_t|s_t)})$ lies in $[0.999, 1.001]$, plus a token-level veto rejecting any sequence containing a token whose likelihood ratio falls below $10^{-4}$ [3, Sec. 5.1].
+DR. KERNEL studies RL for Triton kernel generation and reaches the same instability from the training side [@drkernel]. It states two hypotheses — saturation from training instability caused by train/inference mismatch, and an objective misaligned with meaningful speedup — monitors entropy, gradient norms and perplexity, finds "excessively high values across these metrics", and applies geometric Mismatch Rejection Sampling: keep samples whose geometric-mean importance ratio $w = \exp(\frac{1}{|T|}\sum_t \log\frac{\pi_{train}(a_t|s_t)}{\pi_{rollout}(a_t|s_t)})$ lies in $[0.999, 1.001]$, plus a token-level veto rejecting any sequence containing a token whose likelihood ratio falls below $10^{-4}$ [@drkernel, Sec. 5.1].
 
-Its key negative finding is that MRS "successfully stabilizes the training dynamics" while failing to "fundamentally lift the performance ceiling" [3, Sec. 5.1], which separates stability from capability. What MRS corrects is a distributional discrepancy between two inference engines, a property of the trajectory's context rather than of the domain's vocabulary.
+Its key negative finding is that MRS "successfully stabilizes the training dynamics" while failing to "fundamentally lift the performance ceiling" [@drkernel, Sec. 5.1], which separates stability from capability. What MRS corrects is a distributional discrepancy between two inference engines, a property of the trajectory's context rather than of the domain's vocabulary.
 
-### 2.3 Precision mismatch and off-policy drift
+### Precision mismatch and off-policy drift
 
-Three lines of work converge on the sensitivity of the PPO ratio when probabilities sit near the numerical floor, at which point a small absolute difference becomes a large relative one [1, 2]:
+Three lines of work converge on the sensitivity of the PPO ratio when probabilities sit near the numerical floor, at which point a small absolute difference becomes a large relative one [@cudaagent; @cudaagentblog]:
 
 - Jet-RL treats the train/inference precision mismatch as the operative difference;
 - *Precision Mismatch in Reasoning Models* examines the same effect in the reasoning setting;
 - *First-Order Approximation for Stable LLM-RL Training* analyses it as a stability property of the objective.
 
-Liu et al. characterise the complementary phenomenon in which an RL framework's efficiency machinery renders the training data off-policy [4].
+Liu et al. characterise the complementary phenomenon in which an RL framework's efficiency machinery renders the training data off-policy [@liuoffpolicy].
 
 All three take the floor condition as given. The contribution of the present study is to test whether it holds at generation time, which makes the two lines of work complementary rather than competing.
 
-### 2.4 Logprob availability in closed APIs
+### Logprob availability in closed APIs
 
-The constraint described in §1.3 has a methodological consequence worth separating from the engineering one. Because tool-call arguments carry no logprob, any measurement built on an agent framework is limited to the tokens the model emits outside its tool calls — that is, to its narration, not to the code. Studies that report probability statistics from framework-based collection are therefore measuring a different object from the one this paper measures, and comparisons across the two should be made with that in mind.
+The constraint described in Section~\ref{measurement-constraints} has a methodological consequence worth separating from the engineering one. Because tool-call arguments carry no logprob, any measurement built on an agent framework is limited to the tokens the model emits outside its tool calls — that is, to its narration, not to the code. Studies that report probability statistics from framework-based collection are therefore measuring a different object from the one this paper measures, and comparisons across the two should be made with that in mind.
 
-### 2.5 Position of this work
+### Position of this work
 
 The works above study instability from the training side. This paper does not train. It measures the generation-time distribution that the causal chain's second link asserts, on a model whose weights we do not control but whose outputs we can read — and it measures it twice, on two task families, with the observable stated as a distribution rather than a threshold.
 
 ---
 
-## 3. Method
+## Method
 
-### 3.1 Collection without an agent framework
+### Collection without an agent framework
 
-An agent writes the kernel through `write` or `edit` tool calls; the kernel text lives in the tool arguments; those tokens carry no logprob (§1.3). Two workarounds fail. Asking the model, via prompt suffix, to first print the code and then call the tool produced compliance in 0 of 6 trials — the model's policy is to act. Replaying saved conversations afterwards cannot recover $\pi_\theta(a_t|s_t)$ either, because the chat template and special tokens applied at generation are not reproducible from a plain reconstruction.
+An agent writes the kernel through `write` or `edit` tool calls; the kernel text lives in the tool arguments; those tokens carry no logprob (Section~\ref{measurement-constraints}). Two workarounds fail. Asking the model, via prompt suffix, to first print the code and then call the tool produced compliance in 0 of 6 trials — the model's policy is to act. Replaying saved conversations afterwards cannot recover $\pi_\theta(a_t|s_t)$ either, because the chat template and special tokens applied at generation are not reproducible from a plain reconstruction.
 
 So the tools are removed. The driver sends a task description plus `reference.py` and asks for the complete `candidate.py` inside a fenced block, with no tools offered. The model writes code in `message.content`; that field is covered by `logprobs`. The driver parses the block, writes the file, invokes the independent evaluator, and appends the evaluator's output as the next user turn.
 
 This is the design decision the whole study rests on, so it was verified before collecting: a single-turn probe returned a 1,396-character block containing `@triton.jit` and `tl.load`, with **448 of 448** tokens inside that block carrying a logprob.
 
-### 3.2 The loop
+### The loop
 
 At turn $t$ the driver holds message list $M_t$, requests completions with `logprobs=true, top_logprobs=20, temperature=1.0`, receives $y_t$ and $\log\pi_\theta(y_{t,i} \mid M_t, y_{t,<i})$, extracts the fenced block, stages it with `reference.py` and the evaluator in an isolated temp directory, runs the evaluator, and forms feedback $f_t$:
 
@@ -126,11 +126,11 @@ $$M_{t+1} = M_t \oplus [\text{assistant}: y_t] \oplus [\text{user}: f_t]$$
 
 Termination: correctness after at least one revision, no fenced block, or a turn cap of 6 (level 2) / 8 (reductions).
 
-### 3.3 Two task families
+### Two task families
 
 **Family A — reductions (n=4).** `row_reduce`, `vector_affine`, `layernorm_rows`, `softmax_rows`. Each is elementwise or a single-dimension reduction; the kernel logic is two or three lines and the control flow is one bounds check.
 
-**Family B — operator chains (n=5).** From KernelBench Level 2 [12]:
+**Family B — operator chains (n=5).** From KernelBench Level 2 [@kernelbench]:
 
 | Task | Chain |
 |---|---|
@@ -150,18 +150,18 @@ Selecting among them requires deciding what to fuse, whether an intermediate is 
 
 Family B tasks were generated mechanically (`scripts/make_kb2_tasks.py`): the KernelBench `Model` class is wrapped into the `run(x)` entry point, the model is seeded so that reference and candidate see identical weights, and the model is exported as `MODEL` for the candidate to import. Evaluators check correctness on two shapes at tolerance $10^{-4}$.
 
-### 3.4 Feedback conditions
+### Feedback conditions
 
 - **full** — the evaluator's verbatim output.
 - **truncated** — one line: `compilation failed`, `output mismatch`, or `correct`.
 
 Both conditions were implemented before collection began and were held constant thereafter, so the comparison between them is not confounded by any later change of procedure.
 
-### 3.5 Model selection
+### Model selection
 
 The API offers reasoning and non-reasoning models. Under the reasoning model the budget is consumed inside the reasoning channel: at `max_tokens=4000` the probe produced 14,042 characters of reasoning and zero of code, `finish_reason=length`. The non-reasoning model puts everything in `content`, reports zero reasoning tokens, and solved `row_reduce` in two turns in 22 seconds. All reported runs use the non-reasoning model with `max_tokens=8192`.
 
-### 3.6 Observables
+### Observables
 
 Because a rate cannot be compared against a probability, the observables below are stated as a distribution rather than a single number:
 
@@ -178,24 +178,24 @@ with $\tau = -2$ as the headline. **Quantiles** of the logprob distribution per 
 
 Region assignment is by fenced-code-block state: a token is in `code` if an odd number of ``` delimiters precede it, else `prose`. No keyword tables are used for the primary results.
 
-### 3.7 Statistics
+### Statistics
 
 Fisher's exact test (two-sided) on the $2\times2$ table of (low-probability, not) × (in group, not). Exact rather than asymptotic because cell counts are unbalanced. **The test assumes independent observations, and tokens within a completion are not independent**, so the reported $p$-values are anti-conservative; the effect sizes here are large enough that the sign is not in question, but $p=0.0007$ should not be read as a statement about 322,375 independent draws. A cluster-level analysis with run as the unit is not reported.
 
-### 3.8 Collection scale
+### Collection scale
 
 | Family | Runs | Tokens |
 |---|---|---|
 | A (reductions) | 128 | 98,533 |
 | B (chains) | 40 | 542,611 |
 
-Family B success rate is 7/40 (17.5%), and its `after_failure` context carries 87.5% of the tokens — a selection effect discussed in §6.
+Family B success rate is 7/40 (17.5%), and its `after_failure` context carries 87.5% of the tokens — a selection effect discussed in Section~\ref{limitations}.
 
 ---
 
-## 4. Results
+## Results
 
-### 4.1 RQ1: CUDA vocabulary is not the low-probability tail
+### RQ1: CUDA vocabulary is not the low-probability tail
 
 Family A, 98,533 content tokens:
 
@@ -208,9 +208,9 @@ Family A, 98,533 content tokens:
 
 Both boundaries agree in direction, and the direction is opposite to the hypothesis. A third reference class initially appeared to sharpen it: structural tokens (`for`, `if`, `def`, `return`, `in`, `not`) showed 1.54% against 0.81%, which would suggest that positions with no lexical choice carry more uncertainty than positions with a domain-specific name.
 
-**That reading does not survive the manual check in §4.7.** Of the 40 low-probability structural tokens in Family A, 16 are ordinary English words used in prose — `If you want to push speed further`, `Key design points for why`, `(pass BLOCK_COLS >= n_cols)`. A keyword table cannot tell `for` the preposition from `for` the loop. The apparent inversion is therefore an artefact of the same kind as the one described in §5.5, and the only defensible statement about structural tokens is the one that comes from reading them (§4.7).
+**That reading does not survive the manual check in Section~\ref{manual-classification-of-low-probability-tokens}.** Of the 40 low-probability structural tokens in Family A, 16 are ordinary English words used in prose — `If you want to push speed further`, `Key design points for why`, `(pass BLOCK_COLS >= n_cols)`. A keyword table cannot tell `for` the preposition from `for` the loop. The apparent inversion is therefore an artefact of the same kind as the one described in Section~\ref{classification-bias-in-the-first-pass}, and the only defensible statement about structural tokens is the one that comes from reading them (Section~\ref{manual-classification-of-low-probability-tokens}).
 
-### 4.2 RQ2: spatial distribution of the probability cost
+### RQ2: spatial distribution of the probability cost
 
 Family B, 542,611 tokens, split by fenced-block state:
 
@@ -240,7 +240,7 @@ Comments inside code fences count as code in the table above, and they are high-
 
 The highest-frequency low-probability tokens in the whole collection are `the` (118), `` ` `` (116), `,` (70), `.` (64), `and` (63), `I` (55) — prose function words and punctuation.
 
-### 4.3 RQ3: effect of task difficulty
+### RQ3: effect of task difficulty
 
 Comparing the two families directly is confounded: they differ in task construction, turn cap (8 vs 6), success rate (near 100% vs 17.5%) and context composition, so an equality between their rates could be a genuine invariance or the cancellation of several opposing effects.
 
@@ -258,7 +258,7 @@ The rate spans 0.18%–0.44% across a success range from 0/8 to 5/8. **Within th
 
 What rose is the prose share of the stream (from negligible in Family A to 40.6% in Family B) and prose's own rate (12–14%).
 
-### 4.4 RQ4: proximity to the claimed probability floor
+### RQ4: proximity to the claimed probability floor
 
 Family B, quantiles of logprob by region:
 
@@ -275,14 +275,14 @@ Converting to absolute probability:
 ```
 code min   −13.02  →  2.2 × $10^{-6}$
 prose min  −16.65  →  5.9 × $10^{-8}$
-claimed    $10^{-9}$     ⇔  logprob −20.7
+claimed    $10^{-9}$     =  logprob −20.7
 ```
 
 **The lowest code token in 322,375 is 2.2×$10^{-6}$, four hundred times more probable than the claimed floor.** 99% of code tokens sit above 0.26, and the median is 1.0.
 
 For completeness, the joint logprob of a whole completion (n=215) has mean −903.3 and median −414.8, i.e. $e^{-414.8} \approx 7\times10^{-181}$. That number is far *below* $10^{-9}$, but it is the product of two thousand tokens, not a single token's probability — the two quantities are not the same object, and the source's quotation is explicitly of the latter.
 
-### 4.5 Concentration of probability mass
+### Concentration of probability mass
 
 For a region $G$ with cost $C(G) = -\sum_{i\in G}\log\pi_\theta(a_i|s_i)$, sort its tokens by logprob ascending and let $G_{q}$ be the worst fraction $q$ of them. The concentration statistic is
 
@@ -299,7 +299,7 @@ The shapes are opposite. **Code's cost is concentrated**: 5% of code tokens carr
 
 In absolute terms, prose carries **12.6× the total negative logprob of code on 68% as many tokens** — a per-token cost 18× higher.
 
-### 4.6 Context type
+### Context type
 
 | context | tokens | $R_{-2}$ |
 |---|---|---|
@@ -309,9 +309,9 @@ In absolute terms, prose carries **12.6× the total negative logprob of code on 
 
 Family A showed the same ordering by task, and `after_failure` ran 4.6× `initial`. The direction is consistent across both families: a failed evaluation raises the rate, a successful one does not.
 
-Note the composition: 87.5% of Family B's tokens sit in `after_failure`. This is a selection effect (§6.5).
+Note the composition: 87.5% of Family B's tokens sit in `after_failure`. This is a selection effect (Limitation~5).
 
-### 4.7 Manual classification of low-probability tokens
+### Manual classification of low-probability tokens
 
 Aggregate rates say where cost is; they do not say what the model was doing. So we read every low-probability token in context.
 
@@ -325,7 +325,7 @@ Aggregate rates say where cost is; they do not say what the model was doing. So 
 | conversational prose | ~4% | `If`, `Odd`, `Summary`, `verified` |
 | **control-flow decisions** | **~1%** | `if not x.is_contiguous()`, `for col_start in range(...)` |
 
-**Family B: all 189 non-comment code tokens with logprob ≤ −4.5.**
+**Family B: all 189 non-comment code tokens with logprob $\le -4.5$.**
 
 | category | count | examples |
 |---|---|---|
@@ -347,25 +347,25 @@ A second example makes the distinction concrete: the identifier `y` in `y = torc
 
 ---
 
-## 5. Discussion
+## Discussion
 
-### 5.1 Status of the second link
+### Status of the second link
 
 RQ1–RQ4 converge: CUDA vocabulary carries less low-probability mass than the surrounding text; the cost is spatially located outside code blocks; it does not respond to task difficulty; and its absolute magnitude is 400× above the claimed floor even at the extreme.
 
 The claim "CUDA is rare in pretraining, therefore CUDA tokens sit at $10^{-9}$" does not survive this measurement **in any condition we can observe**.
 
-A narrower claim survives, and it is harder to escape than the original: alignment cannot change what is in a pretraining corpus, so if a near-floor probability were a consequence of corpus rarity it would persist across alignment, the model retaining both its weights and its exposure frequency. We measure ≈1.0 on an aligned model. Either the alignment step moved a token probability by nine orders of magnitude — which would mean the quantity is not a function of the corpus at all — or the $10^{-9}$ was never a corpus consequence. Both readings leave the attribution without its stated mechanism.
+A narrower claim survives, and it is harder to escape than the original: alignment cannot change what is in a pretraining corpus, so if a near-floor probability were a consequence of corpus rarity it would persist across alignment, the model retaining both its weights and its exposure frequency. We measure a value near 1.0 on an aligned model. Either the alignment step moved a token probability by nine orders of magnitude — which would mean the quantity is not a function of the corpus at all — or the $10^{-9}$ was never a corpus consequence. Both readings leave the attribution without its stated mechanism.
 
-### 5.2 The magnitude gap and its interpretation
+### The magnitude gap and its interpretation
 
-We measure ≈1.0 where the source reports $10^{-9}$. We decline to read that as a refutation, because conditions differ: the source measures an un-finetuned base model during training rollout; we measure an aligned model through an inference API. Alignment raises the probability of common code patterns substantially.
+We measure a value near 1.0 where the source reports $10^{-9}$. We decline to read that as a refutation, because conditions differ: the source measures an un-finetuned base model during training rollout; we measure an aligned model through an inference API. Alignment raises the probability of common code patterns substantially.
 
 But the difference must not be used to *dismiss* the result either. The claim, as stated, is a consequence of corpus statistics — CUDA is 0.01% of pretraining — and corpus statistics do not depend on which organisation trained the model or whether it was later aligned. **If rarity implied a near-floor conditional probability, it would do so for any model pretrained on comparable data**; a nine-order-of-magnitude difference between two such models is better explained by the claim being false than by one model having a qualitatively different corpus.
 
 **The control that would settle it**: repeat the measurement on a base model, before fine-tuning. If CUDA token probabilities there are near the floor and rise after alignment, both accounts hold and the chain is intact at the base-model stage. If they are not near the floor even before alignment, the chain fails at its second link. We could not run this control — it requires base-model weights — and it is the single highest-value follow-up.
 
-### 5.3 Regional distribution as the supported finding
+### Regional distribution as the supported finding
 
 The strongest regularity in both collections concerns not domain vocabulary but **the type of text being produced**.
 
@@ -375,7 +375,7 @@ The mechanism is visible in the token inventory. In code, the model writes from 
 
 **And the prose is concentrated where the model is failing.** `after_failure` carries 87.5% of the tokens at 6.37%, against 1.88% at the first turn. When a kernel does not work, the model writes substantially more text, and that text is where the uncertainty lives.
 
-### 5.4 A context-distribution account of the collapse
+### A context-distribution account of the collapse
 
 **What follows is a hypothesis, not a finding.** We state it first so that the three observations below are read as things it is consistent with, not as things that support it.
 
@@ -385,7 +385,7 @@ A coherent reading is that **the instability is a context-distribution problem, 
 
 **This also explains why RFT rescues the run.** Rejection fine-tuning keeps only trajectories that succeeded. Successful trajectories contain little debug prose — our `after_success` sample has 12,147 tokens against 474,728 for failures. Anchoring the policy on them removes precisely the region where the probability cost lives.
 
-If this reading is right, then "feed more CUDA data" targets an object we measured at probability ≈1.0, while the actionable lever is what the environment says after failure and how the policy is asked to recover.
+If this reading is right, then "feed more CUDA data" targets an object we measured at probability near 1.0, while the actionable lever is what the environment says after failure and how the policy is asked to recover.
 
 **A competing account we cannot rule out.** The prose may be a *symptom* of confusion rather than a *source* of instability: a model that is lost writes uncertain text *because* it is lost, and the epistemic state is what destabilises training. Under that reading, prose cost is a measurement of confusion, and an intervention targeting prose would suppress the symptom while leaving the state intact. Our RFT argument does not distinguish these — RFT removes unsuccessful trajectories, not prose.
 
@@ -393,7 +393,7 @@ Two experiments would separate them, and neither is run here. First, keep the co
 
 **Confirming the account at all** requires logging entropy and token probabilities through a training run, which we cannot do.
 
-### 5.5 Classification bias in the first pass
+### Classification bias in the first pass
 
 Our first pass, using a local 4B model, produced a headline of 10.00% for `triton_specific` at $p=0.0156$. It was wrong. The classifier deliberately excluded `load`/`zeros`/`store` from the prose-side markers to avoid mislabelling English sentences, which meant only occurrences *inside code segments* could be labelled Triton-specific. That subgroup held 20 of 451 total occurrences — a 96% undercount — and happened to include two extreme samples. The same word, split by the typing rule:
 
@@ -406,9 +406,9 @@ The between-group difference was manufactured by the classification rule. Recomp
 
 Two rules came out of this and govern the present paper: **class statistics are computed over every token, never over a pre-partitioned subset**, and **every headline is checked under a second definition** so that a result holding under only one boundary is visible as such.
 
-A third rule came later: **aggregate rates are not enough.** The 816-token and 189-token readings in §4.7 exist because rates cannot distinguish "the model was choosing an implementation" from "the model was choosing a word", and that distinction is the entire question.
+A third rule came later: **aggregate rates are not enough.** The 816-token and 189-token readings in Section~\ref{manual-classification-of-low-probability-tokens} exist because rates cannot distinguish "the model was choosing an implementation" from "the model was choosing a word", and that distinction is the entire question.
 
-### 5.6 Collection driver defect
+### Collection driver defect
 
 Family B's success rate of 17.5% is not a model property. Of 32 failures, 16 were `NameError` caused by the driver accepting **any** fenced block as the final candidate: in 14 of 39 runs the model's last output was a fragment (63–239 characters, e.g. `group_id = pid // (GROUP_M * num_pid_n)`) rather than a complete file, and the driver ran the fragment. Four more failed on out-of-memory from a task whose peak we mis-estimated. Nine were genuine output mismatches.
 
@@ -416,55 +416,29 @@ Excluding the fragment runs, the success rate on complete files is 28% (7/25). T
 
 ---
 
-## 6. Limitations
+## Limitations
 
-1. **Model state.** The measurement is on an aligned model at inference. The base-model control (§5.2) is missing. The stated scope of this paper is conditional on that difference.
+1. **Model state.** The measurement is on an aligned model at inference. The base-model control (Section~\ref{the-magnitude-gap-and-its-interpretation}) is missing. The stated scope of this paper is conditional on that difference.
 2. **Single model family.** All API runs use one model; the 4B replication in Family A used a different family but a weaker stack.
 3. **Task scope and class of fusion.** The relevant distinction is not "reduction versus chain" but "**chain with a trivial organisational choice versus chain with a non-obvious one**". All five Family B tasks belong to the former class: a heavy op followed by elementwise passes, where the fusion decision is "fuse the tail into the epilogue or do a second pass", and both options are easy to write once the convolution is correct. The genuinely hard organisational decisions — a tiling that keeps an intermediate in shared memory, a transpose that changes the access pattern, split-K versus two-pass reduction for a reduction that does not fit one block, FlashAttention-style online softmax — are **not represented at all**. The null result on RQ3 therefore concerns only the trivial class of fusion decisions.
 4. **Selection effect in Family B.** Success rate 17.5%; `after_failure` holds 87.5% of tokens. The code-side density of 0.60% is measured mostly in the context of a struggling model. Whether it differs when the model is succeeding is not answerable from this corpus.
-5. **Statistical dependence.** Tokens within a completion are not independent, so exact tests are anti-conservative (§3.7). No cluster-level analysis is reported.
+5. **Statistical dependence.** Tokens within a completion are not independent, so exact tests are anti-conservative (Section~\ref{statistics}). No cluster-level analysis is reported.
 6. **No training.** We do not measure whether low probability causes importance-ratio explosion, nor the relative contribution of precision mismatch.
 7. **One collection path.** A single driver against a single endpoint; no cross-engine replication.
-8. **Region assignment by fence state.** A token is `code` or `prose` by fenced-block parity. Fenced blocks used for non-code content (tracebacks, shell commands) are counted as code; we did not enumerate how many. Comments inside code blocks are also counted as code, which biases the code-side rate *upward*; §4.2 quantifies the effect (0.60% → 0.33%) rather than leaving it as a caveat.
+8. **Region assignment by fence state.** A token is `code` or `prose` by fenced-block parity. Fenced blocks used for non-code content (tracebacks, shell commands) are counted as code; we did not enumerate how many. Comments inside code blocks are also counted as code, which biases the code-side rate *upward*; Section~\ref{rq2-spatial-distribution-of-the-probability-cost} quantifies the effect (0.60% → 0.33%) rather than leaving it as a caveat.
 9. **An unseparated alternative for the context effect.** `after_failure` may reflect *responding to bad news* or simply *writing new content* (after a failure the model rewrites; after a success it refines). Truncating the message does not distinguish these. Separating them requires a condition that asks for a rewrite after a success.
 
 ---
 
-## 7. Conclusion
+## Conclusion
 
 Whatever the reported $10^{-9}$ measures, it is not a property of the domain's vocabulary. Over 98,533 tokens on reduction tasks and 542,611 on operator chains, CUDA/Triton vocabulary carries *less* low-probability mass than the surrounding text; inside code fences the rate is 0.33% once comments are removed, outside 13.56%, a 41× difference; the worst 5% of code tokens carry 98.1% of the code's cost against 30.3% for prose; and the absolute minimum across 322,375 code tokens is 2.2×$10^{-6}$, four hundred times above the claimed floor.
 
 Because alignment cannot alter corpus statistics, a rarity-driven floor would have survived it. It did not. That leaves the causal chain's attribution without its stated mechanism.
 
-What the data support is that the cost tracks the type of text being written, and that composed text concentrates where the model is failing. Whether that makes the prose a cause of instability or a symptom of it is open, and the experiments that would decide it are named in §5.4.
+What the data support is that the cost tracks the type of text being written, and that composed text concentrates where the model is failing. Whether that makes the prose a cause of instability or a symptom of it is open, and the experiments that would decide it are named in Section~\ref{a-context-distribution-account-of-the-collapse}.
 
 ## References
-
-[1] CUDA Agent: Large-Scale Agentic RL for High-Performance CUDA Kernel Generation. arXiv:2602.24286.
-
-[2] CUDA Agent: Agentic RL for High-Performance CUDA Kernel Generation. Technical blog, 2026-03.
-
-[3] DR. KERNEL: Reinforcement Learning Done Right for Triton Kernel Generations. arXiv:2602.05885.
-
-[4] Liu et al. Your Efficient RL Framework Secretly Brings You Off-Policy RL Training.
-
-[5] Jet-RL: precision mismatch in RL training.
-
-[6] Precision Mismatch in Reasoning Models.
-
-[7] First-Order Approximation for Stable LLM-RL Training.
-
-[8] Carlini et al. Stealing Part of a Production Language Model.
-
-[9] How Open Must Language Models be to Enable Reliable Scientific Inference? (2026).
-
-[10] Surrogate Fidelity: When Can Open LLMs Explain Closed Ones? (Meta).
-
-[11] alphaXiv overview of arXiv:2602.24286 (independent reading; notes the entropy observation and that the association does not establish a single cause).
-
-[12] KernelBench: Can LLMs Write Efficient GPU Kernels? (level 2 operator chains).
-
----
 
 ## Appendix A — Reproducibility
 
