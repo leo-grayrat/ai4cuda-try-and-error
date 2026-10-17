@@ -1,4 +1,4 @@
-# Is CUDA Syntax Rare Enough to Break PPO? A Conditional-Probability Test of a Stated Root Cause
+# Is CUDA Syntax Rare Enough to Break PPO? A Conditional-Probability Test on an Aligned Model, With the Base-Model Control Outstanding
 
 **Author:** leo-grayrat
 **Affiliation:** Independent research
@@ -8,7 +8,7 @@
 
 ## Abstract
 
-CUDA Agent attributes its policy collapse at training step 17 to a specific chain: CUDA code is under 0.01% of pretraining data, the base model therefore assigns near-floor probability to CUDA tokens ($\pi_\theta(a_t \mid s_t) \approx 10^{-9}$), and small train/inference precision differences are amplified into exploding importance ratios. The first link of that chain — that CUDA vocabulary constitutes a low-probability tail at generation time — has not been tested independently, partly because closed APIs do not expose logprobs for tool-call arguments. We measure it directly. Leaving the agent framework behind, we drive multi-turn chat in which the kernel is written in the reply body, so every code token falls under `logprobs`. Over 128 runs (4 Triton tasks × 2 feedback conditions × 16 repeats) we obtain 98,533 content tokens with conditional probabilities. Three findings. First, CUDA/Triton vocabulary is **less** likely to be low-probability than everything else: 0.26% versus 0.84% under a strict boundary (Fisher $p = 0.0007$) and 0.49% versus 0.84% under a loose one ($p = 0.0070$), with both boundaries agreeing in direction. Second, context dominates token identity by an order of magnitude — tokens emitted after a failed evaluation carry a 4.30% rate against 0.94% at the first turn. Third, compressing the environment feedback does not reduce the tail (0.71% versus 0.95%), so the planned intervention is inert. We do not read the nine-order-of-magnitude gap between $\approx 10^{-9}$ and our measured $\approx 1.0$ as a refutation, because the two measurements differ in model state (un-finetuned base model during rollout versus an aligned model at inference). What the data do establish is a tension the original narrative must resolve, and a concrete control — repeating the measurement on a base model — that would resolve it.
+CUDA Agent attributes its policy collapse at training step 17 to a specific chain: CUDA code is under 0.01% of pretraining data, the base model therefore assigns near-floor probability to CUDA tokens ($\pi_\theta(a_t \mid s_t) \approx 10^{-9}$), and small train/inference precision differences are amplified into exploding importance ratios. The first link of that chain — that CUDA vocabulary constitutes a low-probability tail at generation time — has not been tested independently, partly because closed APIs do not expose logprobs for tool-call arguments. **We measure it on an aligned commercial model at inference; we do not measure the un-finetuned base model during rollout, which is the condition the source describes, and that control is outstanding.** Leaving the agent framework behind, we drive multi-turn chat in which the kernel is written in the reply body, so every code token falls under `logprobs`. Over 128 runs (4 Triton tasks × 2 feedback conditions × 16 repeats) we obtain 98,533 content tokens with conditional probabilities. Three findings. First, CUDA/Triton vocabulary is less likely to be low-probability than everything else: 0.26% versus 0.84% under a strict boundary (Fisher $p = 0.0007$) and 0.49% versus 0.84% under a loose one ($p = 0.0070$), with both boundaries agreeing in direction; at the sequence level the vocabulary accounts for 2.38% of tokens but only 0.53% of the total negative log-probability. Second, context dominates token identity by an order of magnitude — tokens emitted after a failed evaluation carry a 4.30% rate against 0.94% at the first turn, and the ordering holds within every task. Third, compressing the environment feedback does not reduce the tail (0.71% versus 0.95%), so the planned intervention is inert. We do not read the nine-order-of-magnitude gap between $\approx 10^{-9}$ and our measured $\approx 1.0$ as a refutation, because the conditions differ; we read it as a tension the original narrative must resolve, and we name the control that would resolve it. The wider claim these data support is about agentic RL rather than about CUDA: uncertainty tracks what the environment just said, not which vocabulary the domain uses.
 
 **Keywords:** CUDA Agent; training instability; log-probability; out-of-distribution context; Triton
 
@@ -159,6 +159,8 @@ with $\tau = -2$ as the headline. Group comparisons use Fisher's exact test (two
 
 Context type is assigned mechanically from the turn index and the previous evaluator verdict: `initial` for turn 0, `after_success` when the previous evaluation passed, `after_failure` when it failed.
 
+**Independence caveat.** The exact test assumes independent observations, and tokens within one completion are plainly not independent — a low-probability token early in a regenerated block may raise or lower the next. The reported $p$-values are therefore anti-conservative. The effect sizes here are large enough that the sign is not in question, but $p = 0.0007$ should not be read as a statement about 98,533 independent draws. A cluster-level test with run as the unit would be the stronger analysis and is not reported.
+
 ### 3.8 Scale
 
 4 tasks × 2 conditions × 16 repeats = 128 runs, of which 127 produced data (one run failed to emit a fenced block). All 127 finished with a correct kernel.
@@ -188,6 +190,10 @@ The distribution shifts, not just the rate. The cumulative distribution of logpr
 
 A third reference class sharpens the reading. Structural tokens — `for`, `if`, `def`, `return`, `in`, `not`, which have no alternative spelling at a given position — show $R_{-2} = 1.54\%$ against 0.81% for the remainder. So the axis that matters is not "CUDA versus not CUDA"; if anything, tokens with *no* choice are more likely to be low-probability than tokens with a domain-specific name.
 
+That inversion is worth sitting with, because it is the opposite of what a "rare token" account predicts. `for` is among the most common tokens in any pretraining corpus and has no synonym at a fixed syntactic position, yet it carries a high rate; `tl.load` is rare and carries a low one. The reading that fits both is that the uncertainty sits not in the token but in the *decision the token realises*: `for` appears where the model must choose a loop structure — a range, a grid-stride loop, a block-stride loop — and the choice of structure is under-determined by the task, whereas once `tl.` has been emitted the continuation is nearly forced. Under that reading the low-probability rate indexes the size of the decision space at that position, and the vocabulary label is incidental.
+
+This is a post-hoc interpretation of a comparison that was not designed to test it, and it should be treated as such. It does, however, predict something checkable: positions that follow a structural keyword should be more variable than positions that follow a module prefix, which is a sharper claim than any aggregate rate in this paper.
+
 ### 4.2 RQ2: context dominates token identity
 
 | Context | $n$ | mean logprob | $R_{-2}$ | p10 |
@@ -201,6 +207,17 @@ The rate after a failed evaluation is 4.6× the first-turn rate and 9× the afte
 ![Low-probability rate by context type.](figures/fig2_lowprob_by_context.png)
 
 The direction of the success case is informative on its own: `after_success` (0.48%) is *below* `initial` (0.94%). A passing evaluation narrows the space of plausible continuations — the model has seen its own code accepted and is revising within a known-good region.
+
+**The ordering holds within every task**, so it is not an artefact of task composition:
+
+| Task | `initial` | `after_success` | `after_failure` |
+|---|---|---|---|
+| `layernorm_rows` | 0.49% | 0.17% | **4.54%** (n=1,344) |
+| `row_reduce` | 1.22% | 0.65% | **10.69%** (n=131) |
+| `softmax_rows` | 1.37% | 0.75% | **3.79%** (n=1,373) |
+| `vector_affine` | 0.54% | 0.30% | **2.71%** (n=295) |
+
+Every task shows `after_failure > initial > after_success`. The failure cells are unevenly distributed across tasks (`softmax_rows` 43.7% and `layernorm_rows` 42.8% of failure tokens, `row_reduce` only 4.2%), but the ordering is invariant, which is what matters: the context effect is not a re-description of a task effect.
 
 ### 4.3 RQ3: compressing feedback does nothing
 
@@ -255,6 +272,19 @@ The lowest-probability tokens in the corpus:
 ```
 
 **Not one is a code token; every one is an ordinary English word**, and most occur inside prose. The tail, such as it is, lives in the model's explanatory text rather than in the kernel it is writing.
+
+### 4.7 Sequence-level attribution: which tokens actually cost probability
+
+A per-token rate is a proxy. The quantity that feeds the importance ratio is the joint probability of a completion, $\sum_i \log \pi_\theta(a_i \mid s_i)$. Attribution over all 257 completions:
+
+| | tokens $k$ | $\sum \log \pi$ | per token |
+|---|---|---|---|
+| CUDA/Triton vocabulary | 2,344 | −31.6 | −0.0135 |
+| all other tokens | 96,189 | −5,978.0 | −0.0621 |
+
+**CUDA vocabulary is 2.38% of the tokens but contributes only 0.53% of the total negative log-probability.** Per completion the joint log-probability has mean −23.4 and median −9.3 (min −413.6, max −0.0).
+
+At the level that the causal chain actually operates on, the CUDA vocabulary is not the drag. Nearly all of the probability cost is carried by the surrounding text — which, given §4.6, is where the lowest-probability tokens live.
 
 ---
 
@@ -321,13 +351,15 @@ This study's first pass is a variant of the same failure: the machinery was soun
 
 ## 6. Limitations
 
-1. **Model state.** The measurement is on an aligned model at inference. The base-model control (§5.2) is missing and is the most important gap.
+1. **Model state.** The measurement is on an aligned model at inference. The base-model control (§5.2) is missing and is the most important gap. **Everything in this paper is conditional on that difference**, which is why the title carries it.
 2. **Single model family.** All API runs use one model. The 4B replication (§4.5) is a different family but a weaker stack.
-3. **Task scope.** Four tasks, all elementwise or reduction-shaped. Nothing with fusion, tiling, shared-memory staging, or launch-configuration search — the decision types where real optimisation lives. The vocabulary tested is therefore the *mechanical* part of CUDA, which is also the part most likely to be templated; a task whose kernel requires a non-obvious algorithmic choice might behave differently.
-4. **Class imbalance in the key context.** `after_failure` is 3.2% of tokens (3,143 of 98,533). The 4.30% estimate rests on that sample.
+3. **Task scope bounds the claim.** Four tasks, all elementwise or reduction-shaped. A row-reduction kernel has essentially one structure — load a block, reduce, store — so its Triton vocabulary is templated *by construction*. The source's motivating examples are different in kind: operator fusion, folding BatchNorm into convolution weights, algebraic simplification of a diagonal matmul. Those require *choosing an organisation*, and the token sequences that realise different organisations share little surface form. **On a fusion task the measured rate could be materially higher** — not because the tokens are rarer, but because the structure is under-determined. Nothing in this paper speaks to that case, and the aggregate phrasing "CUDA vocabulary is not the low-probability tail" is broader than the evidence; it holds for the mechanical layer of Triton on reduction-shaped tasks.
+4. **Class imbalance in the key context.** `after_failure` is 3.2% of tokens (3,143 of 98,533), and its distribution across tasks is uneven (`row_reduce` contributes only 4.2% of those tokens). The *ordering* `after_failure > initial > after_success` holds in all four tasks (§4.2), but the absolute magnitude rests on that sample.
 5. **No training.** We do not measure whether low probability causes importance-ratio explosion, nor the relative contribution of precision mismatch. Both require training runs.
 6. **One collection path.** All reported data come from a single driver against a single endpoint; cross-engine replication is absent.
 7. **Evaluator feedback is text-based.** The model never sees a profiler; "performance" in this loop is correctness plus a timing line, so the `after_profiling` context the original plan anticipated does not occur.
+8. **Statistical dependence.** Tokens within a completion are not independent, so the exact tests are anti-conservative (§3.7). A cluster-level analysis with run as the unit is not reported.
+9. **An unseparated alternative for the context effect.** `after_failure` may reflect *responding to bad news* or simply *writing new content* (after a failure the model rewrites; after a success it refines). Truncating the message does not distinguish these, since it does not change whether new code must be written. Separating them would require a condition that asks for a rewrite after a success.
 
 ---
 
