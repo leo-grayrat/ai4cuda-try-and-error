@@ -1,4 +1,4 @@
-# Where Does the Probability Cost Live? A Distributional Test of the Claim That CUDA Syntax Is Rare Enough to Break PPO
+# Where Does the Probability Cost Live? A Distributional Test of Whether CUDA Tokens Approach the Claimed Probability Floor
 
 **Author:** leo-grayrat
 **Affiliation:** Independent research
@@ -10,13 +10,13 @@
 
 CUDA Agent explains its policy collapse at training step 17 with a chain whose second link is an explicit empirical claim: CUDA code is under 0.01% of pretraining data, therefore the policy assigns near-floor probability to CUDA tokens, "e.g. $\pi_\theta(a_t \mid s_t) \approx 10^{-9}$", and small precision differences are consequently amplified into exploding importance ratios. We test that link where it can be tested: at generation time, against a live model, with per-token conditional probabilities.
 
-Two collections support the test. The first uses four elementwise/reduction tasks (128 runs, 98,533 tokens). The second uses five KernelBench Level 2 operator chains — ConvTranspose3d + GroupNorm + GELU + Sum and similar — where an implementer must decide what to fuse, whether to materialise intermediates, and how to tile (40 runs, 542,611 tokens). In both, the kernel is written in the reply body rather than through tool calls, so every code token falls under `logprobs`; a pre-flight check confirmed 448/448 code tokens carry a probability.
+Two collections support the test. The first uses four elementwise/reduction tasks (128 runs, 98,533 tokens). The second uses five KernelBench Level 2 operator chains — ConvTranspose3d + GroupNorm + GELU + Sum and similar — where an implementer must decide what to fuse, whether to materialise intermediates, and how to tile (40 runs, 542,611 tokens; **87.5% of these tokens come from runs that ended in failure**, a selection effect noted wherever their numbers are quoted). In both, the kernel is written in the reply body rather than through tool calls, so every code token falls under `logprobs`; a pre-flight check confirmed 448/448 code tokens carry a probability.
 
-Four results. **First**, CUDA/Triton vocabulary carries a *lower* low-probability rate than the surrounding text — 0.26% vs 0.84% under a strict vocabulary (Fisher $p = 0.0007$), 0.49% vs 0.84% under a loose one ($p = 0.0070$). **Second**, the cost is spatially concentrated: inside fenced code blocks the rate is 0.60%, outside it 13.56%, a 22.4× difference, and the worst 5% of code tokens carry 98.1% of the code's total negative log-probability while the worst 5% of prose tokens carry only 30.3% of prose's. **Third**, raising task difficulty does not move the code-side rate: 0.67% on reduction tasks, 0.60% on fusion tasks, with per-task values spanning 0.25–0.93%. **Fourth**, the absolute probabilities do not approach the claimed floor: the lowest code token in 322,375 measured has logprob −13.02 (2.2×10⁻⁶), the lowest prose token −16.65 (5.9×10⁻⁸), while 10⁻⁹ corresponds to −20.7 — 400× below anything observed.
+Four results. **First**, CUDA/Triton vocabulary carries a *lower* low-probability rate than the surrounding text — 0.26% vs 0.84% under a strict vocabulary (Fisher $p = 0.0007$), 0.49% vs 0.84% under a loose one ($p = 0.0070$). **Second**, the cost is spatially concentrated: inside fenced code blocks the rate is 0.60% (0.33% with in-block comments excluded), outside it 13.56% — a 22.4× difference that rises to 41× once comments are removed from the code region. The worst 5% of code tokens carry 98.1% of the code's total negative log-probability while the worst 5% of prose tokens carry only 30.3% of prose's. **Third**, raising task difficulty does not move the code-side rate: 0.67% on reduction tasks, 0.60% on fusion tasks, with per-task values spanning 0.25–0.93%. **Fourth**, the absolute probabilities do not approach the claimed floor: the lowest code token in 322,375 measured has logprob −13.02 (2.2×10⁻⁶), the lowest prose token −16.65 (5.9×10⁻⁸), while 10⁻⁹ corresponds to −20.7 — 400× below anything observed.
 
 Reading all 816 low-probability tokens from the first collection and all 189 high-cost non-comment code tokens from the second, in context and without a keyword table, yields a consistent picture: the cost sits in comments, identifier naming, punctuation and occasional slips, not in implementation choices. We find no case in which the model's uncertainty at a token corresponds to choosing between two ways of implementing a kernel.
 
-We read this as evidence that the second link does not hold under observable conditions, and that the causal chain's attribution — rare CUDA syntax causing instability — points at the wrong object. The uncertainty tracks *what the model is writing* (prose or debug reasoning vs templated code), not *which vocabulary the domain uses*. The gap between 10⁻⁹ and our measurements is not presented as a refutation, since the source measures a base model during rollout and we measure an aligned model at inference; it is presented as a tension the source must explain, with the resolving experiment named.
+We read this as evidence that **whatever the reported 10⁻⁹ measures, it is not a property of the domain's vocabulary** — alignment cannot change corpus statistics, so a rarity-driven floor would survive alignment if it existed. The causal chain's attribution therefore points at the wrong object. The uncertainty tracks *what the model is writing* (prose or debug reasoning vs templated code), not *which vocabulary the domain uses*. The gap between 10⁻⁹ and our measurements is not presented as a refutation, since the source measures a base model during rollout and we measure an aligned model at inference; it is presented as a tension the source must explain, with the resolving experiment named.
 
 **Keywords:** CUDA Agent; training instability; conditional probability; log-probability distribution; fusion kernels
 
@@ -206,16 +206,36 @@ Family B, 542,611 tokens, split by fenced-block state:
 
 **Density ratio: 22.4×.**
 
+Comments inside code fences count as code in the table above, and they are high-entropy. Recomputing with in-block comments excluded:
+
+| Task | all code | pure code |
+|---|---|---|
+| `12_gemm_multiply_leakyrelu` | 0.25% | **0.18%** |
+| `14_gemm_divide_sum_scaling` | 0.93% | **0.44%** |
+| `17_conv2d_instancenorm_divide` | 0.58% | **0.26%** |
+| `19_convtranspose2d_gelu_groupnorm` | 0.73% | **0.42%** |
+| `1_conv2d_relu_biasadd` | 0.52% | **0.37%** |
+| **total (310,935 tokens)** | 0.60% | **0.33%** |
+
+**With comments removed the contrast against prose is 41×, not 22.4×.** The earlier figure was a blend.
+
 The highest-frequency low-probability tokens in the whole collection are `the` (118), `` ` `` (116), `,` (70), `.` (64), `and` (63), `I` (55) — prose function words and punctuation.
 
 ### 4.3 RQ3: raising difficulty does not move the code-side rate
 
-| Family | code-side $R_{-2}$ |
-|---|---|
-| A (reductions, 4 tasks) | 0.67% |
-| B (chains, 5 tasks) | **0.60%** |
+Comparing the two families directly is confounded: they differ in task construction, turn cap (8 vs 6), success rate (near 100% vs 17.5%) and context composition, so an equality between their rates could be a genuine invariance or the cancellation of several opposing effects.
 
-Per-task values in Family B span 0.25%–0.93%; none exceeds 1%. The task description moved from `sum each row` to `ConvTranspose3d + GroupNorm + GELU + Sum` — a five-fold increase in operator-chain length, with fusion and tiling decisions that the reductions did not have — and the code-side density did not rise.
+**The cleaner comparison is within Family B**, where the five tasks differ in chain length and in how often the model succeeded (5/8, 1/8, 1/8, 0/8, 0/8):
+
+| Task | chain | success | pure-code $R_{-2}$ |
+|---|---|---|---|
+| `12_gemm_multiply_leakyrelu` | 3 ops | 5/8 | 0.18% |
+| `1_conv2d_relu_biasadd` | 3 ops | 0/8 | 0.37% |
+| `14_gemm_divide_sum_scaling` | 4 ops | 1/8 | 0.44% |
+| `17_conv2d_instancenorm_divide` | 3 ops | 1/8 | 0.26% |
+| `19_convtranspose2d_gelu_groupnorm` | 3 ops | 0/8 | 0.42% |
+
+The rate spans 0.18%–0.44% across a success range from 0/8 to 5/8. **Within this family, neither chain length nor success rate predicts the code-side density.** Across families, the reduction tasks sit at 0.67% and the chains at 0.33% (pure code), which is a *decrease* — not the increase a difficulty hypothesis would predict, though the four confounds above prevent reading that as an effect.
 
 What rose is the prose share of the stream (from negligible in Family A to 40.6% in Family B) and prose's own rate (12–14%).
 
@@ -308,7 +328,9 @@ A second example makes the distinction concrete: the identifier `y` in `y = torc
 
 RQ1–RQ4 converge: CUDA vocabulary carries less low-probability mass than the surrounding text; the cost is spatially located outside code blocks; it does not respond to task difficulty; and its absolute magnitude is 400× above the claimed floor even at the extreme.
 
-The claim "CUDA is rare in pretraining, therefore CUDA tokens sit at 10⁻⁹" does not survive this measurement.
+The claim "CUDA is rare in pretraining, therefore CUDA tokens sit at 10⁻⁹" does not survive this measurement **in any condition we can observe**.
+
+What follows is narrower and, we think, harder to escape: **alignment cannot change what is in a pretraining corpus.** If a near-floor probability were a consequence of corpus rarity, it would persist across alignment, because the model would still be the same model with the same exposure frequency. We measure ≈1.0 on an aligned model. Either the alignment step moved a token probability by nine orders of magnitude — which would mean the quantity is not a function of the corpus at all — or the 10⁻⁹ was never a corpus consequence. Both readings leave the attribution without its stated mechanism.
 
 ### 5.2 The nine-orders-of-magnitude gap, and why it is a tension
 
@@ -330,6 +352,8 @@ The mechanism is visible in the token inventory. In code, the model writes from 
 
 ### 5.4 An alternative account of the training collapse
 
+**What follows is a hypothesis, not a finding.** We state it first so that the three observations below are read as things it is consistent with, not as things that support it.
+
 Put the pieces together: the source reports entropy rising alongside reward collapse; DR. KERNEL reports that correcting train/inference mismatch stabilises training without raising the ceiling; and our data show uncertainty concentrated in failure-driven prose, not in code.
 
 A coherent reading is that **the instability is a context-distribution problem, not a vocabulary problem**. After a failed evaluation the trajectory leaves the training distribution — not because CUDA words are rare, but because compiler diagnostics and self-correction text are. RL on such trajectories has to learn from a state distribution it has not seen; entropy rises; the ratio becomes unstable.
@@ -338,7 +362,11 @@ A coherent reading is that **the instability is a context-distribution problem, 
 
 If this reading is right, then "feed more CUDA data" targets an object we measured at probability ≈1.0, while the actionable lever is what the environment says after failure and how the policy is asked to recover.
 
-**This is an inference, not a demonstration.** Confirming it requires logging entropy and token probabilities during training, which we cannot do.
+**A competing account we cannot rule out.** The prose may be a *symptom* of confusion rather than a *source* of instability: a model that is lost writes uncertain text *because* it is lost, and the epistemic state is what destabilises training. Under that reading, prose cost is a measurement of confusion, and an intervention targeting prose would suppress the symptom while leaving the state intact. Our RFT argument does not distinguish these — RFT removes unsuccessful trajectories, not prose.
+
+Two experiments would separate them, and neither is run here. First, keep the content of a failure message but change its formatting (a compiler with a different diagnostic style): the prose distribution should shift while the code should not. Second, ask for a rewrite after a *success*: that produces prose of similar length without the diagnostic content, separating "more prose" from "bad news".
+
+**Confirming the account at all** requires logging entropy and token probabilities through a training run, which we cannot do.
 
 ### 5.5 A methodological failure, kept because it explains the design
 
@@ -367,7 +395,7 @@ Excluding the fragment runs, the success rate on complete files is 28% (7/25). T
 
 1. **Model state.** The measurement is on an aligned model at inference. The base-model control (§5.2) is missing. Everything here is conditional on that difference, which is why the title carries it.
 2. **Single model family.** All API runs use one model; the 4B replication in Family A used a different family but a weaker stack.
-3. **Task scope.** Reduction and operator-chain tasks only. What is measured is the mechanical layer of Triton and the fusion structure of Level 2 chains. Nothing here speaks to Level 3 (ResNet, VGG), and nothing speaks to tasks where the kernel requires a non-obvious *algorithmic* choice rather than a fusion/tiling choice.
+3. **Task scope — and the kind of fusion tested.** The distinction that matters is not "reduction versus chain" but "**chain with a trivial organisational choice versus chain with a non-obvious one**". All five Family B tasks have the trivial kind: a heavy op followed by elementwise passes, where the fusion decision is "fuse the tail into the epilogue or do a second pass", and both options are easy to write once the convolution is correct. The genuinely hard organisational decisions — a tiling that keeps an intermediate in shared memory, a transpose that changes the access pattern, split-K versus two-pass reduction for a reduction that does not fit one block, FlashAttention-style online softmax — are **not represented at all**. The null result on RQ3 is therefore a null result about the easy kind of fusion.
 4. **Selection effect in Family B.** Success rate 17.5%; `after_failure` holds 87.5% of tokens. The code-side density of 0.60% is measured mostly in the context of a struggling model. Whether it differs when the model is succeeding is not answerable from this corpus.
 5. **Statistical dependence.** Tokens within a completion are not independent, so exact tests are anti-conservative (§3.7). No cluster-level analysis is reported.
 6. **No training.** We do not measure whether low probability causes importance-ratio explosion, nor the relative contribution of precision mismatch.
@@ -379,15 +407,11 @@ Excluding the fragment runs, the success rate on complete files is 28% (7/25). T
 
 ## 7. Conclusion
 
-The second link of CUDA Agent's causal chain does not hold in any condition we can measure.
+Whatever the reported 10⁻⁹ measures, it is not a property of the domain's vocabulary. Over 98,533 tokens on reduction tasks and 542,611 on operator chains, CUDA/Triton vocabulary carries *less* low-probability mass than the surrounding text; inside code fences the rate is 0.33% once comments are removed, outside 13.56%, a 41× difference; the worst 5% of code tokens carry 98.1% of the code's cost against 30.3% for prose; and the absolute minimum across 322,375 code tokens is 2.2×10⁻⁶, four hundred times above the claimed floor.
 
-CUDA/Triton vocabulary is *less* likely to be low-probability than surrounding text (0.26% vs 0.84%, $p=0.0007$, two boundaries agreeing). The cost is spatial: 0.60% inside code fences against 13.56% outside, a 22.4× difference, and the worst 5% of code tokens carry 98.1% of the code's total cost while the worst 5% of prose carry 30.3% of prose's. Raising task difficulty from single reductions to five-operator chains leaves the code-side rate at 0.60%. The absolute minimum over 322,375 code tokens is 2.2×10⁻⁶ — four hundred times above the claimed floor of 10⁻⁹.
+Because alignment cannot alter corpus statistics, a rarity-driven floor would have survived it. It did not. That leaves the causal chain's attribution without its stated mechanism.
 
-Reading every low-probability token in context rather than counting them produces the finding that organizes the rest: **none of them corresponds to an implementation decision.** The tail is composed of comment wording, identifier naming, punctuation, and slips.
-
-What the data support instead is that uncertainty tracks what kind of text is being written — templated code versus composed reasoning — and that the composed reasoning concentrates where the model is failing. A coherent account of the training collapse follows: not rare vocabulary, but a context distribution that leaves the training manifold after failure. This account is consistent with the observed entropy rise, with RFT's effectiveness, and with DR. KERNEL's finding that correcting mismatch stabilises training without raising the ceiling. It is an inference, and the experiment that would test it — logging entropy and token probabilities through a training run — is the obvious next step.
-
----
+What the data support is that the cost tracks the kind of text being written, and that composed text concentrates where the model is failing. Whether that makes the prose a cause of instability or a symptom of it is open, and the experiments that would decide it are named in §5.4.
 
 ## References
 
