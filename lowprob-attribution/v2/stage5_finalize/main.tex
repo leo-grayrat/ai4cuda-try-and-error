@@ -201,8 +201,8 @@ probability; log-probability distribution; fusion kernels
 \hypertarget{introduction}{%
 \subsection{1. Introduction}\label{introduction}}
 
-\hypertarget{the-claim-quoted}{%
-\subsubsection{1.1 The claim, quoted}\label{the-claim-quoted}}
+\hypertarget{the-claim}{%
+\subsubsection{1.1 The claim}\label{the-claim}}
 
 Agentic reinforcement learning now produces GPU kernels that beat
 compiler autotuning. CUDA Agent reports pass rates of 100\%, 100\% and
@@ -231,9 +231,9 @@ The fix is a three-stage warm-up: single-turn RL, rejection fine-tuning
 of the actor on positive-reward trajectories, and value pretraining of
 the critic.
 
-\hypertarget{why-the-second-link-is-the-one-to-test}{%
-\subsubsection{1.2 Why the second link is the one to
-test}\label{why-the-second-link-is-the-one-to-test}}
+\hypertarget{selection-of-the-second-link}{%
+\subsubsection{1.2 Selection of the second
+link}\label{selection-of-the-second-link}}
 
 The chain has four links: (i) CUDA is rare in pretraining; (ii) that
 rarity yields near-floor token probabilities; (iii) near-floor
@@ -246,15 +246,15 @@ generation time}, and that can be measured directly, on any model,
 without training. If (ii) fails, (iii) and (iv) have no antecedent, and
 the attribution needs a different basis.
 
-There is a second reason to test (ii) rather than (iii)/(iv): (ii) is
-\emph{cheap to falsify and expensive to defend}. Anyone can measure a
-conditional probability; the claim that it sits at 10⁻⁹ is falsifiable
-with a \texttt{logprobs} request. That asymmetry makes it the right
-place to push.
+A second consideration favours (ii) over (iii) and (iv): (ii) is
+falsifiable at low cost. A conditional probability can be measured with
+a single \texttt{logprobs} request, whereas testing (iii) and (iv)
+requires training runs. This asymmetry determines which link is tested
+first.
 
-\hypertarget{why-the-measurement-is-not-trivial}{%
-\subsubsection{1.3 Why the measurement is not
-trivial}\label{why-the-measurement-is-not-trivial}}
+\hypertarget{measurement-constraints}{%
+\subsubsection{1.3 Measurement
+constraints}\label{measurement-constraints}}
 
 Under an agent framework, the kernel is written through tool calls, and
 \textbf{tool-call arguments are not covered by \texttt{logprobs}}. The
@@ -272,8 +272,8 @@ The practical consequence is architectural (§3.1): an agent-framework
 experiment cannot measure the tokens that matter, so the framework has
 to be removed.
 
-\hypertarget{what-this-paper-does}{%
-\subsubsection{1.4 What this paper does}\label{what-this-paper-does}}
+\hypertarget{design-of-this-study}{%
+\subsubsection{1.4 Design of this study}\label{design-of-this-study}}
 
 We measure per-token conditional probabilities inside a real multi-turn
 kernel-writing loop, on two task families of different difficulty, and
@@ -295,8 +295,8 @@ ask:
   claimed 10⁻⁹ floor?
 \end{itemize}
 
-\hypertarget{findings}{%
-\subsubsection{1.5 Findings}\label{findings}}
+\hypertarget{summary-of-results}{%
+\subsubsection{1.5 Summary of results}\label{summary-of-results}}
 
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.50}}
@@ -314,8 +314,8 @@ RQ4 & No --- minimum code logprob −13.02 (2.2×10⁻⁶) vs the claimed
 \bottomrule
 \end{longtable}
 
-\hypertarget{scope-stated-up-front}{%
-\subsubsection{1.6 Scope, stated up front}\label{scope-stated-up-front}}
+\hypertarget{scope}{%
+\subsubsection{1.6 Scope}\label{scope}}
 
 We measure an \textbf{aligned commercial model at inference}, not the
 un-finetuned base model during rollout. That difference is material and
@@ -411,15 +411,15 @@ others 2025).
 check whether it holds at generation time --- a precondition, not a
 competing mechanism.
 
-\hypertarget{why-closed-apis-cannot-answer-this}{%
-\subsubsection{2.4 Why closed APIs cannot answer
-this}\label{why-closed-apis-cannot-answer-this}}
+\hypertarget{logprob-availability-in-closed-apis}{%
+\subsubsection{2.4 Logprob availability in closed
+APIs}\label{logprob-availability-in-closed-apis}}
 
 See §1.3. The short version: tool-call arguments carry no logprob, so a
 framework-based measurement cannot see the tokens that write the kernel.
 
-\hypertarget{position}{%
-\subsubsection{2.5 Position}\label{position}}
+\hypertarget{position-of-this-work}{%
+\subsubsection{2.5 Position of this work}\label{position-of-this-work}}
 
 The works above study instability from the training side. This paper
 does not train. It measures the generation-time distribution that the
@@ -433,9 +433,9 @@ than a threshold.
 \hypertarget{method}{%
 \subsection{3. Method}\label{method}}
 
-\hypertarget{removing-the-framework-so-the-measurement-exists}{%
-\subsubsection{3.1 Removing the framework so the measurement
-exists}\label{removing-the-framework-so-the-measurement-exists}}
+\hypertarget{collection-without-an-agent-framework}{%
+\subsubsection{3.1 Collection without an agent
+framework}\label{collection-without-an-agent-framework}}
 
 An agent writes the kernel through \texttt{write} or \texttt{edit} tool
 calls; the kernel text lives in the tool arguments; those tokens carry
@@ -529,9 +529,8 @@ Evaluators check correctness on two shapes at tolerance \(10^{-4}\).
 
 Fixed before collection, not varied afterwards.
 
-\hypertarget{model-selection-settled-empirically}{%
-\subsubsection{3.5 Model selection, settled
-empirically}\label{model-selection-settled-empirically}}
+\hypertarget{model-selection}{%
+\subsubsection{3.5 Model selection}\label{model-selection}}
 
 The API offers reasoning and non-reasoning models. Under the reasoning
 model the budget is consumed inside the reasoning channel: at
@@ -575,8 +574,8 @@ are large enough that the sign is not in question, but \(p=0.0007\)
 should not be read as a statement about 322,375 independent draws. A
 cluster-level analysis with run as the unit is not reported.
 
-\hypertarget{scale}{%
-\subsubsection{3.8 Scale}\label{scale}}
+\hypertarget{collection-scale}{%
+\subsubsection{3.8 Collection scale}\label{collection-scale}}
 
 \begin{longtable}[]{@{}lll@{}}
 \toprule
@@ -624,9 +623,9 @@ hypothesis. A third reference class sharpens it: structural tokens
 choice are more often low-probability than tokens with a domain-specific
 name.
 
-\hypertarget{rq2-the-cost-is-spatial-and-it-is-outside-the-code}{%
-\subsubsection{4.2 RQ2: the cost is spatial, and it is outside the
-code}\label{rq2-the-cost-is-spatial-and-it-is-outside-the-code}}
+\hypertarget{rq2-spatial-distribution-of-the-probability-cost}{%
+\subsubsection{4.2 RQ2: spatial distribution of the probability
+cost}\label{rq2-spatial-distribution-of-the-probability-cost}}
 
 Family B, 542,611 tokens, split by fenced-block state:
 
@@ -679,9 +678,9 @@ The highest-frequency low-probability tokens in the whole collection are
 \texttt{.} (64), \texttt{and} (63), \texttt{I} (55) --- prose function
 words and punctuation.
 
-\hypertarget{rq3-raising-difficulty-does-not-move-the-code-side-rate}{%
-\subsubsection{4.3 RQ3: raising difficulty does not move the code-side
-rate}\label{rq3-raising-difficulty-does-not-move-the-code-side-rate}}
+\hypertarget{rq3-effect-of-task-difficulty}{%
+\subsubsection{4.3 RQ3: effect of task
+difficulty}\label{rq3-effect-of-task-difficulty}}
 
 Comparing the two families directly is confounded: they differ in task
 construction, turn cap (8 vs 6), success rate (near 100\% vs 17.5\%) and
@@ -716,10 +715,9 @@ effect.
 What rose is the prose share of the stream (from negligible in Family A
 to 40.6\% in Family B) and prose's own rate (12--14\%).
 
-\hypertarget{rq4-the-absolute-probabilities-do-not-approach-the-claimed-floor}{%
-\subsubsection{4.4 RQ4: the absolute probabilities do not approach the
-claimed
-floor}\label{rq4-the-absolute-probabilities-do-not-approach-the-claimed-floor}}
+\hypertarget{rq4-proximity-to-the-claimed-probability-floor}{%
+\subsubsection{4.4 RQ4: proximity to the claimed probability
+floor}\label{rq4-proximity-to-the-claimed-probability-floor}}
 
 Family B, quantiles of logprob by region:
 
@@ -755,9 +753,9 @@ i.e.~\(e^{-414.8} \approx 7\times10^{-181}\). That number is far
 single token's probability --- the two quantities are not the same
 object, and the source's quotation is explicitly of the latter.
 
-\hypertarget{where-the-probability-mass-sits}{%
-\subsubsection{4.5 Where the probability mass
-sits}\label{where-the-probability-mass-sits}}
+\hypertarget{concentration-of-probability-mass}{%
+\subsubsection{4.5 Concentration of probability
+mass}\label{concentration-of-probability-mass}}
 
 \begin{longtable}[]{@{}llllll@{}}
 \toprule
@@ -777,8 +775,8 @@ only 30.3\%, and the remaining 95\% each contribute a little.
 In absolute terms, prose carries \textbf{12.6× the total negative
 logprob of code on 68\% as many tokens} --- a per-token cost 18× higher.
 
-\hypertarget{context}{%
-\subsubsection{4.6 Context}\label{context}}
+\hypertarget{context-type}{%
+\subsubsection{4.6 Context type}\label{context-type}}
 
 \begin{longtable}[]{@{}lll@{}}
 \toprule
@@ -799,9 +797,9 @@ not.
 Note the composition: 87.5\% of Family B's tokens sit in
 \texttt{after\_failure}. This is a selection effect (§6.5).
 
-\hypertarget{reading-the-tokens-not-counting-them}{%
-\subsubsection{4.7 Reading the tokens, not counting
-them}\label{reading-the-tokens-not-counting-them}}
+\hypertarget{manual-classification-of-low-probability-tokens}{%
+\subsubsection{4.7 Manual classification of low-probability
+tokens}\label{manual-classification-of-low-probability-tokens}}
 
 Aggregate rates say where cost is; they do not say what the model was
 doing. So we read every low-probability token in context.
@@ -897,9 +895,9 @@ is not in question.
 \hypertarget{discussion}{%
 \subsection{5. Discussion}\label{discussion}}
 
-\hypertarget{the-second-link-does-not-hold}{%
-\subsubsection{5.1 The second link does not
-hold}\label{the-second-link-does-not-hold}}
+\hypertarget{status-of-the-second-link}{%
+\subsubsection{5.1 Status of the second
+link}\label{status-of-the-second-link}}
 
 RQ1--RQ4 converge: CUDA vocabulary carries less low-probability mass
 than the surrounding text; the cost is spatially located outside code
@@ -920,9 +918,9 @@ orders of magnitude --- which would mean the quantity is not a function
 of the corpus at all --- or the 10⁻⁹ was never a corpus consequence.
 Both readings leave the attribution without its stated mechanism.
 
-\hypertarget{the-nine-orders-of-magnitude-gap-and-why-it-is-a-tension}{%
-\subsubsection{5.2 The nine-orders-of-magnitude gap, and why it is a
-tension}\label{the-nine-orders-of-magnitude-gap-and-why-it-is-a-tension}}
+\hypertarget{the-magnitude-gap-and-its-interpretation}{%
+\subsubsection{5.2 The magnitude gap and its
+interpretation}\label{the-magnitude-gap-and-its-interpretation}}
 
 We measure ≈1.0 where the source reports 10⁻⁹. We decline to read that
 as a refutation, because conditions differ: the source measures an
@@ -948,14 +946,12 @@ even before alignment, the chain fails at its second link. We could not
 run this control --- it requires base-model weights --- and it is the
 single highest-value follow-up.
 
-\hypertarget{what-the-data-do-support-the-cost-is-in-the-writing-not-the-code}{%
-\subsubsection{5.3 What the data do support: the cost is in the writing,
-not the
-code}\label{what-the-data-do-support-the-cost-is-in-the-writing-not-the-code}}
+\hypertarget{regional-distribution-as-the-supported-finding}{%
+\subsubsection{5.3 Regional distribution as the supported
+finding}\label{regional-distribution-as-the-supported-finding}}
 
-The strongest regularity in both collections is not about domain
-vocabulary; it is about \textbf{which kind of text the model is
-producing}.
+The strongest regularity in both collections concerns not domain
+vocabulary but \textbf{the type of text being produced}.
 
 Code blocks: 0.60\%. Prose: 13.56\%. The ratio is stable across five
 very different tasks, and it survives a five-fold increase in
@@ -974,9 +970,9 @@ most tokens.
 1.88\% at the first turn. When a kernel does not work, the model writes
 substantially more text, and that text is where the uncertainty lives.
 
-\hypertarget{an-alternative-account-of-the-training-collapse}{%
-\subsubsection{5.4 An alternative account of the training
-collapse}\label{an-alternative-account-of-the-training-collapse}}
+\hypertarget{a-context-distribution-account-of-the-collapse}{%
+\subsubsection{5.4 A context-distribution account of the
+collapse}\label{a-context-distribution-account-of-the-collapse}}
 
 \textbf{What follows is a hypothesis, not a finding.} We state it first
 so that the three observations below are read as things it is consistent
@@ -1025,10 +1021,9 @@ diagnostic content, separating ``more prose'' from ``bad news.''
 \textbf{Confirming the account at all} requires logging entropy and
 token probabilities through a training run, which we cannot do.
 
-\hypertarget{a-methodological-failure-kept-because-it-explains-the-design}{%
-\subsubsection{5.5 A methodological failure, kept because it explains
-the
-design}\label{a-methodological-failure-kept-because-it-explains-the-design}}
+\hypertarget{classification-bias-in-the-first-pass}{%
+\subsubsection{5.5 Classification bias in the first
+pass}\label{classification-bias-in-the-first-pass}}
 
 Our first pass, using a local 4B model, produced a headline of 10.00\%
 for \texttt{triton\_specific} at \(p=0.0156\). It was wrong. The
@@ -1061,9 +1056,9 @@ distinguish ``the model was choosing an implementation'' from ``the
 model was choosing a word,'' and that distinction is the entire
 question.
 
-\hypertarget{a-second-methodological-failure-the-driver}{%
-\subsubsection{5.6 A second methodological failure: the
-driver}\label{a-second-methodological-failure-the-driver}}
+\hypertarget{collection-driver-defect}{%
+\subsubsection{5.6 Collection driver
+defect}\label{collection-driver-defect}}
 
 Family B's success rate of 17.5\% is not a model property. Of 32
 failures, 16 were \texttt{NameError} caused by the driver accepting
@@ -1089,25 +1084,25 @@ share of \texttt{after\_failure} in the corpus.
 \tightlist
 \item
   \textbf{Model state.} The measurement is on an aligned model at
-  inference. The base-model control (§5.2) is missing. Everything here
-  is conditional on that difference, which is why the title carries it.
+  inference. The base-model control (§5.2) is missing. The stated scope
+  of this paper is conditional on that difference.
 \item
   \textbf{Single model family.} All API runs use one model; the 4B
   replication in Family A used a different family but a weaker stack.
 \item
-  \textbf{Task scope --- and the kind of fusion tested.} The distinction
-  that matters is not ``reduction versus chain'' but ``\textbf{chain
-  with a trivial organisational choice versus chain with a non-obvious
-  one}.'' All five Family B tasks have the trivial kind: a heavy op
-  followed by elementwise passes, where the fusion decision is ``fuse
-  the tail into the epilogue or do a second pass,'' and both options are
-  easy to write once the convolution is correct. The genuinely hard
-  organisational decisions --- a tiling that keeps an intermediate in
-  shared memory, a transpose that changes the access pattern, split-K
-  versus two-pass reduction for a reduction that does not fit one block,
+  \textbf{Task scope and class of fusion.} The relevant distinction is
+  not ``reduction versus chain'' but ``\textbf{chain with a trivial
+  organisational choice versus chain with a non-obvious one}.'' All five
+  Family B tasks belong to the former class: a heavy op followed by
+  elementwise passes, where the fusion decision is ``fuse the tail into
+  the epilogue or do a second pass,'' and both options are easy to write
+  once the convolution is correct. The genuinely hard organisational
+  decisions --- a tiling that keeps an intermediate in shared memory, a
+  transpose that changes the access pattern, split-K versus two-pass
+  reduction for a reduction that does not fit one block,
   FlashAttention-style online softmax --- are \textbf{not represented at
-  all}. The null result on RQ3 is therefore a null result about the easy
-  kind of fusion.
+  all}. The null result on RQ3 therefore concerns only the trivial class
+  of fusion decisions.
 \item
   \textbf{Selection effect in Family B.} Success rate 17.5\%;
   \texttt{after\_failure} holds 87.5\% of tokens. The code-side density
@@ -1158,7 +1153,7 @@ Because alignment cannot alter corpus statistics, a rarity-driven floor
 would have survived it. It did not. That leaves the causal chain's
 attribution without its stated mechanism.
 
-What the data support is that the cost tracks the kind of text being
+What the data support is that the cost tracks the type of text being
 written, and that composed text concentrates where the model is failing.
 Whether that makes the prose a cause of instability or a symptom of it
 is open, and the experiments that would decide it are named in §5.4.
