@@ -5,3 +5,16 @@ results/*
 proxy-records/
 *.zstd
 __pycache__/
+
+# collected data directories (runs, runs-formal, runs-kb2, runs-triton, ...)
+runs-*/
+# server logs
+*.log
+# LaTeX intermediate files from the paper build
+paper/main.aux
+paper/main.fdb_latexmk
+paper/main.fls
+paper/main.log
+paper/main.xdv
+paper/main.blg
+paper/main.bbl

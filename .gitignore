@@ -7,3 +7,6 @@ __pycache__/
 runs/
 *.pyc
 .workbuddy/
+
+# stray windows redirection artifact
+nul
