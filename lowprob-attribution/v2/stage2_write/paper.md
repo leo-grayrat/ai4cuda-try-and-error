@@ -438,8 +438,6 @@ Because alignment cannot alter corpus statistics, a rarity-driven floor would ha
 
 What the data support is that the cost tracks the type of text being written, and that composed text concentrates where the model is failing. Whether that makes the prose a cause of instability or a symptom of it is open, and the experiments that would decide it are named in Section~\ref{a-context-distribution-account-of-the-collapse}.
 
-## References
-
 ## Appendix A — Reproducibility
 
 ```bash
