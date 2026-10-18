@@ -134,3 +134,15 @@ def test_python_runtime_config_changes_do_not_force_native_recompilation(tmp_pat
     assert executor.build_hash() == before
     executor.files.write("kernels/new.cu", "__global__ void f() {}")
     assert executor.build_hash() != before
+
+
+def test_source_checker_does_not_reject_tensor_creation_aliases(tmp_path):
+    from runtime import source_checks
+    (tmp_path / "model_new.py").write_text("from torch import empty_like as allocate\nclass ModelNew:\n def forward(self,x):\n  return allocate(x)\n")
+    assert "python_compute" not in source_checks(tmp_path)
+
+
+def test_source_checker_does_not_call_cuda_stream_metadata_tensor_math(tmp_path):
+    from runtime import source_checks
+    (tmp_path / "model_new.py").write_text("import torch\nclass ModelNew:\n def forward(self,x):\n  stream = torch.cuda.current_stream()\n  return x\n")
+    assert "python_compute" not in source_checks(tmp_path)

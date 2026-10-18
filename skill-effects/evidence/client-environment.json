@@ -1,0 +1,12 @@
+{
+  "python": "3.13.5 | packaged by Anaconda, Inc. | (main, Jun 12 2025, 16:37:03) [MSC v.1929 64 bit (AMD64)]",
+  "packages": {
+    "torch": "2.11.0+cu128",
+    "triton": null,
+    "triton-windows": "3.8.0.post29",
+    "requests": "2.32.3",
+    "tokenizers": "0.23.3",
+    "pytest": "9.1.1",
+    "ninja": null
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "method": "CUDA events around repeated complete model calls, including launch gaps; not summed kernel-only time",
+  "iterations_per_sample": 100,
+  "calibration_us": 134.2719942331314,
+  "matmul_precision": "highest, baseline TF32 disabled",
+  "samples_us": {
+    "eager": [
+      28.100481033325195,
+      25.92672109603882,
+      27.458560466766357,
+      29.821760654449463,
+      25.008320808410645,
+      24.8470401763916,
+      27.992959022521973
+    ],
+    "compiled": [
+      39.520320892333984,
+      36.765758991241455,
+      36.274240016937256,
+      35.63904047012329,
+      37.664639949798584,
+      34.53439950942993,
+      35.13375997543335
+    ],
+    "candidate": [
+      15.827840566635132,
+      12.345600128173828,
+      11.891839504241943,
+      11.802239418029785,
+      10.56704044342041,
+      11.071679592132568,
+      11.515519618988037
+    ]
+  },
+  "median_us": {
+    "eager": 27.458560466766357,
+    "compiled": 36.274240016937256,
+    "candidate": 11.802239418029785
+  },
+  "purpose": "paired candidate/reference timing for the current frozen task"
+}

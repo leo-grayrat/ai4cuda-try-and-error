@@ -112,6 +112,8 @@ def source_checks(work: Path) -> dict[str, str]:
         findings["python_syntax"] = str(exc)
         return findings
     torch_aliases = {"torch", "F", "nn"}
+    imported_functions = {}
+    known_compute = {"relu", "gelu", "sigmoid", "softmax", "log_softmax", "layer_norm", "rms_norm", "batch_norm", "group_norm", "linear", "matmul", "mm", "bmm", "addmm", "einsum", "conv1d", "conv2d", "conv3d", "convolution", "sum", "mean", "var", "std", "cumsum", "max", "min", "add", "sub", "mul", "div", "pow", "sqrt", "rsqrt", "exp", "log", "sin", "cos", "tanh", "clamp", "norm", "normalize", "reshape", "view", "transpose", "permute"}
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -119,6 +121,7 @@ def source_checks(work: Path) -> dict[str, str]:
                     torch_aliases.add(alias.asname or alias.name.split(".")[0])
         if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("torch"):
             torch_aliases.update(a.asname or a.name for a in node.names)
+            imported_functions.update({a.asname or a.name: a.name for a in node.names})
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "forward":
             tensor_args = {arg.arg for arg in node.args.args if arg.arg != "self"}
@@ -127,10 +130,10 @@ def source_checks(work: Path) -> dict[str, str]:
                     findings["python_compute"] = f"direct forward-input arithmetic at line {child.lineno}; applies to the study's tensor-only forward inputs"
                 if isinstance(child, ast.Call):
                     text = ast.unparse(child.func)
-                    if text.split(".")[0] in torch_aliases:
-                        allowed = {"empty", "empty_like", "empty_strided", "zeros", "zeros_like", "ones", "ones_like", "tensor"}
-                        if text.split(".")[-1] not in allowed:
-                            findings["python_compute"] = f"torch call in forward at line {child.lineno}: {text}"
+                    name = imported_functions.get(text, text.split(".")[-1])
+                    tensor_method = isinstance(child.func, ast.Attribute) and isinstance(child.func.value, ast.Name) and child.func.value.id in tensor_args
+                    if name in known_compute and (text.split(".")[0] in torch_aliases or tensor_method):
+                        findings["python_compute"] = f"known tensor computation in forward at line {child.lineno}: {text}"
     stale = [p.name for p in (work / "kernels").glob("*") if re.search(r"(?:_old|_test|_v\d+)\.(?:cu|cpp)$|\.bak$", p.name)]
     if stale:
         findings["intermediate_files"] = ", ".join(stale)

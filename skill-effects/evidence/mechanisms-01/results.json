@@ -1,0 +1,58 @@
+{
+  "reference_write_rejected": true,
+  "unverified_finish_rejected": {
+    "ok": false,
+    "finish_rejected": true,
+    "source_findings": {},
+    "changed_infrastructure": [],
+    "validation_missing_or_stale": [
+      "compile",
+      "verify",
+      "benchmark"
+    ]
+  },
+  "compile": {
+    "ok": true,
+    "returncode": 0,
+    "seconds": 15.404883399998653,
+    "log": "tool-003-compile.log",
+    "output": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\nCompiling 4 files: binding.cpp, kernels\\axpby.cu, kernels\\axpby_binding.cpp, kernels\\probe_gemm_binding.cpp\nCompile success: cuda_extension.pyd\n",
+    "changed_infrastructure": [],
+    "label": "trusted upstream CUDA fixture"
+  },
+  "verify": {
+    "ok": true,
+    "returncode": 0,
+    "seconds": 16.289131199999247,
+    "log": "tool-004-verify.log",
+    "output": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n[PASS] case=0 seed=20261019: values, parameters, repeated calls, non-default stream\n[PASS] case=0 seed=20261020: values, parameters, repeated calls, non-default stream\n[PASS] case=1 seed=20261019: values, parameters, repeated calls, non-default stream\n[PASS] case=1 seed=20261020: values, parameters, repeated calls, non-default stream\n[PASS] case=2 seed=20261019: values, parameters, repeated calls, non-default stream\n[PASS] case=2 seed=20261020: values, parameters, repeated calls, non-default stream\n[PASS] independent verification complete\n",
+    "changed_infrastructure": [],
+    "label": "trusted upstream CUDA fixture"
+  },
+  "benchmark": {
+    "ok": true,
+    "returncode": 0,
+    "seconds": 15.107298899998568,
+    "log": "tool-005-benchmark.log",
+    "output": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\ndriver.c\n  正在创建库 E:\\Project\\Git\\Research\\ai4cuda-try-and-error\\skill-effects\\runs\\mechanisms-01\\temp\\tmp8j5wkqw1\\cuda_utils.cp313-win_amd64.lib 和对象 E:\\Project\\Git\\Research\\ai4cuda-try-and-error\\skill-effects\\runs\\mechanisms-01\\temp\\tmp8j5wkqw1\\cuda_utils.cp313-win_amd64.exp\n{\n  \"method\": \"CUDA events around repeated complete model calls\",\n  \"iterations_per_sample\": 100,\n  \"samples_us\": {\n    \"eager\": [\n      84.72064018249512,\n      72.20096111297607,\n      64.72127914428711,\n      75.98432064056396,\n      70.20448207855225,\n      84.94303703308105,\n      73.25376033782959\n    ],\n    \"compiled\": [\n      104.55936431884766,\n      104.02655601501465,\n      97.49664306640625,\n      96.49408340454102,\n      99.3449592590332,\n      105.44960021972656,\n      104.20767784118652\n    ],\n    \"candidate\": [\n      33.73248100280762,\n      33.71295928955078,\n      36.627840995788574,\n      31.78112030029297,\n      32.906880378723145,\n      32.04511880874634,\n      38.622400760650635\n    ]\n  },\n  \"median_us\": {\n    \"eager\": 73.25376033782959,\n    \"compiled\": 104.02655601501465,\n    \"candidate\": 33.71295928955078\n  },\n  \"purpose\": \"environment feasibility on upstream development example only\"\n}\n",
+    "changed_infrastructure": [],
+    "label": "trusted upstream CUDA fixture"
+  },
+  "cublas": {
+    "cuBLAS_GEMM_correct": true,
+    "output_shape": [
+      3,
+      5
+    ]
+  },
+  "post_edit_finish_rejected": {
+    "ok": false,
+    "finish_rejected": true,
+    "source_findings": {},
+    "changed_infrastructure": [],
+    "validation_missing_or_stale": [
+      "verify",
+      "benchmark"
+    ]
+  }
+}

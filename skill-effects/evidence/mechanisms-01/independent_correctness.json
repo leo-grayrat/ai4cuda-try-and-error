@@ -1,0 +1,114 @@
+{
+  "correct": true,
+  "planned_checks": 6,
+  "checks": [
+    {
+      "case_index": 0,
+      "seed": 20261019,
+      "input_shapes": [
+        [
+          1,
+          128
+        ],
+        [
+          1,
+          128
+        ]
+      ],
+      "correct": true,
+      "input_preserved": true,
+      "previous_output_preserved": true,
+      "nondefault_stream_correct": true
+    },
+    {
+      "case_index": 0,
+      "seed": 20261020,
+      "input_shapes": [
+        [
+          1,
+          128
+        ],
+        [
+          1,
+          128
+        ]
+      ],
+      "correct": true,
+      "input_preserved": true,
+      "previous_output_preserved": true,
+      "nondefault_stream_correct": true
+    },
+    {
+      "case_index": 1,
+      "seed": 20261019,
+      "input_shapes": [
+        [
+          7,
+          257
+        ],
+        [
+          7,
+          257
+        ]
+      ],
+      "correct": true,
+      "input_preserved": true,
+      "previous_output_preserved": true,
+      "nondefault_stream_correct": true
+    },
+    {
+      "case_index": 1,
+      "seed": 20261020,
+      "input_shapes": [
+        [
+          7,
+          257
+        ],
+        [
+          7,
+          257
+        ]
+      ],
+      "correct": true,
+      "input_preserved": true,
+      "previous_output_preserved": true,
+      "nondefault_stream_correct": true
+    },
+    {
+      "case_index": 2,
+      "seed": 20261019,
+      "input_shapes": [
+        [
+          0,
+          257
+        ],
+        [
+          0,
+          257
+        ]
+      ],
+      "correct": true,
+      "input_preserved": true,
+      "previous_output_preserved": true,
+      "nondefault_stream_correct": true
+    },
+    {
+      "case_index": 2,
+      "seed": 20261020,
+      "input_shapes": [
+        [
+          0,
+          257
+        ],
+        [
+          0,
+          257
+        ]
+      ],
+      "correct": true,
+      "input_preserved": true,
+      "previous_output_preserved": true,
+      "nondefault_stream_correct": true
+    }
+  ]
+}
