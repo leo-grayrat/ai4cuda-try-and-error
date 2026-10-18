@@ -1,5 +1,7 @@
 # lowprob-attribution
 
+2026-10-18 更新：v2 已加入本地工具调用的代码概率补充，见 [论文 4.8 节及 5.7 节](v2/stage5_finalize/paper.md)、[中文核对说明](v2/local_tool_evidence/REPORT.zh.md)及[PDF](v2/stage5_finalize/main.pdf)。现存 40 个代码参数与工具事件输入逐项对应，保留 3,162 个带概率的生成 token。
+
 低概率 token 归因实验：检验 CUDA Agent 论文声称的"CUDA 语法稀有 → 大量低概率 token → PPO 训练不稳定"因果链起点是否成立。
 
 计划见 [PLAN.md](PLAN.md)，关于「闭源 API 拿不到完整逐 token 概率」的公开证据汇总见 [related-work.md](related-work.md)。

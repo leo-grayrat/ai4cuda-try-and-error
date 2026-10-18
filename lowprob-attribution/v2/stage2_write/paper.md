@@ -10,7 +10,7 @@
 
 CUDA Agent explains its policy collapse at training step 17 with a chain whose second link is an explicit empirical claim: CUDA code is under 0.01% of pretraining data, therefore the policy assigns near-floor probability to CUDA tokens, "e.g. $\pi_\theta(a_t \mid s_t) \approx 10^{-9}$", and small precision differences are consequently amplified into exploding importance ratios. We test that link where it can be tested: at generation time, against a live model, with per-token conditional probabilities.
 
-Two collections support the test. The first uses four elementwise/reduction tasks (128 runs, 98,533 tokens). The second uses five KernelBench Level 2 operator chains — ConvTranspose3d + GroupNorm + GELU + Sum and similar — where an implementer must decide what to fuse, whether to materialise intermediates, and how to tile (40 runs, 542,611 tokens; **87.5% of these tokens come from runs that ended in failure**, a selection effect noted wherever their numbers are quoted). In both, the kernel is written in the reply body rather than through tool calls, so every code token falls under `logprobs`; a pre-flight check confirmed 448/448 code tokens carry a probability.
+Two collections support the test. The first uses four elementwise/reduction tasks (128 runs, 98,533 tokens). The second uses five KernelBench Level 2 operator chains — ConvTranspose3d + GroupNorm + GELU + Sum and similar — where an implementer must decide what to fuse, whether to materialise intermediates, and how to tile (40 runs, 542,611 tokens; **87.5% of these tokens come from runs that ended in failure**, a selection effect noted wherever their numbers are quoted). In both, the kernel is written in the reply body rather than through tool calls, so every code token falls under `logprobs`; a pre-flight check confirmed 448/448 code tokens carry a probability. A supplementary audit of saved local vLLM records recovered 40 code-bearing tool arguments whose 3,162 generated tokens retain their probabilities, extending measurement coverage to the tool-call output channel.
 
 Four results. **First**, CUDA/Triton vocabulary carries a *lower* low-probability rate than the surrounding text — 0.26% vs 0.84% under a strict vocabulary (Fisher $p = 0.0007$), 0.49% vs 0.84% under a loose one ($p = 0.0070$). **Second**, the cost is spatially concentrated: inside fenced code blocks the rate is 0.60% (0.33% with in-block comments excluded), outside it 13.56% — a 22.4× difference that rises to 41× once comments are removed from the code region. The worst 5% of code tokens carry 98.1% of the code's total negative log-probability while the worst 5% of prose tokens carry only 30.3% of prose's. **Third**, raising task difficulty does not move the code-side rate: 0.67% on reduction tasks, 0.60% on fusion tasks, with per-task values spanning 0.25–0.93%. **Fourth**, the absolute probabilities do not approach the claimed floor: the lowest code token in 322,375 measured has logprob −13.02 (2.2×$10^{-6}$), the lowest prose token −16.65 (5.9×$10^{-8}$), while $10^{-9}$ corresponds to −20.7 — 400× below anything observed.
 
@@ -40,9 +40,9 @@ A second consideration favours (ii) over (iii) and (iv): (ii) is falsifiable at 
 
 ### Measurement constraints
 
-Under an agent framework, the kernel is written through tool calls, and **tool-call arguments are not covered by `logprobs`**. The pattern is consistent across vendors: OpenAI returns `ChoiceLogprobs(content=None)` when `functions` is set (forum threads from 2024 through 2025, no official answer); Claude, Gemini and Grok accept the parameter and silently return none; several reasoning models spend the entire token budget inside the reasoning channel and return empty content, which is a trap we hit ourselves (Section~\ref{model-selection}). Three papers that examine closed models as scientific instruments converge on the same obstacle and identify it as a policy choice motivated by distillation concerns [@carlini; @howopen; @surrogate].
+The DeepSeek API responses inspected during our initial agent experiments exposed probabilities for reply text and reasoning, while the code written through tool-call arguments lay outside those returned probability fields. This determined how we collected the two API task families: the model placed its code in the reply body, and a driver executed it and returned evaluation feedback.
 
-The practical consequence is architectural (Section~\ref{collection-without-an-agent-framework}): an agent-framework experiment cannot measure the tokens that matter, so the framework has to be removed.
+The local vLLM route retained a different output interface. With Qwen3-4B-AWQ, the generated probability stream included the serialised tool calls themselves, including code inside file-writing arguments. Reconstructing that stream makes both the code and its token probabilities accessible. The study therefore has two realised collection routes: reply-body code through the DeepSeek API and tool-argument code through a local server. Section~\ref{local-tool-call-capture} documents the saved evidence for the latter.
 
 ### Design of this study
 
@@ -100,7 +100,7 @@ All three take the floor condition as given. The contribution of the present stu
 
 ### Logprob availability in closed APIs
 
-The constraint described in Section~\ref{measurement-constraints} has a methodological consequence worth separating from the engineering one. Because tool-call arguments carry no logprob, any measurement built on an agent framework is limited to the tokens the model emits outside its tool calls — that is, to its narration, not to the code. Studies that report probability statistics from framework-based collection are therefore measuring a different object from the one this paper measures, and comparisons across the two should be made with that in mind.
+Probability coverage depends on the serving interface as well as on the agent framework. In our DeepSeek API experiments, moving code into the reply body made its probabilities accessible. In the saved local vLLM experiments, code remained in tool-call arguments and its probabilities were already present in the generated token stream. This distinction determines which parts of an output must be reconstructed before its probability distribution can be analysed. The local evidence in Section~\ref{local-tool-call-capture} provides a concrete example of parameter-level collection alongside the reply-body collections used for Families A and B.
 
 ### Position of this work
 
@@ -112,11 +112,11 @@ The works above study instability from the training side. This paper does not tr
 
 ### Collection without an agent framework
 
-An agent writes the kernel through `write` or `edit` tool calls; the kernel text lives in the tool arguments; those tokens carry no logprob (Section~\ref{measurement-constraints}). Two workarounds fail. Asking the model, via prompt suffix, to first print the code and then call the tool produced compliance in 0 of 6 trials — the model's policy is to act. Replaying saved conversations afterwards cannot recover $\pi_\theta(a_t|s_t)$ either, because the chat template and special tokens applied at generation are not reproducible from a plain reconstruction.
+An agent can write the kernel through `write` or `edit` tool calls. For the DeepSeek API route used in Families A and B, the code in those arguments lay outside the returned probability fields (Section~\ref{measurement-constraints}). Asking the agent to print the code before calling a tool produced compliance in 0 of 6 trials. We therefore moved execution into the driver and collected code directly from the reply body. Local vLLM collection followed the complementary tool-call route described in Section~\ref{model-selection}.
 
-So the tools are removed. The driver sends a task description plus `reference.py` and asks for the complete `candidate.py` inside a fenced block, with no tools offered. The model writes code in `message.content`; that field is covered by `logprobs`. The driver parses the block, writes the file, invokes the independent evaluator, and appends the evaluator's output as the next user turn.
+The API driver sends a task description plus `reference.py` and asks for the complete `candidate.py` inside a fenced block, with no tools offered. The model writes code in `message.content`, where the API returns its probabilities. The driver parses the block, writes the file, invokes the independent evaluator, and appends the evaluator's output as the next user turn.
 
-This is the design decision the whole study rests on, so it was verified before collecting: a single-turn probe returned a 1,396-character block containing `@triton.jit` and `tl.load`, with **448 of 448** tokens inside that block carrying a logprob.
+A single-turn probe verified this reply-body route before collection: it returned a 1,396-character block containing `@triton.jit` and `tl.load`, with 448 of 448 tokens inside that block carrying a log-probability.
 
 ### The loop
 
@@ -159,17 +159,15 @@ Both conditions were implemented before collection began and were held constant 
 
 ### Model selection
 
-The collection route and the model were settled together, through three attempts.
+The collection route and the model were settled together. Families A and B use DeepSeek through the reply-body driver, and the earlier local collections retain the complementary tool-call interface.
 
-**First attempt: a consumer API with an agent framework.** The model writes the kernel through tool calls, and the API returns no logprob for tool-call arguments (Section~\ref{logprob-availability-in-closed-apis}), so the tokens of interest are unmeasurable. This route was abandoned.
+**Local tool-call collection.** Qwen3-4B-AWQ was served under vLLM on the available 8~GB GPU. The server exposed tool-call text in `content_logprobs`, including the JSON strings that carried proposed file contents. We retained these generated tokens together with their probabilities and the OpenCode tool events. Recovering a code argument requires concatenating tokens in generation order, parsing the resulting tool-call JSON, and locating its `content` or `newString` string in that stream. The empty convenience fields `content_text` or `tool_call_text` in some responses therefore coexist with fully recorded code in `content_logprobs`.
 
-**Second attempt: a local model served by vLLM.** A cross-backend comparison showed vLLM to be the only serving stack that records tool-call arguments as ordinary generated tokens in `logprobs`, so collection was moved to a local server. The machine available has 8~GB of VRAM (RTX 5060, sm_120), which caps a locally served model at roughly 4B parameters; `Qwen3-4B-AWQ` was therefore served under vLLM 0.31.0 with torch 2.13.0+cu130, the pairing required for Blackwell. Two engineering obstacles were met and bypassed: vLLM compiles kernels with torch.compile and so needs a C compiler, and its flashinfer sampler needs nvcc, which was avoided by disabling that sampler instead of installing a multi-gigabyte CUDA toolkit.
+The saved local collections supply the tool-argument evidence reported in Section~\ref{local-tool-call-capture}. Their earlier significant vocabulary comparison was withdrawn after a classification error was identified (Section~\ref{classification-bias-in-the-first-pass}); the code-bearing records and their probability values remain available for direct inspection. The supplementary audit follows their original output interface and matches the recovered code strings against the tool-event inputs.
 
-This route produced data, but the 4B model skips tool calls unless `tool_choice=required`, and forcing tool use distorts the trajectories. More decisively, the measurements from this route are the ones withdrawn in Section~\ref{classification-bias-in-the-first-pass}: the classification rule of the first pass interacted with the model's output so as to manufacture a significant result. No measurement from the local route is reported in this paper.
+**Reply-body collection for Families A and B.** The API model writes the kernel in `message.content`, where the returned probabilities cover it, and makes a larger model available than the local GPU could serve. Families A and B use a non-reasoning model through that API with `max_tokens=8192`; the reasoning variant tested during setup spent its budget in the reasoning channel and returned zero content at `max_tokens=4000` with `finish_reason=length`. The local tool-call evidence is retained as a separate collection-method supplement.
 
-**Third attempt, adopted: a consumer API without tools.** Removing the tools (Section~\ref{collection-without-an-agent-framework}) removes the reason to run locally. The kernel is then written in `message.content`, which the consumer API does cover with `logprobs`, and a far larger model becomes available than the 8~GB card could serve. All reported runs use a non-reasoning model through that API with `max_tokens=8192`; the reasoning variant of the same API spends the entire budget inside the reasoning channel, producing zero content at `max_tokens=4000` with `finish_reason=length`.
-
-The cost of this choice is that the model is aligned and served, so the base-model condition named in Section~\ref{the-magnitude-gap-and-its-interpretation} cannot be reached from here. That is why this paper reports a tension rather than a refutation.
+The API experiment's model state is discussed in Section~\ref{the-magnitude-gap-and-its-interpretation}.
 
 ### Observables
 
@@ -357,6 +355,23 @@ A second example makes the distinction concrete: the identifier `y` in `y = torc
 
 ---
 
+### Local tool-call capture
+
+The local records preserve code generated inside file-writing tool arguments, alongside each generated token's probability. We audited the three saved directories `runs`, `runs-triton`, and `runs-migrated`, which together contain 195 response records and 26,529 generated tokens. Reconstructing each response and parsing its tool-call JSON identified 40 code-bearing arguments across 33 responses. Those arguments contain 3,162 generated tokens, each with a finite recorded log-probability. All 40 decoded code strings match the input of a `write` or `edit` event in the corresponding run.
+
+| Saved collection | Responses | Generated tokens | Responses with code arguments | Tokens in code arguments |
+|---|---:|---:|---:|---:|
+| `runs` | 49 | 7,182 | 19 | 898 |
+| `runs-triton` | 118 | 15,987 | 12 | 1,862 |
+| Migrated | 28 | 3,360 | 2 | 402 |
+| Total | 195 | 26,529 | 33 | 3,162 |
+
+Here a code-bearing argument is a JSON string in `write.content` or `edit.newString` containing a line that begins with a Python import, a function definition, or a Triton decorator. Its token count includes comments, whitespace and JSON escaping inside that string. The audit records the string's exact character span in the generated stream and the overlapping token indices, so the probability attached to each part of the code can be checked against the original response. Three incomplete tool blocks are listed separately in the audit. Each response has a distinct request identifier across the three directories.
+
+For example, `runs-triton/row_reduce-full-09/logprobs.jsonl`, response line 2, contains an `edit` argument that defines `kernel_launch` and generates `tl.arange`, `tl.load`, `tl.sum` and `tl.store`. Its decoded `newString` is also present in the tool-event input. A second example, `runs-migrated/row_reduce-full-00/logprobs.jsonl`, response line 4, contains a `write` call whose `content` begins with `import triton` and includes a `@triton.jit` function. These examples establish the collection path directly: code was generated as a tool parameter and its probabilities survived in the saved output stream.
+
+Reconstruction also explains the later erroneous report that this corpus contained zero code tokens. That check searched each individual token for complete strings such as `triton`, `def run` and `tl.`. In these records, `triton` can be split into ` tr` and `iton`, and `def run` into `def` and ` run`. Applying the old search to the same 26,529 tokens reproduces its zero matches, while reconstructing and parsing the responses recovers the code arguments above. The audit and the code strings are available in `v2/local_tool_evidence/audit.json`; Appendix A gives the command that regenerates them.
+
 ## Discussion
 
 ### Status of the second link
@@ -426,15 +441,21 @@ Excluding the fragment runs, the success rate on complete files is 28% (7/25). T
 
 ---
 
+### Complementary coverage of reply text and tool parameters
+
+The local collection adds the output interface that the API experiments deliberately set aside. In Families A and B, a prompt asks the model to print a complete candidate in the reply body, and the driver performs file writing and evaluation. In the local records, the model instead proposes a `write` or `edit` call whose parameter contains that code. The recovered parameter tokens retain their probabilities, and the tool-event record preserves the proposed operation and its execution status. This provides an observable route through the agent's own file-writing interface.
+
+The two routes therefore address the same practical measurement need through different channels. Reply-body collection made code probabilities accessible through the tested DeepSeek API. Local vLLM collection retained the tool-call channel and exposed the code probabilities there. Including both makes the method description reflect what was actually achieved: the API workaround supplied the two principal task collections, while the existing local records supplied direct evidence of code-probability capture inside tool arguments.
+
 ## Limitations
 
 1. **Model state.** The measurement is on an aligned model at inference. The base-model control (Section~\ref{the-magnitude-gap-and-its-interpretation}) is missing. The stated scope of this paper is conditional on that difference.
-2. **Single model family.** All API runs use one model; the 4B replication in Family A used a different family but a weaker stack.
+2. **Model coverage.** Families A and B use one API model. The supplementary local records use Qwen3-4B-AWQ and document the tool-call collection route separately.
 3. **Task scope and class of fusion.** The relevant distinction is not "reduction versus chain" but "**chain with a trivial organisational choice versus chain with a non-obvious one**". All five Family B tasks belong to the former class: a heavy op followed by elementwise passes, where the fusion decision is "fuse the tail into the epilogue or do a second pass", and both options are easy to write once the convolution is correct. The genuinely hard organisational decisions — a tiling that keeps an intermediate in shared memory, a transpose that changes the access pattern, split-K versus two-pass reduction for a reduction that does not fit one block, FlashAttention-style online softmax — are **not represented at all**. The null result on RQ3 therefore concerns only the trivial class of fusion decisions.
 4. **Selection effect in Family B.** Success rate 17.5%; `after_failure` holds 87.5% of tokens. The code-side density of 0.60% is measured mostly in the context of a struggling model. Whether it differs when the model is succeeding is not answerable from this corpus.
 5. **Statistical dependence.** Tokens within a completion are not independent, so exact tests are anti-conservative (Section~\ref{statistics}). No cluster-level analysis is reported.
 6. **No training.** We do not measure whether low probability causes importance-ratio explosion, nor the relative contribution of precision mismatch.
-7. **One collection path.** A single driver against a single endpoint; no cross-engine replication.
+7. **Collection-path coverage.** The regional distributions for Families A and B use the reply-body driver. The saved local tool-call records provide the separate parameter-capture evidence in Section~\ref{local-tool-call-capture}.
 8. **Region assignment by fence state.** A token is `code` or `prose` by fenced-block parity. Fenced blocks used for non-code content (tracebacks, shell commands) are counted as code; we did not enumerate how many. Comments inside code blocks are also counted as code, which biases the code-side rate *upward*; Section~\ref{rq2-spatial-distribution-of-the-probability-cost} quantifies the effect (0.60% → 0.33%) rather than leaving it as a caveat.
 9. **An unseparated alternative for the context effect.** `after_failure` may reflect *responding to bad news* or simply *writing new content* (after a failure the model rewrites; after a success it refines). Truncating the message does not distinguish these. Separating them requires a condition that asks for a rewrite after a success.
 
@@ -452,7 +473,8 @@ What the data support is that the cost tracks the type of text being written, an
 
 ```bash
 # Pre-flight
-python scripts/check_plaintext_logprobs.py --model deepseek-chat --max-tokens 16000
+python scripts/check_plaintext_logprobs.py \
+    --model deepseek-chat --max-tokens 16000
 
 # Family A
 python scripts/loop_driver.py --tasks row_reduce vector_affine \
@@ -476,6 +498,9 @@ python scripts/loop_driver.py --tasks-root tasks-kb2 \
 # Analysis
 python scripts/stream_stats.py lowprob-attribution/runs-kb2
 python scripts/make_figures.py
+
+# Audit saved local tool-call code and its probabilities (from repository root)
+python lowprob-attribution/scripts/audit_local_tool_logprobs.py
 ```
 
 ## Appendix B — Production record
