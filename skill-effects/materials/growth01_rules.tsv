@@ -1,0 +1,22 @@
+id	addition_bullet	group	relation_to_existing	links	assessment
+A01	1	allocation	clarification	C02	Re-emphasizes the documented allocation exception.
+A02	2	allocation	specialization	C02;C10	Names the actual failing private allocator and extends the warning to private ATen symbols.
+A03	3	allocation	diagnostic_expansion	A02	Restates A02 as a response to the observed compile error.
+A04	4	debugging	specialization	C22	Adds advice to repair binding errors in bindings rather than change unrelated kernel math.
+A05	5	fallback	new_procedure_with_tension	C24;C26	Requires preserving a known-good fallback; review interaction with the original debug-optimized-version guidance.
+A06	6	validation	clarification	C11	Reiterates dtype/contiguity validation, allowing the wrapper to guarantee specialization.
+A07	7	final_validation	clarification	C16;C22	Explicitly binds validation evidence to the exact final files.
+A08	8	final_validation	repeated_procedure	C16;C27;A07	Prescribes cleanup then compile, verify and benchmark.
+A09	9	fallback	repeated_procedure	A05;A07	Combines restoring the known-good version with revalidation after speculative edits.
+A10	10	final_validation	repetition	A07	Earlier success does not certify a later failed candidate.
+A11	11	final_validation	specialization	C27;A07;A08	Treats cleanup as an edit requiring fresh evidence.
+A12	12	compiler_feedback	new_procedure	C22	Use the first actionable error and available output; prompted partly by the prototype feedback truncation.
+A13	13	module_semantics	new_requirement	C14	Adds normal nn.Module call machinery as an explicit constraint.
+A14	14	module_semantics	repeated_procedure	A13	Names __call__ = forward and gives a qualified exception; review whether task compatibility requires this restriction.
+A15	15	interface	repetition	C14	Reiterates constructor and forward compatibility already needed by the task interface.
+A16	16	python_compute	repetition	C03	Reiterates the no-PyTorch-compute rule.
+A17	17	tool_payload	repetition_of_tool_schema	workspace_schema	Restates required operation/path/content fields already given by the tool schema.
+A18	18	tool_diagnostics	new_classification	workspace_schema	Separates tool errors from CUDA failures but groups malformed model arguments with transport faults.
+A19	19	tool_diagnostics	new_procedure	A18	Adds a read after a failed/ambiguous write; benefit depends on which failure actually occurred.
+A20	20	tool_diagnostics	specialization	A18	Repeats the tool/CUDA distinction for transport or encoding failures.
+A21	21	tool_diagnostics	specialization	A18	Adds directory listing and available utilities as the response to missing files.

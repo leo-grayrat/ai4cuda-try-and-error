@@ -1,0 +1,23 @@
+{
+  "created_utc": "2026-10-18T22:53:44.916902+00:00",
+  "trial": "runs\\dev-rmsnorm-growth01-02",
+  "existing": "skill-effects\\evidence\\growth-01\\cumulative.md",
+  "existing_sha256": "a0d6e30adba303a1161efd5842852916cc7bc9a8237fb2e05182292d069e890a",
+  "purpose": "constructed append-only development history, not recovered FlashRT author history",
+  "status": "complete",
+  "addition_sha256": "f31443411b4291ef198e45f885a9a4ce9abe058e172384381e2a2f49a198c8b1",
+  "cumulative_sha256": "33560e182e2e2431a7895e8eaf2d75b42027cb28a48fa4849418e7cf0f225161",
+  "usage": {
+    "prompt_tokens": 12788,
+    "completion_tokens": 8483,
+    "total_tokens": 21271,
+    "prompt_tokens_details": {
+      "cached_tokens": 3328
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 7625
+    },
+    "prompt_cache_hit_tokens": 3328,
+    "prompt_cache_miss_tokens": 9460
+  }
+}

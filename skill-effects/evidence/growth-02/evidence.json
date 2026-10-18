@@ -1,0 +1,553 @@
+{
+  "task": "dev_rmsnorm",
+  "state": "step_budget",
+  "source_findings": {},
+  "changed_infrastructure": [],
+  "timeline": [
+    {
+      "request": 0,
+      "function": "workspace",
+      "operation": "list",
+      "path": null,
+      "argument_fields": [
+        "operation"
+      ],
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 0,
+      "function": "workspace",
+      "operation": "read",
+      "path": "model.py",
+      "argument_fields": [
+        "operation",
+        "path"
+      ],
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 1,
+      "function": "workspace",
+      "operation": "read",
+      "path": "model_new.py",
+      "argument_fields": [
+        "operation",
+        "path"
+      ],
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 1,
+      "function": "workspace",
+      "operation": "read",
+      "path": "binding.cpp",
+      "argument_fields": [
+        "operation",
+        "path"
+      ],
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 1,
+      "function": "workspace",
+      "operation": "read",
+      "path": "binding_registry.h",
+      "argument_fields": [
+        "operation",
+        "path"
+      ],
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 1,
+      "function": "workspace",
+      "operation": "read",
+      "path": "utils/verification.py",
+      "argument_fields": [
+        "operation",
+        "path"
+      ],
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 1,
+      "function": "workspace",
+      "operation": "read",
+      "path": "utils/profiling.py",
+      "argument_fields": [
+        "operation",
+        "path"
+      ],
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 2,
+      "function": "workspace",
+      "operation": "read",
+      "path": "utils/compile.py",
+      "argument_fields": [
+        "operation",
+        "path"
+      ],
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 2,
+      "function": "workspace",
+      "operation": "read",
+      "path": "contract.md",
+      "argument_fields": [
+        "operation",
+        "path"
+      ],
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 3,
+      "function": "workspace",
+      "operation": "write",
+      "path": "kernels/rmsnorm.cu",
+      "argument_fields": [
+        "content",
+        "operation",
+        "path"
+      ],
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 3,
+      "function": "workspace",
+      "operation": "write",
+      "path": "kernels/rmsnorm_binding.cpp",
+      "argument_fields": [
+        "content",
+        "operation",
+        "path"
+      ],
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 4,
+      "function": "workspace",
+      "operation": null,
+      "path": "model_new.py",
+      "argument_fields": [
+        "content",
+        "path"
+      ],
+      "ok": false,
+      "error": "KeyError: 'operation'",
+      "log": null
+    },
+    {
+      "request": 5,
+      "function": "workspace",
+      "operation": "write",
+      "path": "model_new.py",
+      "argument_fields": [
+        "content",
+        "operation",
+        "path"
+      ],
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 6,
+      "function": "workspace",
+      "operation": "compile",
+      "path": null,
+      "argument_fields": [
+        "label",
+        "operation"
+      ],
+      "ok": true,
+      "error": null,
+      "log": "tool-014-compile.log"
+    },
+    {
+      "request": 7,
+      "function": "workspace",
+      "operation": "verify",
+      "path": null,
+      "argument_fields": [
+        "label",
+        "operation"
+      ],
+      "ok": true,
+      "error": null,
+      "log": "tool-015-verify.log"
+    },
+    {
+      "request": 8,
+      "function": "workspace",
+      "operation": "benchmark",
+      "path": null,
+      "argument_fields": [
+        "label",
+        "operation"
+      ],
+      "ok": true,
+      "error": null,
+      "log": "tool-016-benchmark.log"
+    },
+    {
+      "request": 9,
+      "function": "workspace",
+      "operation": "write",
+      "path": "model_new.py",
+      "argument_fields": [
+        "content",
+        "operation",
+        "path"
+      ],
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 10,
+      "function": "workspace",
+      "operation": "benchmark",
+      "path": null,
+      "argument_fields": [
+        "label",
+        "operation"
+      ],
+      "ok": true,
+      "error": null,
+      "log": "tool-018-benchmark.log"
+    },
+    {
+      "request": 11,
+      "function": "workspace",
+      "operation": "write",
+      "path": "kernels/rmsnorm.cu",
+      "argument_fields": [
+        "content",
+        "operation",
+        "path"
+      ],
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 12,
+      "function": "workspace",
+      "operation": "write",
+      "path": "model_new.py",
+      "argument_fields": [
+        "content",
+        "operation",
+        "path"
+      ],
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 13,
+      "function": "workspace",
+      "operation": "compile",
+      "path": null,
+      "argument_fields": [
+        "label",
+        "operation"
+      ],
+      "ok": true,
+      "error": null,
+      "log": "tool-021-compile.log"
+    },
+    {
+      "request": 14,
+      "function": "workspace",
+      "operation": "benchmark",
+      "path": null,
+      "argument_fields": [
+        "label",
+        "operation"
+      ],
+      "ok": true,
+      "error": null,
+      "log": "tool-022-benchmark.log"
+    },
+    {
+      "request": 15,
+      "function": "workspace",
+      "operation": "write",
+      "path": "kernels/rmsnorm.cu",
+      "argument_fields": [
+        "content",
+        "operation",
+        "path"
+      ],
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 16,
+      "function": "workspace",
+      "operation": null,
+      "path": "model_new.py",
+      "argument_fields": [
+        "content",
+        "path"
+      ],
+      "ok": false,
+      "error": "KeyError: 'operation'",
+      "log": null
+    },
+    {
+      "request": 17,
+      "function": "workspace",
+      "operation": "write",
+      "path": "model_new.py",
+      "argument_fields": [
+        "content",
+        "operation",
+        "path"
+      ],
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 18,
+      "function": "workspace",
+      "operation": "compile",
+      "path": null,
+      "argument_fields": [
+        "label",
+        "operation"
+      ],
+      "ok": true,
+      "error": null,
+      "log": "tool-026-compile.log"
+    },
+    {
+      "request": 19,
+      "function": "workspace",
+      "operation": "benchmark",
+      "path": null,
+      "argument_fields": [
+        "label",
+        "operation"
+      ],
+      "ok": true,
+      "error": null,
+      "log": "tool-027-benchmark.log"
+    },
+    {
+      "request": 20,
+      "function": "workspace",
+      "operation": null,
+      "path": "model_new.py",
+      "argument_fields": [
+        "content",
+        "path"
+      ],
+      "ok": false,
+      "error": "KeyError: 'operation'",
+      "log": null
+    },
+    {
+      "request": 21,
+      "function": "workspace",
+      "operation": "write",
+      "path": "model_new.py",
+      "argument_fields": [
+        "content",
+        "operation",
+        "path"
+      ],
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 22,
+      "function": "workspace",
+      "operation": "benchmark",
+      "path": null,
+      "argument_fields": [
+        "label",
+        "operation"
+      ],
+      "ok": true,
+      "error": null,
+      "log": "tool-030-benchmark.log"
+    },
+    {
+      "request": 23,
+      "function": "workspace",
+      "operation": "write",
+      "path": "kernels/rmsnorm.cu",
+      "argument_fields": [
+        "content",
+        "operation",
+        "path"
+      ],
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 24,
+      "function": "workspace",
+      "operation": "compile",
+      "path": null,
+      "argument_fields": [
+        "label",
+        "operation"
+      ],
+      "ok": true,
+      "error": null,
+      "log": "tool-032-compile.log"
+    },
+    {
+      "request": 24,
+      "function": "workspace",
+      "operation": "write",
+      "path": "model_new.py",
+      "argument_fields": [
+        "content",
+        "operation",
+        "path"
+      ],
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 25,
+      "function": "workspace",
+      "operation": "verify",
+      "path": null,
+      "argument_fields": [
+        "label",
+        "operation"
+      ],
+      "ok": false,
+      "error": null,
+      "log": "tool-034-verify.log"
+    },
+    {
+      "request": 26,
+      "function": "workspace",
+      "operation": "write",
+      "path": "kernels/rmsnorm.cu",
+      "argument_fields": [
+        "content",
+        "operation",
+        "path"
+      ],
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 27,
+      "function": "workspace",
+      "operation": "compile",
+      "path": null,
+      "argument_fields": [
+        "label",
+        "operation"
+      ],
+      "ok": true,
+      "error": null,
+      "log": "tool-036-compile.log"
+    },
+    {
+      "request": 28,
+      "function": "workspace",
+      "operation": "verify",
+      "path": null,
+      "argument_fields": [
+        "label",
+        "operation"
+      ],
+      "ok": true,
+      "error": null,
+      "log": "tool-037-verify.log"
+    },
+    {
+      "request": 29,
+      "function": "workspace",
+      "operation": "benchmark",
+      "path": null,
+      "argument_fields": [
+        "label",
+        "operation"
+      ],
+      "ok": true,
+      "error": null,
+      "log": "tool-038-benchmark.log"
+    },
+    {
+      "request": 30,
+      "function": "workspace",
+      "operation": "write",
+      "path": "model_new.py",
+      "argument_fields": [
+        "content",
+        "operation",
+        "path"
+      ],
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 31,
+      "function": "workspace",
+      "operation": "benchmark",
+      "path": null,
+      "argument_fields": [
+        "label",
+        "operation"
+      ],
+      "ok": true,
+      "error": null,
+      "log": "tool-040-benchmark.log"
+    }
+  ],
+  "final_logs": {
+    "compile": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\nCompiling 3 files: binding.cpp, kernels\\rmsnorm.cu, kernels\\rmsnorm_binding.cpp\nCompile success: cuda_extension.pyd\n",
+    "verify": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n[PASS] case=0 seed=20261019: values, parameters, repeated calls, non-default stream\n[PASS] case=0 seed=20261020: values, parameters, repeated calls, non-default stream\n[PASS] case=1 seed=20261019: values, parameters, repeated calls, non-default stream\n[PASS] case=1 seed=20261020: values, parameters, repeated calls, non-default stream\n[PASS] independent verification complete\n",
+    "benchmark": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n{\n  \"method\": \"CUDA events around repeated complete model calls\",\n  \"iterations_per_sample\": 100,\n  \"samples_us\": {\n    \"eager\": [\n      193.19391250610352,\n      190.32960891723633,\n      179.99456405639648,\n      190.93088150024414,\n      190.6015968322754,\n      184.19488906860352,\n      188.79776000976562\n    ],\n    \"compiled\": [\n      115.19968032836914,\n      133.18655967712402,\n      105.4640007019043,\n      104.23487663269043,\n      103.81376266479492,\n      103.93376350402832,\n      101.77472114562988\n    ],\n    \"candidate\": [\n      79.20959949493408,\n      25.829761028289795,\n      25.400960445404053,\n      29.34880018234253,\n      38.07647943496704,\n      25.397119522094727,\n      25.436480045318604\n    ]\n  },\n  \"median_us\": {\n    \"eager\": 190.32960891723633,\n    \"compiled\": 104.23487663269043,\n    \"candidate\": 25.829761028289795\n  },\n  \"purpose\": \"environment feasibility on upstream development example only\"\n}\n"
+  },
+  "observed_failure_logs": {
+    "tool-034-verify.log": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n[PASS] case=0 seed=20261019: values, parameters, repeated calls, non-default stream\n[PASS] case=0 seed=20261020: values, parameters, repeated calls, non-default stream\n[FAIL] case=1 seed=20261019: AssertionError: Tensor-likes are not close!\n\nMismatched elements: 772 / 1785 (43.2%)\nGreatest absolute difference: 2.669553279876709 at index (2, 16, 2, 2) (up to 0.01 allowed)\nGreatest relative difference: 196.14678955078125 at index (0, 16, 3, 6) (up to 0.01 allowed)\n"
+  },
+  "candidate": {
+    "model_new.py": "import torch.nn as nn\n\nimport cuda_extension\n\n_op = cuda_extension.rmsnorm_forward\n_CONFIG = 11  # single pass, 512 threads\n\n\nclass ModelNew(nn.Module):\n    \"\"\"RMSNorm over dim=1 implemented with a custom fused CUDA kernel.\"\"\"\n\n    def __init__(self, num_features: int, eps: float = 1e-5):\n        super(ModelNew, self).__init__()\n        self.num_features = num_features\n        self.eps = eps\n\n    def forward(self, x):\n        return _op(x, self.eps, _CONFIG)\n",
+    "kernels\\rmsnorm.cu": "// RMSNorm over dim=1 for a contiguous tensor of shape (B, F, N) where N = numel/(B*F).\n// Pure CUDA implementation - no PyTorch dependencies in this file.\n#include <cuda_runtime.h>\n\n// ---------------------------------------------------------------------------\n// Single-pass kernel: one thread handles one column (b, n) and caches all F\n// values of that column in registers.  F is a compile-time constant so the\n// unrolled loops keep the cache entirely in registers.\n// ---------------------------------------------------------------------------\ntemplate <int F, int BLOCK>\n__global__ __launch_bounds__(BLOCK) void rms_single_pass_f(const float* __restrict__ x,\n                                                           float* __restrict__ y,\n                                                           int N,\n                                                           float inv_f,\n                                                           float eps) {\n    const int n = blockIdx.x * BLOCK + threadIdx.x;\n    if (n >= N) return;\n    const size_t base = (size_t)blockIdx.y * (size_t)F * (size_t)N + (size_t)n;\n    const float* __restrict__ px = x + base;\n    float* __restrict__ py = y + base;\n\n    float v[F];\n    float s = 0.0f;\n#pragma unroll\n    for (int f = 0; f < F; ++f) {\n        const float t = px[(size_t)f * (size_t)N];\n        v[f] = t;\n        s = fmaf(t, t, s);\n    }\n    const float scale = rsqrtf(fmaf(s, inv_f, eps));\n#pragma unroll\n    for (int f = 0; f < F; ++f) {\n        py[(size_t)f * (size_t)N] = v[f] * scale;\n    }\n}\n\n// ---------------------------------------------------------------------------\n// Split-F single pass: SPLIT threads cooperate on one column, each caching\n// F/SPLIT values, and the partial sums are combined with warp shuffles.\n// Higher thread-level parallelism / lower register pressure than the\n// one-thread-per-column version.  Requires F % SPLIT == 0.\n// ---------------------------------------------------------------------------\ntemplate <int F, int SPLIT, int BLOCK>\n__global__ __launch_bounds__(BLOCK) void rms_split_f(const float* __restrict__ x,\n                                                     float* __restrict__ y,\n                                                     int N,\n                                                     float inv_f,\n                                                     float eps) {\n    static_assert(F % SPLIT == 0, \"F must be divisible by SPLIT\");\n    constexpr int FP = F / SPLIT;\n    constexpr int COLS = BLOCK / SPLIT;\n    const int tid = threadIdx.x;\n    const int part = tid & (SPLIT - 1);\n    const int n = blockIdx.x * COLS + (tid / SPLIT);\n    const bool valid = (n < N);\n    const int nc = valid ? n : (N - 1);\n\n    const size_t base = (size_t)blockIdx.y * (size_t)F * (size_t)N + (size_t)nc;\n    const float* __restrict__ px = x + base;\n    float* __restrict__ py = y + base;\n\n    const int f0 = part * FP;\n    float v[FP];\n    float s = 0.0f;\n#pragma unroll\n    for (int i = 0; i < FP; ++i) {\n        const float t = px[(size_t)(f0 + i) * (size_t)N];\n        v[i] = t;\n        s = fmaf(t, t, s);\n    }\n#pragma unroll\n    for (int m = 1; m < SPLIT; m <<= 1) {\n        s += __shfl_xor_sync(0xffffffffu, s, m);\n    }\n    const float scale = rsqrtf(fmaf(s, inv_f, eps));\n    if (!valid) return;\n#pragma unroll\n    for (int i = 0; i < FP; ++i) {\n        py[(size_t)(f0 + i) * (size_t)N] = v[i] * scale;\n    }\n}\n\n// Trivial kernel used to measure launch overhead (diagnostic only).\n__global__ void rms_noop(float* y) {\n    if (threadIdx.x == 1024) y[0] = 1.0f;\n}\n\n// Diagnostic: plain float4 copy (upper bound on achievable memory throughput).\ntemplate <int BLOCK>\n__global__ __launch_bounds__(BLOCK) void copy_vec4(const float4* __restrict__ x,\n                                                   float4* __restrict__ y,\n                                                   int nvec) {\n    const int i = blockIdx.x * BLOCK + threadIdx.x;\n    if (i < nvec) y[i] = x[i];\n}\n\n// Diagnostic: plain scalar copy.\ntemplate <int BLOCK>\n__global__ __launch_bounds__(BLOCK) void copy_scalar(const float* __restrict__ x,\n                                                     float* __restrict__ y,\n                                                     int n) {\n    const int i = blockIdx.x * BLOCK + threadIdx.x;\n    if (i < n) y[i] = x[i];\n}\n\n// ---------------------------------------------------------------------------\n// Two-pass kernels (generic F): read x to compute the sum of squares, then\n// read x again (usually from L2) and scale.  Scalar version.\n// ---------------------------------------------------------------------------\ntemplate <int BLOCK, int UNROLL>\n__global__ __launch_bounds__(BLOCK) void rms_two_pass_scalar(const float* __restrict__ x,\n                                                            float* __restrict__ y,\n                                                            int N,\n                                                            int F,\n                                                            float inv_f,\n                                                            float eps) {\n    const int n = blockIdx.x * BLOCK + threadIdx.x;\n    if (n >= N) return;\n    const size_t base = (size_t)blockIdx.y * (size_t)F * (size_t)N + (size_t)n;\n    const float* __restrict__ px = x + base;\n    float* __restrict__ py = y + base;\n\n    float s = 0.0f;\n#pragma unroll UNROLL\n    for (int f = 0; f < F; ++f) {\n        const float t = px[(size_t)f * (size_t)N];\n        s = fmaf(t, t, s);\n    }\n    const float scale = rsqrtf(fmaf(s, inv_f, eps));\n#pragma unroll UNROLL\n    for (int f = 0; f < F; ++f) {\n        const size_t o = (size_t)f * (size_t)N;\n        py[o] = px[o] * scale;\n    }\n}\n\n// ---------------------------------------------------------------------------\n// Two-pass kernel, vectorized with float4 along the innermost (n) axis.\n// Requires N % 4 == 0 (guaranteed by the launcher).\n// ---------------------------------------------------------------------------\ntemplate <int BLOCK, int UNROLL>\n__global__ __launch_bounds__(BLOCK) void rms_two_pass_vec4(const float* __restrict__ x,\n                                                           float* __restrict__ y,\n                                                           int N,\n                                                           int F,\n                                                           float inv_f,\n                                                           float eps) {\n    const int nv = blockIdx.x * BLOCK + threadIdx.x;\n    const int nvec = N >> 2;\n    if (nv >= nvec) return;\n    const size_t base = (size_t)blockIdx.y * (size_t)F * (size_t)N + (size_t)nv * 4;\n    const float4* __restrict__ px = reinterpret_cast<const float4*>(x + base);\n    float4* __restrict__ py = reinterpret_cast<float4*>(y + base);\n    const int stride = N >> 2;  // in float4 units\n\n    float4 s = make_float4(0.f, 0.f, 0.f, 0.f);\n#pragma unroll UNROLL\n    for (int f = 0; f < F; ++f) {\n        const float4 t = px[(size_t)f * stride];\n        s.x = fmaf(t.x, t.x, s.x);\n        s.y = fmaf(t.y, t.y, s.y);\n        s.z = fmaf(t.z, t.z, s.z);\n        s.w = fmaf(t.w, t.w, s.w);\n    }\n    const float4 scale = make_float4(rsqrtf(fmaf(s.x, inv_f, eps)),\n                                     rsqrtf(fmaf(s.y, inv_f, eps)),\n                                     rsqrtf(fmaf(s.z, inv_f, eps)),\n                                     rsqrtf(fmaf(s.w, inv_f, eps)));\n#pragma unroll UNROLL\n    for (int f = 0; f < F; ++f) {\n        const size_t o = (size_t)f * stride;\n        const float4 t = px[o];\n        py[o] = make_float4(t.x * scale.x, t.y * scale.y, t.z * scale.z, t.w * scale.w);\n    }\n}\n\n// ---------------------------------------------------------------------------\n// Launch helpers\n// ---------------------------------------------------------------------------\nstatic inline int div_up(int a, int b) { return (a + b - 1) / b; }\n\n#define DISPATCH_SINGLE(BLOCK, FVAL)                                                        \\\n    case FVAL:                                                                              \\\n        rms_single_pass_f<FVAL, BLOCK><<<dim3(div_up(N, BLOCK), B), BLOCK, 0, stream>>>(     \\\n            x, y, N, inv_f, eps);                                                           \\\n        return true;\n\nstatic bool launch_single_pass(const float* x, float* y, int B, int F, int N, float inv_f, float eps,\n                               cudaStream_t stream) {\n    switch (F) {\n        DISPATCH_SINGLE(256, 1)\n        DISPATCH_SINGLE(256, 2)\n        DISPATCH_SINGLE(256, 3)\n        DISPATCH_SINGLE(256, 4)\n        DISPATCH_SINGLE(256, 5)\n        DISPATCH_SINGLE(256, 6)\n        DISPATCH_SINGLE(256, 7)\n        DISPATCH_SINGLE(256, 8)\n        DISPATCH_SINGLE(256, 9)\n        DISPATCH_SINGLE(256, 10)\n        DISPATCH_SINGLE(256, 11)\n        DISPATCH_SINGLE(256, 12)\n        DISPATCH_SINGLE(256, 13)\n        DISPATCH_SINGLE(256, 14)\n        DISPATCH_SINGLE(256, 15)\n        DISPATCH_SINGLE(256, 16)\n        DISPATCH_SINGLE(256, 17)\n        DISPATCH_SINGLE(256, 18)\n        DISPATCH_SINGLE(256, 19)\n        DISPATCH_SINGLE(256, 20)\n        DISPATCH_SINGLE(256, 21)\n        DISPATCH_SINGLE(256, 22)\n        DISPATCH_SINGLE(256, 23)\n        DISPATCH_SINGLE(256, 24)\n        DISPATCH_SINGLE(256, 25)\n        DISPATCH_SINGLE(256, 26)\n        DISPATCH_SINGLE(256, 27)\n        DISPATCH_SINGLE(256, 28)\n        DISPATCH_SINGLE(256, 29)\n        DISPATCH_SINGLE(256, 30)\n        DISPATCH_SINGLE(256, 31)\n        DISPATCH_SINGLE(256, 32)\n        DISPATCH_SINGLE(256, 48)\n        DISPATCH_SINGLE(256, 64)\n        default:\n            return false;\n    }\n}\n\n// Alternate block sizes for tuning (only the shapes that matter).\ntemplate <int BLOCK>\nstatic bool launch_single_pass_tuned(const float* x, float* y, int B, int F, int N, float inv_f,\n                                     float eps, cudaStream_t stream) {\n    switch (F) {\n        DISPATCH_SINGLE(BLOCK, 16)\n        DISPATCH_SINGLE(BLOCK, 17)\n        DISPATCH_SINGLE(BLOCK, 32)\n        DISPATCH_SINGLE(BLOCK, 64)\n        default:\n            return false;\n    }\n}\n\n#define DISPATCH_SPLIT(SPLIT, FVAL)                                                          \\\n    case FVAL:                                                                               \\\n        rms_split_f<FVAL, SPLIT, 256><<<dim3(div_up(N, 256 / SPLIT), B), 256, 0, stream>>>(    \\\n            x, y, N, inv_f, eps);                                                            \\\n        return true;\n\ntemplate <int SPLIT>\nstatic bool launch_split(const float* x, float* y, int B, int F, int N, float inv_f, float eps,\n                         cudaStream_t stream) {\n    if ((F % SPLIT) != 0) return false;\n    switch (F) {\n        DISPATCH_SPLIT(SPLIT, 8)\n        DISPATCH_SPLIT(SPLIT, 16)\n        DISPATCH_SPLIT(SPLIT, 32)\n        DISPATCH_SPLIT(SPLIT, 48)\n        DISPATCH_SPLIT(SPLIT, 64)\n        default:\n            return false;\n    }\n}\n\nextern \"C\" void rmsnorm_launcher(const float* x,\n                                 float* y,\n                                 int B,\n                                 int F,\n                                 int N,\n                                 float eps,\n                                 int config,\n                                 cudaStream_t stream) {\n    if (B <= 0 || F <= 0 || N <= 0) return;\n    const float inv_f = 1.0f / (float)F;\n\n    if (config < 0) {\n        // Auto-tuned choice.\n        config = (F <= 64) ? 4 : 1;\n    }\n\n    switch (config) {\n        case 7:  // diagnostic: no kernel at all\n            return;\n        case 8:  // diagnostic: single trivial kernel launch\n            rms_noop<<<1, 32, 0, stream>>>(y);\n            return;\n        case 9: {  // diagnostic: pure copy ceiling\n            const int total = B * F * N;\n            if ((total & 3) == 0) {\n                copy_vec4<256><<<div_up(total >> 2, 256), 256, 0, stream>>>(\n                    reinterpret_cast<const float4*>(x), reinterpret_cast<float4*>(y), total >> 2);\n            } else {\n                copy_scalar<256><<<div_up(total, 256), 256, 0, stream>>>(x, y, total);\n            }\n            return;\n        }\n        case 10: {  // single pass, 128 threads\n            if (launch_single_pass_tuned<128>(x, y, B, F, N, inv_f, eps, stream)) return;\n            if (launch_single_pass(x, y, B, F, N, inv_f, eps, stream)) return;\n            break;\n        }\n        case 11: {  // single pass, 512 threads\n            if (launch_single_pass_tuned<512>(x, y, B, F, N, inv_f, eps, stream)) return;\n            if (launch_single_pass(x, y, B, F, N, inv_f, eps, stream)) return;\n            break;\n        }\n        case 12: {  // single pass, 64 threads\n            if (launch_single_pass_tuned<64>(x, y, B, F, N, inv_f, eps, stream)) return;\n            if (launch_single_pass(x, y, B, F, N, inv_f, eps, stream)) return;\n            break;\n        }\n        case 13: {  // split-2 single pass\n            if (launch_split<2>(x, y, B, F, N, inv_f, eps, stream)) return;\n            if (launch_single_pass(x, y, B, F, N, inv_f, eps, stream)) return;\n            break;\n        }\n        case 14: {  // split-4 single pass\n            if (launch_split<4>(x, y, B, F, N, inv_f, eps, stream)) return;\n            if (launch_single_pass(x, y, B, F, N, inv_f, eps, stream)) return;\n            break;\n        }\n        case 15: {  // split-8 single pass\n            if (launch_split<8>(x, y, B, F, N, inv_f, eps, stream)) return;\n            if (launch_single_pass(x, y, B, F, N, inv_f, eps, stream)) return;\n            break;\n        }\n        case 4: {  // single pass, register cached, 256 threads\n            if (launch_single_pass(x, y, B, F, N, inv_f, eps, stream)) return;\n            break;\n        }\n        case 2: {  // two pass, float4, 256 threads\n            if ((N & 3) == 0) {\n                dim3 grid(div_up(N >> 2, 256), B);\n                rms_two_pass_vec4<256, 8><<<grid, 256, 0, stream>>>(x, y, N, F, inv_f, eps);\n                return;\n            }\n            break;\n        }\n        case 3: {  // two pass, scalar, 128 threads\n            dim3 grid(div_up(N, 128), B);\n            rms_two_pass_scalar<128, 8><<<grid, 128, 0, stream>>>(x, y, N, F, inv_f, eps);\n            return;\n        }\n        case 5: {  // two pass, float4, 128 threads\n            if ((N & 3) == 0) {\n                dim3 grid(div_up(N >> 2, 128), B);\n                rms_two_pass_vec4<128, 8><<<grid, 128, 0, stream>>>(x, y, N, F, inv_f, eps);\n                return;\n            }\n            break;\n        }\n        default:\n            break;\n    }\n\n    // Fallback / config 1: generic two pass scalar.\n    dim3 grid(div_up(N, 256), B);\n    rms_two_pass_scalar<256, 8><<<grid, 256, 0, stream>>>(x, y, N, F, inv_f, eps);\n}\n",
+    "kernels\\rmsnorm_binding.cpp": "// PyTorch binding for the RMSNorm CUDA kernel.\n#include <torch/types.h>\n#include <torch/csrc/utils/pybind.h>\n\n#include <cuda_runtime.h>\n#include <c10/cuda/CUDAStream.h>\n\n#include \"../binding_registry.h\"\n\nextern \"C\" void rmsnorm_launcher(const float* x,\n                                 float* y,\n                                 int B,\n                                 int F,\n                                 int N,\n                                 float eps,\n                                 int config,\n                                 cudaStream_t stream);\n\ntorch::Tensor rmsnorm_forward(torch::Tensor input, double eps, int64_t config) {\n    TORCH_CHECK(input.is_cuda(), \"Input must be a CUDA tensor\");\n    TORCH_CHECK(input.is_contiguous(), \"Input must be contiguous\");\n    TORCH_CHECK(input.scalar_type() == torch::kFloat32, \"Input must be float32\");\n    TORCH_CHECK(input.dim() >= 2, \"Input must have at least 2 dims\");\n\n    const int B = static_cast<int>(input.size(0));\n    const int F = static_cast<int>(input.size(1));\n    const long long total = static_cast<long long>(input.numel());\n    const int N = static_cast<int>(total / (static_cast<long long>(B) * F));\n\n    auto output = torch::empty_like(input);\n    if (total == 0) return output;\n\n    cudaStream_t stream = c10::cuda::getCurrentCUDAStream().stream();\n    rmsnorm_launcher(input.data_ptr<float>(),\n                     output.data_ptr<float>(),\n                     B,\n                     F,\n                     N,\n                     static_cast<float>(eps),\n                     static_cast<int>(config),\n                     stream);\n    return output;\n}\n\nvoid register_rmsnorm(pybind11::module& m) {\n    m.def(\"rmsnorm_forward\",\n          &rmsnorm_forward,\n          \"RMSNorm over dim=1 (CUDA)\",\n          pybind11::arg(\"input\"),\n          pybind11::arg(\"eps\") = 1e-5,\n          pybind11::arg(\"config\") = -1);\n}\n\nREGISTER_BINDING(rmsnorm, register_rmsnorm);\n"
+  }
+}

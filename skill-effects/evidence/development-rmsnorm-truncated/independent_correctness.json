@@ -1,0 +1,12 @@
+{
+  "correct": false,
+  "planned_checks": 4,
+  "checks": [
+    {
+      "case_index": 0,
+      "seed": 20261019,
+      "correct": false,
+      "error": "NotImplementedError: Implement CUDA extension"
+    }
+  ]
+}

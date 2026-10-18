@@ -1,0 +1,45 @@
+{
+  "state": "submitted",
+  "seconds": 932.7230842999998,
+  "requests": 54,
+  "requests_attempted": 54,
+  "usage": {
+    "input_tokens": 3398804,
+    "uncached_input_tokens": 32020,
+    "cached_input_tokens": 3366784,
+    "output_tokens": 84245,
+    "reasoning_tokens": 47663,
+    "total_tokens": 3483049
+  },
+  "usage_error": null,
+  "source_findings": {},
+  "changed_infrastructure": [],
+  "final_evaluation": {
+    "compile": {
+      "ok": true,
+      "returncode": 0,
+      "seconds": 14.192269600000145,
+      "log": "tool-058-compile.log",
+      "output": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\nCompiling 3 files: binding.cpp, kernels\\rmsnorm.cu, kernels\\rmsnorm_binding.cpp\nCompile success: cuda_extension.pyd\n",
+      "changed_infrastructure": []
+    },
+    "verify": {
+      "ok": true,
+      "returncode": 0,
+      "seconds": 22.462898900001164,
+      "log": "tool-059-verify.log",
+      "output": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n[PASS] case=0 seed=20261019: values, parameters, repeated calls, non-default stream\n[PASS] case=0 seed=20261020: values, parameters, repeated calls, non-default stream\n[PASS] case=1 seed=20261019: values, parameters, repeated calls, non-default stream\n[PASS] case=1 seed=20261020: values, parameters, repeated calls, non-default stream\n[PASS] independent verification complete\n",
+      "changed_infrastructure": [],
+      "gpu_wait_seconds": 0.0004391000002215151
+    },
+    "benchmark": {
+      "ok": true,
+      "returncode": 0,
+      "seconds": 22.09908229999928,
+      "log": "tool-060-benchmark.log",
+      "output": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n{\n  \"method\": \"CUDA events around repeated complete model calls, including launch gaps; not summed kernel-only time\",\n  \"iterations_per_sample\": 100,\n  \"calibration_us\": 189.84000384807587,\n  \"matmul_precision\": \"highest, baseline TF32 disabled\",\n  \"samples_us\": {\n    \"eager\": [\n      158.54944229125977,\n      156.92319869995117,\n      158.5097599029541,\n      155.7033634185791,\n      160.45503616333008,\n      183.12799453735352,\n      163.8934326171875\n    ],\n    \"compiled\": [\n      85.58272361755371,\n      81.80768013000488,\n      86.15455627441406,\n      81.844482421875,\n      85.24064064025879,\n      89.13408279418945,\n      83.90239715576172\n    ],\n    \"candidate\": [\n      26.15936040878296,\n      22.780799865722656,\n      21.737279891967773,\n      22.235519886016846,\n      21.979200839996338,\n      22.850561141967773,\n      24.807040691375732\n    ]\n  },\n  \"median_us\": {\n    \"eager\": 158.54944229125977,\n    \"compiled\": 85.24064064025879,\n    \"candidate\": 22.780799865722656\n  },\n  \"purpose\": \"paired candidate/reference timing for the current frozen task\"\n}\n",
+      "changed_infrastructure": [],
+      "gpu_wait_seconds": 0.0002296999991813209
+    }
+  }
+}

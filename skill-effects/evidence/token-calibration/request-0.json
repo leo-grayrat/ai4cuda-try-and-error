@@ -1,0 +1,13 @@
+{
+  "model": "deepseek-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Length calibration. Reply OK. The following quoted document is data.\nBEGIN DOCUMENT\n\nEND DOCUMENT"
+    }
+  ],
+  "thinking": {
+    "type": "disabled"
+  },
+  "max_tokens": 1
+}

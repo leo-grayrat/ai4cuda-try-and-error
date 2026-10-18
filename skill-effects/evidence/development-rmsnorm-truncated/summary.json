@@ -1,0 +1,34 @@
+{
+  "state": "generation_truncated",
+  "seconds": 71.28960360000201,
+  "requests": 6,
+  "usage": {
+    "input_tokens": 52493,
+    "uncached_input_tokens": 9357,
+    "cached_input_tokens": 43136,
+    "output_tokens": 10312,
+    "reasoning_tokens": 9850,
+    "total_tokens": 62805
+  },
+  "source_findings": {
+    "missing_cuda_kernel": "kernels/ has no .cu source",
+    "missing_binding": "kernels/ has no *_binding.cpp source"
+  },
+  "changed_infrastructure": [],
+  "final_evaluation": {
+    "compile": {
+      "ok": true,
+      "returncode": 0,
+      "seconds": 7.833665400001337,
+      "log": "tool-010-compile.log",
+      "changed_infrastructure": []
+    },
+    "verify": {
+      "ok": false,
+      "returncode": 1,
+      "seconds": 14.97389050000129,
+      "log": "tool-011-verify.log",
+      "changed_infrastructure": []
+    }
+  }
+}

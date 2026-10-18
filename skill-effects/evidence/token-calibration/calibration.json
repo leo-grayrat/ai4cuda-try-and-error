@@ -1,0 +1,102 @@
+{
+  "tokenizer_repository": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash",
+  "revision": "314113f8a7dadb388215396ba5fbee2c610a04d6",
+  "tokenizer_sha256": "c90dfa01249db1be4245780a052ede752e1361c612ac6d08e2bdada7d599476b",
+  "measured_utc": "2026-10-18T22:49:34.191932+00:00",
+  "scope": "document text only; actual agent request usage is recorded separately",
+  "documents": [
+    {
+      "path": "sources/CUDA-Agent.SKILL.md",
+      "sha256": "3161860fb45dea51a688f3fe217ace664df6bd16808d8865824684a58a786d63",
+      "lines": 376,
+      "characters": 13182,
+      "text_tokens": 3392
+    },
+    {
+      "path": "sources/FlashRT.AGENTS.md",
+      "sha256": "8ee46af445c5b33292e523de303cd6ed60df63fd085a4e0be5fdfbc64b622019",
+      "lines": 1749,
+      "characters": 93644,
+      "text_tokens": 21800
+    },
+    {
+      "path": "materials/core.md",
+      "sha256": "642741728b67ec14897643d46cde6db90584102d653a39314a2c2773641a09d8",
+      "lines": 11,
+      "characters": 1079,
+      "text_tokens": 256
+    },
+    {
+      "path": "materials/workflow.md",
+      "sha256": "c7ec37e312ac9f80578952d42e3660e5dc85fdcf8fcb637c8ffc19f6edd18952",
+      "lines": 25,
+      "characters": 2862,
+      "text_tokens": 629
+    },
+    {
+      "path": "materials/condensed.md",
+      "sha256": "f7fdad9c7a5bad7d687c9593579dc28e07441ddfc66417110e7358e58146d79b",
+      "lines": 47,
+      "characters": 5137,
+      "text_tokens": 1108
+    },
+    {
+      "path": "evidence/growth-01/cumulative.md",
+      "sha256": "a0d6e30adba303a1161efd5842852916cc7bc9a8237fb2e05182292d069e890a",
+      "lines": 411,
+      "characters": 17489,
+      "text_tokens": 4307
+    }
+  ],
+  "api_calibration": [
+    {
+      "index": 0,
+      "content_text_tokens": 20,
+      "api_prompt_tokens": 24,
+      "framing_difference": 4,
+      "usage": {
+        "prompt_tokens": 24,
+        "completion_tokens": 1,
+        "total_tokens": 25,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 24
+      }
+    },
+    {
+      "index": 1,
+      "content_text_tokens": 3412,
+      "api_prompt_tokens": 3416,
+      "framing_difference": 4,
+      "usage": {
+        "prompt_tokens": 3416,
+        "completion_tokens": 1,
+        "total_tokens": 3417,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 3416
+      }
+    },
+    {
+      "index": 2,
+      "content_text_tokens": 4327,
+      "api_prompt_tokens": 4331,
+      "framing_difference": 4,
+      "usage": {
+        "prompt_tokens": 4331,
+        "completion_tokens": 1,
+        "total_tokens": 4332,
+        "prompt_tokens_details": {
+          "cached_tokens": 3328
+        },
+        "prompt_cache_hit_tokens": 3328,
+        "prompt_cache_miss_tokens": 1003
+      }
+    }
+  ],
+  "constant_framing_difference": true
+}

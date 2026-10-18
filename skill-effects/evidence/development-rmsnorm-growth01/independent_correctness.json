@@ -1,0 +1,70 @@
+{
+  "correct": true,
+  "planned_checks": 4,
+  "checks": [
+    {
+      "case_index": 0,
+      "seed": 20261019,
+      "input_shapes": [
+        [
+          16,
+          64,
+          32,
+          33
+        ]
+      ],
+      "correct": true,
+      "input_preserved": true,
+      "previous_output_preserved": true,
+      "nondefault_stream_correct": true
+    },
+    {
+      "case_index": 0,
+      "seed": 20261020,
+      "input_shapes": [
+        [
+          16,
+          64,
+          32,
+          33
+        ]
+      ],
+      "correct": true,
+      "input_preserved": true,
+      "previous_output_preserved": true,
+      "nondefault_stream_correct": true
+    },
+    {
+      "case_index": 1,
+      "seed": 20261019,
+      "input_shapes": [
+        [
+          3,
+          17,
+          5,
+          7
+        ]
+      ],
+      "correct": true,
+      "input_preserved": true,
+      "previous_output_preserved": true,
+      "nondefault_stream_correct": true
+    },
+    {
+      "case_index": 1,
+      "seed": 20261020,
+      "input_shapes": [
+        [
+          3,
+          17,
+          5,
+          7
+        ]
+      ],
+      "correct": true,
+      "input_preserved": true,
+      "previous_output_preserved": true,
+      "nondefault_stream_correct": true
+    }
+  ]
+}

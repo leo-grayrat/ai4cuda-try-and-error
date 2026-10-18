@@ -1,0 +1,40 @@
+{
+  "state": "step_budget",
+  "seconds": 537.0579492999968,
+  "requests": 32,
+  "usage": {
+    "input_tokens": 1067090,
+    "uncached_input_tokens": 16594,
+    "cached_input_tokens": 1050496,
+    "output_tokens": 42045,
+    "reasoning_tokens": 21558,
+    "total_tokens": 1109135
+  },
+  "source_findings": {},
+  "changed_infrastructure": [],
+  "final_evaluation": {
+    "compile": {
+      "ok": true,
+      "returncode": 0,
+      "seconds": 15.213453200001823,
+      "log": "tool-041-compile.log",
+      "changed_infrastructure": []
+    },
+    "verify": {
+      "ok": true,
+      "returncode": 0,
+      "seconds": 22.547180300000036,
+      "log": "tool-042-verify.log",
+      "changed_infrastructure": [],
+      "gpu_wait_seconds": 0.00021109999943291768
+    },
+    "benchmark": {
+      "ok": true,
+      "returncode": 0,
+      "seconds": 22.219123800001398,
+      "log": "tool-043-benchmark.log",
+      "changed_infrastructure": [],
+      "gpu_wait_seconds": 0.0002693999995244667
+    }
+  }
+}

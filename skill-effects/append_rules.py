@@ -28,6 +28,13 @@ def main():
     if config["purpose"] != "development":
         raise ValueError("Only development trials can supply rule-writing feedback")
     outcome = json.loads((trial / "result.json").read_text(encoding="utf-8"))
+    first_request = json.loads((trial / "request-000.json").read_text(encoding="utf-8"))
+    initial_user = next(message["content"] for message in first_request["messages"] if message["role"] == "user")
+    task_request = initial_user.split("\n\nAdditional development guidance:\n", 1)[0]
+    dialogue = json.loads((trial / "messages.json").read_text(encoding="utf-8"))
+    visible_explanations = [{"message_index": index, "content": message["content"]} for index, message in enumerate(dialogue) if message["role"] == "assistant" and message.get("content")]
+    report_path = trial / "submitted-report.json"
+    last_report_attempt = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
     events = [json.loads(line) for line in (trial / "events.jsonl").read_text(encoding="utf-8").splitlines()]
     timeline = []
     for event in events:
@@ -37,14 +44,21 @@ def main():
                 arguments = json.loads(function["arguments"])
             except ValueError:
                 arguments = {}
+            if not isinstance(arguments, dict):
+                arguments = {"invalid_argument_type": type(arguments).__name__}
             result = event["result"]
-            timeline.append({"request": event["index"], "function": function["name"], "operation": arguments.get("operation"), "path": arguments.get("path"), "ok": result.get("ok"), "error": result.get("error"), "log": result.get("log")})
+            timeline.append({"request": event["index"], "function": function["name"], "operation": arguments.get("operation"), "path": arguments.get("path"), "argument_fields": sorted(arguments) if isinstance(arguments, dict) else [], "ok": result.get("ok"), "error": result.get("error"), "log": result.get("log")})
     final_logs = {}
     for name, result in outcome["final_evaluation"].items():
         if result.get("log"):
             log = trial / result["log"]
             final_logs[name] = compiler_feedback(log.read_text(encoding="utf-8", errors="replace"))
-    evidence = {"task": config["task"], "state": outcome["state"], "source_findings": outcome["source_findings"], "changed_infrastructure": outcome["changed_infrastructure"], "timeline": timeline, "final_logs": final_logs, "candidate": {str(p.relative_to(trial / "work")): p.read_text(encoding="utf-8") for p in (trial / "work").rglob("*") if p.is_file() and (p.name == "model_new.py" or p.parent.name == "kernels") and p.suffix in {".py", ".cu", ".cpp", ".h"}}}
+    failure_logs = {}
+    for item in timeline:
+        if item.get("ok") is False and item.get("log"):
+            path = trial / item["log"]
+            failure_logs[item["log"]] = compiler_feedback(path.read_text(encoding="utf-8", errors="replace"))
+    evidence = {"input_policy": "actual-task-and-visible-dialogue-v2", "task": config["task"], "actual_task_request": task_request, "visible_assistant_explanations": visible_explanations, "last_report_attempt": last_report_attempt, "report_was_submitted": outcome["state"] == "submitted", "state": outcome["state"], "source_findings": outcome["source_findings"], "changed_infrastructure": outcome["changed_infrastructure"], "timeline": timeline, "final_logs": final_logs, "observed_failure_logs": failure_logs, "candidate": {str(p.relative_to(trial / "work")): p.read_text(encoding="utf-8") for p in (trial / "work").rglob("*") if p.is_file() and (p.name == "model_new.py" or p.parent.name == "kernels") and p.suffix in {".py", ".cu", ".cpp", ".h"}}}
     directory = args.output.resolve()
     directory.mkdir(parents=True, exist_ok=False)
     save(directory / "evidence.json", evidence)
@@ -55,7 +69,7 @@ CURRENT DOCUMENT:
 """ + existing + "\n\nOBSERVED DEVELOPMENT EPISODE:\n" + json.dumps(evidence, ensure_ascii=False)
     body = {"model": "deepseek-flash", "messages": [{"role": "user", "content": prompt}], "thinking": {"type": "enabled"}, "reasoning_effort": "high", "max_tokens": args.max_tokens, "temperature": 1.0}
     save(directory / "request.json", body)
-    save(directory / "provenance.json", {"created_utc": datetime.now(timezone.utc).isoformat(), "trial": str(trial.relative_to(ROOT)), "existing": str(args.existing), "existing_sha256": digest(args.existing), "purpose": "constructed append-only development history, not recovered FlashRT author history", "status": "requested"})
+    save(directory / "provenance.json", {"created_utc": datetime.now(timezone.utc).isoformat(), "trial": str(trial.relative_to(ROOT)), "existing": str(args.existing), "existing_sha256": digest(args.existing), "input_policy": evidence["input_policy"], "writer_code_sha256": digest(Path(__file__)), "purpose": "constructed append-only development history, not recovered FlashRT author history", "status": "requested"})
     key = json.loads((Path.home() / ".local/share/opencode/auth.json").read_text(encoding="utf-8"))["deepseek"]["key"]
     response = requests.post("https://api.deepseek.com/chat/completions", json=body, headers={"Authorization": "Bearer " + key}, timeout=(20, 180))
     data = response.json()

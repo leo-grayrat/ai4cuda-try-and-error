@@ -1,0 +1,25 @@
+{
+  "created_utc": "2026-10-18T23:29:31.710230+00:00",
+  "trial": "runs\\growth-series-01-episode-02-dev_rmsnorm",
+  "existing": "E:\\Project\\Git\\Research\\ai4cuda-try-and-error\\skill-effects\\runs\\growth-series-01\\append-01\\cumulative.md",
+  "existing_sha256": "0967a8a6982c72b9b3d85994554633a436a87b408739c4ea3b911798fe246c76",
+  "input_policy": "actual-task-and-visible-dialogue-v2",
+  "writer_code_sha256": "30b18711c11bb4fbe0a3fa6acc03d180da826fa38134ba5f62f52b8c9bee66d8",
+  "purpose": "constructed append-only development history, not recovered FlashRT author history",
+  "status": "complete",
+  "addition_sha256": "a9ba6ac70be7056b85f4679a1a83b5cbe9b950cd98f7f337ee04ec3479d06097",
+  "cumulative_sha256": "77bb56a280b39bee60e1cb87fcdf1a381e2a06e69d3b7a668afc636413e6f25a",
+  "usage": {
+    "prompt_tokens": 17177,
+    "completion_tokens": 5849,
+    "total_tokens": 23026,
+    "prompt_tokens_details": {
+      "cached_tokens": 5120
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 5012
+    },
+    "prompt_cache_hit_tokens": 5120,
+    "prompt_cache_miss_tokens": 12057
+  }
+}
