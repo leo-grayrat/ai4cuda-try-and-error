@@ -18,9 +18,9 @@ These observations locate the probability cost primarily in the surrounding pros
 
 ### Training instability and the vocabulary explanation {#the-claim}
 
-Agentic reinforcement learning has enabled language models to develop GPU kernels through repeated implementation, evaluation and revision. CUDA Agent reports pass rates of 100%, 100% and 92% across the KernelBench difficulty splits, with faster-than-`torch.compile` rates of 97%, 97% and 92% [@cudaagent, Tab. 2]. Its training procedure uses proximal policy optimisation (PPO) over multi-turn trajectories produced in a development sandbox.
+Multi-turn reinforcement learning has enabled language models to develop GPU kernels through repeated implementation, evaluation and revision, as demonstrated by Kevin and CUDA Agent [@kevin; @cudaagent]. In its main KernelBench table, CUDA Agent reports an overall pass rate of 98.8% and a faster-than-`torch.compile` rate of 96.8% across 250 workloads [@cudaagent; @kernelbench]. Its training procedure uses proximal policy optimisation (PPO) over trajectories produced in a development sandbox [@cudaagent; @ppo].
 
-The authors report that their first run collapsed after 17 training steps. They attribute this instability to a severe domain distribution mismatch, citing a CUDA share below 0.01% of pretraining data and token probabilities near the numerical floor [@cudaagent, Sec. 5.1–5.2; @cudaagentblog]. The illustrative probability in their explanation is
+The authors report that their first run collapsed after 17 training steps. They attribute this instability to a severe domain distribution mismatch, citing a CUDA share below 0.01% of pretraining data and token probabilities near the numerical floor [@cudaagent]. The illustrative probability in their explanation is
 
 $$
 \pi_\theta(a_t\mid s_t)\approx10^{-9}.
@@ -77,7 +77,7 @@ The main collections describe the inference-time output of an aligned commercial
 
 ### The causal chain under test
 
-CUDA Agent connects domain rarity, near-floor token probabilities and training instability, then uses staged warm-up to stabilise PPO [@cudaagent; @cudaagentblog]. Rejection fine-tuning retains positive-reward trajectories and removes unsuccessful or malformed interactions. Value pretraining uses generalised advantage estimation, and subsequent PPO training uses asymmetric clipping for 150 steps. The reported settings are collected here to keep the training configuration separate from the prose explanation:
+CUDA Agent connects domain rarity, near-floor token probabilities and training instability, then uses staged warm-up to stabilise PPO [@cudaagent]. Rejection fine-tuning retains positive-reward trajectories and removes unsuccessful or malformed interactions. Value pretraining uses generalised advantage estimation [@gae], and subsequent PPO training uses asymmetric clipping [@cudaagent; @ppo]. The settings reported for these components are collected below [@cudaagent]:
 
 | Component | Parameter | Value |
 |---|---|---:|
@@ -86,7 +86,7 @@ CUDA Agent connects domain rarity, near-floor token probabilities and training i
 | PPO clipping | Lower bound parameter | 0.2 |
 | PPO clipping | Upper bound parameter | 0.28 |
 
-A third-party reading of the ablations distinguishes the observations from the proposed causal interpretation [@logprobtracking]. Removing rejection fine-tuning is associated with reward collapse and rising policy entropy; removing value pretraining is associated with lower explained variance and longer trajectories. These observations describe training behaviour at the distribution and trajectory levels. The quoted near-floor probability concerns an individual generated token, so examining it requires a token-level measurement alongside those aggregate indicators.
+CUDA Agent's own ablations show reward collapse and rising policy entropy when rejection fine-tuning is removed, and lower explained variance with longer trajectories when value pretraining is removed [@cudaagent]. These observations describe training behaviour at the distribution and trajectory levels. The near-floor probability proposed in the same paper concerns an individual generated token, motivating a token-level measurement alongside the reported aggregate indicators [@cudaagent].
 
 ### Train/inference mismatch in DR. KERNEL {#dr-kernel-mismatch}
 
@@ -113,17 +113,19 @@ $$
 {\pi_{\mathrm{rollout}}(a_t\mid s_t)}<10^{-4}.
 $$
 
-DR. KERNEL reports that this procedure stabilises training dynamics without fundamentally raising the performance ceiling [@drkernel, Sec. 5.1]. The result makes train/inference discrepancy an important comparison for the vocabulary account: the two explanations locate the relevant distributional difference in different parts of the generation and training process.
+DR. KERNEL reports that this procedure stabilises training dynamics without fundamentally raising the performance ceiling [@drkernel]. The result makes train/inference discrepancy an important comparison for the vocabulary account: the two explanations locate the relevant distributional difference in different parts of the generation and training process.
 
 ### Precision mismatch and off-policy drift
 
-Several studies examine how differences between training and inference affect reinforcement learning. Jet-RL focuses on precision mismatch, *Precision Mismatch in Reasoning Models* examines the reasoning setting, and *First-Order Approximation for Stable LLM-RL Training* analyses stability through the objective [@jetrl; @precisionmismatch; @firstorder]. Liu et al. describe how efficiency mechanisms in an RL framework can make training data off-policy [@liuoffpolicy].
+Jet-RL studies the numerical discrepancy introduced when rollout uses FP8 precision and training uses BF16, and proposes a unified precision flow to stabilise optimisation [@jetrl]. Zheng et al. derive a first-order formulation of token-level policy-gradient objectives and relate its validity to training–inference discrepancy and policy staleness [@firstorder]. Yao et al. demonstrate that separate rollout and training backends can assign different token probabilities even with shared model parameters, motivating importance-sampling correction [@liuoffpolicy].
 
-These studies motivate measuring the probabilities that enter the importance ratio and identifying the conditions under which they become small. Our experiment contributes the generated-token distribution for selected kernel-writing tasks, including its regional composition and low-probability tail.
+Trust Region Masking extends this analysis to long-horizon reinforcement learning by examining the sequence-level consequences of implementation divergence and masking trajectories outside a trust region [@trustregion]. Together, these studies motivate measuring the probabilities that enter the importance ratio and identifying where their tails occur [@jetrl; @firstorder; @trustregion]. Our experiment supplies the generated-token distribution for selected kernel-writing tasks, including its regional composition and contextual examples.
 
 ### Logprob availability in closed APIs
 
-The serving interface determines which generated tokens can be associated with probabilities. In our DeepSeek experiments, moving code into reply text made those probabilities accessible to the collection driver. In the local vLLM records, the generated stream retained both tool-call arguments and their probabilities. Recovering the latter requires parsing the serialised output and locating the code within its JSON strings. Together, these interfaces support collection from reply-body implementations and agent-generated file-writing operations.
+Probability outputs are useful scientific observations in their own right. Chauvin et al. use token log-probabilities to detect changes in models served through APIs, showing that these measurements can support low-cost monitoring [@logprobtracking]. Carlini et al. recover information about a production model's output projection through black-box API access, illustrating the additional information exposed by probability-related outputs [@carlini].
+
+The serving interface also determines which parts of a generated interaction can be measured. Michaelov et al. distinguish model evaluation, comparison and interpretation as research goals with different access requirements [@howopen]. In our DeepSeek experiments, moving code into reply text made its probabilities accessible. In the local vLLM records, the generated stream retained both tool-call arguments and their probabilities. Recovering the latter requires parsing the serialised output and locating the code within its JSON strings. These collection routes make the measured output channel explicit for each experiment.
 
 ### Position of this work
 
@@ -164,7 +166,7 @@ Here the concatenation operator appends messages in order. A run stops when a ca
 
 ### Two task families
 
-Family A contains `row_reduce`, `vector_affine`, `layernorm_rows` and `softmax_rows`. These tasks use elementwise operations or single-dimension reductions, with short kernel bodies and limited control flow. Family B draws five operator chains from KernelBench Level 2 [@kernelbench]:
+Family A contains `row_reduce`, `vector_affine`, `layernorm_rows` and `softmax_rows`. These tasks use elementwise operations or single-dimension reductions, with short kernel bodies and limited control flow. Family B draws five operator chains from KernelBench Level 2, the operator-sequence split of a benchmark containing 250 PyTorch workloads [@kernelbench]:
 
 | Task | Chain |
 |---|---|
@@ -197,7 +199,7 @@ Model selection was tied to the available collection interface and hardware. The
 
 In the local records, `content_logprobs` contains the generated tokens of serialised tool calls, including proposed file contents. The corresponding OpenCode events retain the tool names, input strings and execution status. Recovering a code argument involves concatenating the token stream, parsing the tool-call JSON and locating the `content` or `newString` value. Some responses have empty `content_text` and `tool_call_text` convenience fields even though their generated stream contains the code. Section~\ref{local-tool-call-capture} reports the audit of these saved records.
 
-Families A and B use the non-reasoning API model with a maximum response budget of 8,192 tokens. The reasoning variant tested during setup exhausted a 4,000-token budget in the reasoning channel and returned an empty content field with `finish_reason=length`. The selected interface made reply-body code probabilities accessible while allowing a larger model than the local GPU could serve.
+Families A and B use the non-reasoning API model with a maximum response budget of 8,192 tokens. The reasoning variant tested during setup exhausted a 4,000-token budget in the reasoning channel and returned an empty content field with `finish_reason=length`. The selected interface made reply-body code probabilities accessible while allowing a larger model than the local GPU could serve. This choice treats the API as the measurement instrument and specifies its observable output channel, following the distinction between model behaviour and deployment access discussed by Michaelov et al. [@howopen].
 
 An earlier vocabulary comparison from the local collection was withdrawn after a classification error was identified. Section~\ref{classification-bias-in-the-first-pass} describes that error; the retained records support direct inspection of the generated code and its probabilities.
 
@@ -432,7 +434,7 @@ Together, these results challenge the attribution of the measured probability co
 
 ### The magnitude gap and its interpretation
 
-The observed code-token minimum is approximately four hundred times the quoted floor, while the median code-token probability rounds to one. This gap motivates examining how model state, generated context and token selection enter the comparison. CUDA Agent discusses a base policy during rollout; our main collections use an aligned model through an inference API.
+The observed code-token minimum is approximately four hundred times the quoted floor, while the median code-token probability rounds to one. This gap motivates examining how model state, generated context and token selection enter the comparison. CUDA Agent discusses a base policy during rollout, while our main collections use an aligned model through an inference API [@cudaagent]. Chlenski et al. examine cross-model fidelity and find that agreement in predictions can coexist with differences in attribution, making the measurement target and the kind of inference important to specify [@surrogate].
 
 The empirical finding is that near-floor probabilities are absent from the measured code output, including its CUDA/Triton vocabulary. To connect this result to the training account, a matched base-model measurement would locate the same quantities before fine-tuning and show how their distributions change afterward. Such a comparison would directly test whether the quoted tail is associated with the base policy and how it relates to the vocabulary and regions identified here.
 
@@ -446,15 +448,15 @@ The composition of the interaction also contributes to the aggregate result. Fai
 
 ### A context-distribution account of the collapse
 
-The regional measurements motivate a hypothesis linking training instability to the contexts generated during unsuccessful revision. CUDA Agent reports rising entropy alongside reward collapse, DR. KERNEL finds that controlling train/inference mismatch stabilises training, and our collections place much of the probability cost in prose produced around failed evaluations. These observations suggest examining the distribution of diagnostic and self-correction text encountered during rollout.
+The regional measurements motivate a hypothesis linking training instability to the contexts generated during unsuccessful revision. CUDA Agent reports rising entropy alongside reward collapse [@cudaagent], and DR. KERNEL finds that controlling train/inference mismatch stabilises training [@drkernel]. Our collections place much of the probability cost in prose produced around failed evaluations. These observations suggest examining the distribution of diagnostic and self-correction text encountered during rollout.
 
 Under this hypothesis, failed evaluations lead the policy into contexts containing compiler diagnostics, revised explanations and attempts to recover from an unsuccessful implementation. Their continuation distribution may differ from that represented in successful demonstrations. Tracking how often training visits these contexts could help explain changes in entropy and importance ratios as trajectories lengthen.
 
-Rejection fine-tuning offers a relevant comparison because it selects successful trajectories and thereby changes the context mixture used to anchor the policy. In our Family B collection, success-following responses contain 12,147 tokens and failure-following responses contain 474,728. These counts illustrate the potential size of the mixture difference and motivate measuring its effect directly within a training run.
+Rejection fine-tuning offers a relevant comparison because it selects successful trajectories and thereby changes the context mixture used to anchor the policy [@cudaagent]. In our Family B collection, success-following responses contain 12,147 tokens and failure-following responses contain 474,728. These counts illustrate the potential size of the mixture difference and motivate measuring its effect directly within a training run.
 
 A second explanation places the uncertain prose downstream of an unresolved implementation problem. A struggling model may produce both an incorrect kernel and a diffuse explanation, with the prose recording the difficulty already present in the interaction. Distinguishing these explanations requires interventions that vary the generated context while holding other aspects of the task fixed.
 
-Two comparisons would help. One could retain the content of a failure message while changing its diagnostic formatting, then measure the response distribution in code and prose separately. Another could request a complete rewrite after a successful evaluation, providing a comparison between rewriting after success and rewriting after failure. Logging the same regional probabilities, entropy and importance ratios during training would then connect these interaction-level measurements to the reported instability.
+Two comparisons would help. One could retain the content of a failure message while changing its diagnostic formatting, then measure the response distribution in code and prose separately. Another could request a complete rewrite after a successful evaluation, providing a comparison between rewriting after success and rewriting after failure. Logging the same regional probabilities, entropy and importance ratios during training would then connect these interaction-level measurements to the discrepancy examined by Jet-RL and the objective analysis of Zheng et al. [@jetrl; @firstorder].
 
 ### Classification bias in the first pass
 
@@ -485,7 +487,7 @@ Reply-body collection enabled the main experiments through the tested DeepSeek A
 
 ## Limitations
 
-1. **Model state.** The main measurements describe an aligned model at inference. A matched measurement of the base policy before fine-tuning would clarify how the observed distribution relates to the rollout distribution discussed by CUDA Agent.
+1. **Model state.** The main measurements describe an aligned model at inference. A matched measurement of the base policy before fine-tuning would clarify how the observed distribution relates to the rollout distribution discussed by CUDA Agent [@cudaagent; @surrogate].
 2. **Model coverage.** Families A and B use one API model. The Qwen3-4B-AWQ records extend the collection interface to local tool calls and are reported as a separate supplement.
 3. **Task coverage.** The selected operator chains combine a heavy operation with subsequent passes. Their implementation arrangements cover a limited part of the kernel-design space. More demanding choices involving shared-memory intermediates, access-pattern transformations, split-K reductions or online softmax would extend this coverage.
 4. **Context composition.** Failure-following responses account for 87.5% of Family B's tokens. The reported regional distributions therefore weight unsuccessful revision heavily, and the driver defect contributes to that mixture.
