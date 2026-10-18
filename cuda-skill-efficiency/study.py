@@ -154,6 +154,7 @@ def estimated_skill_tokens(skill_text: str) -> tuple[int | None, str | None]:
 def child_environment(
     parent: dict[str, str], windows: bool | None = None,
     python_executable: Path | None = None, cache_dir: Path | None = None,
+    extra: dict[str, str] | None = None,
 ) -> dict[str, str]:
     env = parent.copy()
     on_windows = windows if windows is not None else os.name == "nt"
@@ -167,6 +168,8 @@ def child_environment(
     if cache_dir:
         env["TRITON_CACHE_DIR"] = str(cache_dir)
         env["CUPY_CACHE_DIR"] = str(cache_dir)
+    if extra:
+        env.update(extra)
     return env
 
 
@@ -190,31 +193,43 @@ def stop_process_tree(proc: subprocess.Popen, windows: bool | None = None) -> No
 
 def run_trial(
     task: Path, skill: Path | None, model: str, output: Path, timeout_s: int,
-    backend: str = "opencode",
+    backend: str = "opencode", env_extra: dict[str, str] | None = None,
+    prompt_suffix: str | None = None, opencode_agent: str | None = None,
 ) -> dict:
     if output.exists():
         raise FileExistsError(output)
     output.mkdir(parents=True)
     with isolated_task_workspace(task, output) as (work, task_hashes):
-        return _run_trial_in_workspace(task, skill, model, output, timeout_s, backend, work, task_hashes)
+        return _run_trial_in_workspace(
+            task, skill, model, output, timeout_s, backend, work, task_hashes,
+            env_extra, prompt_suffix, opencode_agent,
+        )
 
 
 def _run_trial_in_workspace(
     task: Path, skill: Path | None, model: str, output: Path, timeout_s: int,
     backend: str, work: Path, task_hashes: dict[str, str],
+    env_extra: dict[str, str] | None = None,
+    prompt_suffix: str | None = None,
+    opencode_agent: str | None = None,
 ) -> dict:
     skill_text = skill.read_text(encoding="utf-8") if skill else ""
     prompt = (task / "task.md").read_text(encoding="utf-8")
     prompt += "\n\nEdit only candidate.py. Check the result against reference.py on a small and a large CUDA input. Report what you checked."
+    if prompt_suffix:
+        prompt += "\n\n" + prompt_suffix
     if skill_text:
         prompt += "\n\n---\n\nAdditional CUDA development guidance:\n\n" + skill_text
     (output / "prompt.txt").write_text(prompt, encoding="utf-8")
     if backend == "opencode":
         command = [
             "opencode.cmd" if os.name == "nt" else "opencode", "run", "--pure", "--auto",
-            "--model", model, "--format", "json", "--title",
+            "--model", model, "--format", "json", "--dir", str(work), "--title",
             f"AI4CUDA {task.name} {skill.name if skill else 'none'}", prompt,
         ]
+        if opencode_agent:
+            command.insert(5, opencode_agent)
+            command.insert(5, "--agent")
     elif backend == "codex":
         command = [
             "codex.cmd" if os.name == "nt" else "codex", "exec", "--json", "--ephemeral",
@@ -232,12 +247,26 @@ def _run_trial_in_workspace(
     versions.mkdir()
     cache = output / "triton-cache"
     cache.mkdir()
-    env = child_environment(os.environ, python_executable=Path(sys.executable), cache_dir=cache)
-    env["OPENCODE_DISABLE_AUTOUPDATE"] = "true"
-    version = subprocess.run(
-        [command[0], "--version"], cwd=work, env=env,
-        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10,
+    env = child_environment(
+        os.environ, python_executable=Path(sys.executable), cache_dir=cache,
+        extra=env_extra,
     )
+    env["OPENCODE_DISABLE_AUTOUPDATE"] = "true"
+    # stdin must be closed. This probe runs inside a chain of pipes, and
+    # OpenCode's launcher can block waiting for input, which stalls the whole
+    # batch (observed: opencode.exe --version alive for 40+ minutes). On
+    # Windows the timeout alone does not reap the children the .cmd wrapper
+    # spawns, so kill the process tree explicitly when it fires.
+    try:
+        version = subprocess.run(
+            [command[0], "--version"], cwd=work, env=env, stdin=subprocess.DEVNULL,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=20,
+        )
+    except subprocess.TimeoutExpired as exc:
+        if exc.process is not None:
+            stop_process_tree(exc.process)
+        version = None
     with (output / "events.jsonl").open("w", encoding="utf-8") as raw, (output / "stderr.txt").open("w", encoding="utf-8") as err:
         proc = subprocess.Popen(
             command, stdin=subprocess.PIPE if backend == "codex" else subprocess.DEVNULL,
@@ -338,6 +367,13 @@ def main() -> None:
     run.add_argument("--model")
     run.add_argument("--output", type=Path, required=True)
     run.add_argument("--timeout-s", type=int, default=300)
+    run.add_argument("--opencode-config", type=Path,
+                     help="path exported as OPENCODE_CONFIG to the child process")
+    run.add_argument("--opencode-agent", default=None,
+                     help="OpenCode agent name passed via --agent (e.g. a minimal "
+                          "agent with skills disabled)")
+    run.add_argument("--prompt-suffix", default=None,
+                     help="extra instruction appended to the assembled task prompt")
     evaluate = commands.add_parser("evaluate")
     evaluate.add_argument("--task", type=Path, required=True)
     evaluate.add_argument("--trial", type=Path, required=True)
@@ -346,9 +382,15 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == "run":
         model = args.model or ("deepseek/deepseek-flash" if args.backend == "opencode" else "gpt-5.5")
+        env_extra = (
+            {"OPENCODE_CONFIG": str(args.opencode_config.resolve())}
+            if args.opencode_config else None
+        )
         summary = run_trial(
             args.task.resolve(), args.skill.resolve() if args.skill else None,
             model, args.output.resolve(), args.timeout_s, args.backend,
+            env_extra=env_extra, prompt_suffix=args.prompt_suffix,
+            opencode_agent=args.opencode_agent,
         )
         print(json.dumps(summary, ensure_ascii=False))
         raise SystemExit(run_exit_code(summary))

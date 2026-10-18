@@ -1,0 +1,350 @@
+# 低概率 Token 归因：实验计划
+
+## 总览
+
+用 OpenCode 现有的 agent 循环跑多轮 Triton/CUDA 任务，通过一个透明记录代理捕获逐 token logprobs，统计低概率（意外）token 在"token 类型 × 上下文类型"上的分布，检验 CUDA Agent 论文声称的训练不稳定 root cause（CUDA 语法稀有 → 大量低概率 token）是否成立。
+
+- **周期**：约 3-4 个工作日
+- **成本**：API 费用约 $2-5
+- **硬件**：仅现有笔记本 RTX 5060，无训练
+
+## 一、架构：OpenCode + 记录代理
+
+三层结构，每层职责单一：
+
+```
+study.py（现有，不改核心逻辑）
+    ↓ 发起
+opencode run --pure --auto --model deepseek/deepseek-flash
+    ↓ API 请求
+记录代理（localhost，新建 ~200 行 Python）
+    ↓ 转发 + 注入 logprobs 参数 + 侧录响应
+DeepSeek 官方 API（logprobs=True, top_logprobs=20）
+```
+
+- **OpenCode 层**：复用全部现有设施——任务隔离（`isolated_task_workspace`）、评测（`evaluate.py`）、事件流记录（`events.jsonl`）、版本快照（`versions/`）。model 从墨点网关的 deepseek 换成 OpenCode 内置的 `deepseek/deepseek-flash` 分组（直连官方），baseURL 由代理替代（OpenCode 配置里给 deepseek provider 加 `baseURL: http://localhost:8765/v1`，代理再转发到 `https://api.deepseek.com/v1`）。
+- **代理层**：接收请求 → 注入 `logprobs: true, top_logprobs: 20` → 转发官方 → 把响应里的 `logprobs.content` / `logprobs.reasoning_content` 侧录到 `logprobs.jsonl`，同时记录完整的 assistant 回复文本作为对齐键。流式和非流式都要处理（OpenCode 用流式，代理需要聚合 SSE 流再侧录完整 logprobs——这是实现上最需要注意的一点）。
+- **study.py 层**：只加一个开关，支持"截断反馈"条件（Phase 1 干预用），其余不动。
+
+## 二、Phase 0：可行性验证（半天）
+
+三个验证，全部通过才进入 Phase 1：
+
+1. **官方 API 连通性**：`deepseek/deepseek-flash` 分组是否已配好 API key（OpenCode 的 deepseek 分组需要 `DEEPSEEK_API_KEY` 或 auth 登录）。跑一个最小 chat 请求带 `logprobs: true`，确认响应里有 logprobs 字段和 -9999 哨兵语义符合预期。
+2. **代理对齐**：起代理，把 OpenCode 指向它，跑一个最小任务，确认（a）代理侧录的 logprobs 完整、（b）能与 OpenCode events.jsonl 里的 assistant 文本按前缀匹配对齐、（c）流式聚合无丢失。
+3. **观测量 sanity check**：原设计的"哨兵率（-9999 占比）"经实测恒为 0，已在第九节修正为 `lowprob rate`（`logprob <= τ`，τ ∈ {-2, -5}）加 `in_topn` 标记。sanity check 相应改为：确认每类样本的 `lowprob rate` 既非恒 0 也非接近 1，且 `in_topn` 在固定 `top_logprobs` 下可比。
+
+**Kill condition**：如果代理对流式 SSE 的 logprobs 聚合在 DeepSeek 官方 API 上无法实现（比如官方流式不返回 logprobs 字段），就改用非流式模式跑 OpenCode（OpenCode 支持配置非流式）或降级到逐轮回放（拿保存的 messages 重新请求）。这条 fallback 在 Phase 0 内验证。
+
+## 三、Phase 1：轨迹采集（1-2 天）
+
+**任务**：4 道现有 Triton 任务（row_reduce / vector_affine / softmax_rows / layernorm_rows）+ 2-3 道 KernelBench CUDA C++ 题（从 Level 1 选简单的：如 vector add、矩阵转置、ReLU——本机已有 `.cache/KernelBench`，评测适配需要把 `kernelbench_adapter.py` 的接口接到新代理流程里，工作量约半天）。
+
+**条件**（干预对照）：
+- **完整反馈**：编译错误全文、正确性对比输出、性能数字。现有 study.py 的默认行为。
+- **截断反馈**：编译错误只给"compilation failed"一行、正确性只给"output mismatch"、性能只给"correct but slower"。
+
+**规模**：6 道任务 × 2 条件 × 3 重复 = 36 次运行。每次 5-15 轮对话，总量约 15-20 万 token，费用约 $3-6。
+
+**产出**：每次运行一个目录，含 `events.jsonl`（OpenCode 标准）、`logprobs.jsonl`（代理侧录）、`run.json`（复用现有格式）、`work/`（任务文件与版本快照）。
+
+## 四、Phase 2：对齐与分类（1 天）
+
+**对齐脚本**：把 `logprobs.jsonl` 的每条 completion 与 `events.jsonl` 的 `text`/`tool_use` 事件按文本前缀匹配，产出统一的 `tokens.jsonl`：每个 token 一行，字段包括 `logprob`、`logprob_field`（content / reasoning_content）、`in_topn`（chosen 是否在返回的 top_logprobs 内）、`is_lowprob`（`logprob <= τ`）、`token_text`、`event_index`、`turn`、`task`、`condition`。
+
+**分类脚本**（规则冻结后不再改）：
+- token 类型：`NL_reasoning` / `generic_code` / `triton_specific`（Triton 关键词表）/ `cuda_specific`（threadIdx、__shared__、__syncthreads 等关键词表）/ `number` / `identifier` / `tool_syntax`
+- 上下文类型：`initial` / `after_compile_error` / `after_correctness_fail` / `after_profiling`——由 events.jsonl 的 step 序列推导（上一步 tool_use 的类型决定）
+
+分类规则、关键词表在 Phase 2 开始时写死提交，之后即使发现分类不准也只记录不修补——分类错误率本身进 limitations。
+
+## 五、Phase 3：分析与产出（半天）
+
+四个分析（对应判读树）：
+
+1. **token 类型 × lowprob rate**：`cuda_specific`/`triton_specific` vs `generic_code` 的低概率率比较——低概率是否来自 CUDA/Triton 语法本身。
+2. **上下文类型 × lowprob rate**：`after_compile_error`/`after_profiling` vs `initial`——低概率是否来自工具观察后的分布外上下文。
+3. **干预对照**：完整反馈 vs 截断反馈的整体 lowprob rate 差异——压缩工具反馈能否消除低概率尾部。
+4. **交互项**：`cuda_specific × after_compile_error`——语法本身不低概率、但被奇怪上下文带低，是比"CUDA 语法稀有"精确得多的结论。
+
+每项同时报告该单元的 logprob 均值与低分位数，以及 `in_topn` 比例，避免只由单一阈值承载结论。
+
+**产出**：`lowprob-attribution/` 目录（README、tokens.jsonl 汇总、分析脚本、结果报告），根 README 加一行入口。结果无论正反都写成一篇可独立发布的实证短报告草稿（约 4-6 页）。
+
+## 六、守门自检与边界
+
+**改变哪个判断**：CUDA Agent 论文标题为"The Root Cause of Training Instability"的因果链起点——低概率 token 是否真的来自 CUDA 语法稀有。起点被抽掉，整条链要重新解释；起点被证实，我们的质疑收回。
+
+**不能回答**：低概率是否真的导致 PPO 比值爆炸（需训练）；train-inference mismatch 贡献几何（需双引擎）；Seed1.6 特定权重上的表现（需其权重）。报告里会明确写这三条边界。
+
+**防偏移护栏**：分类规则和判读树在采集开始前冻结；分析中发现的"分类不准"记为结果不修补；代理是通用工具不做研究性扩展；整个计划不包含训练、不包含造 baseline、不包含给 locator 补规则。
+
+## 七、判读树（提前定死）
+
+- `lowprob rate`（τ=-2 与 τ=-5 两档）在 triton/cuda_specific 和 generic_code 之间无显著差异，且 after_compile_error 明显高于 initial → CUDA Agent 的 root cause 叙事需要改写：低概率不来自 CUDA 语法稀有，而来自多轮工具 Agent 的分布外上下文。
+- triton/cuda_specific 的 `lowprob rate` 显著高于 generic_code，且各上下文类型下一致 → CUDA Agent 的叙事得到支持，之前的质疑收回。
+- 两种模式在不同任务/轮次上混合出现 → 需要更细致的分解，但仍能回答"哪类 token 在什么条件下变低概率"。
+
+## 八、执行顺序
+
+1. Phase 0：验证 deepseek 分组 key → 最小 logprobs 请求 → 写代理 → 代理下跑通 OpenCode → 对齐验证 → 哨兵率 sanity check
+2. Phase 1：冻结判读树和分类规则 → 适配 2-3 道 KernelBench CUDA 题 → 36 次运行
+3. Phase 2：对齐脚本 → 分类脚本 → tokens.jsonl
+4. Phase 3：四项分析 → 结果报告 → README 入口
+
+## 九、Phase 0 实测记录（2026-10-15）
+
+DeepSeek 官方 API 恢复后，用裸 `urllib` 直调 `https://api.deepseek.com/chat/completions` 实测（脚本 `scripts/check_logprobs.py`、`scripts/check_sentinel.py`）。四点与计划假设不符，其中第三点推翻了原观测量定义。
+
+### 1. 模型名
+
+官方 `/models` 只返回 `deepseek-flash` 和 `deepseek-v4-pro`。此前脚本里用的 `deepseek-chat` 是一个可用的别名，但不是官方列表中的模型名。两者生成的 logprobs 语义不同（见下条）。
+
+### 2. 推理模型把 logprobs 放在 `reasoning_content`
+
+`deepseek-flash` / `deepseek-v4-pro` 是推理模型：响应里 `logprobs.content` 为空，逐 token logprob 全部在 `logprobs.reasoning_content`；`deepseek-chat` 别名则把 logprobs 放在 `logprobs.content`。代理必须同时读取两路（`scripts/record_proxy.py` 已按此实现）。分析时必须记录 `logprobs field` 是哪一路，否则两类模型的样本不可比。
+
+### 3. `-9999` 哨兵不存在（推翻原观测量）
+
+计划原假设："生成的 token 不在 top-N 最可能 token 之内时，`logprob` 返回 `-9999.0` 哨兵"。实测不成立。
+
+在同一段 500 token 的 reasoning 里，有 8 个 token 的 chosen 值**不在**返回的 `top_logprobs` 列表内（即严格意义上的"不在 top-5 之内"），它们返回的是真实 logprob 而不是哨兵：
+
+```
+chosen=' Trit'      logprob=-3.500   best_alt=' User'@-1.257
+chosen=' Need'      logprob=-2.803   best_alt=' Could'@-1.895
+chosen=' including' logprob=-4.697   best_alt=' no'@-0.268
+chosen=' returns'   logprob=-6.032   best_alt='(x'@-0.857
+```
+
+全文 `logprob <= -9998` 的计数为 0。同时 `top_logprobs` 取 1、5、10、20 四档时哨兵率**恒为 0%**，而 `logprob <= -5` 的计数随档位在 0~6 之间波动。
+
+结论：哨兵率这个观测量在当前 API 上恒为 0，没有分辨力。不能作为主指标。
+
+### 4. `temperature=0` 会让 logprobs 退化为全 0
+
+同一 prompt、同一模型，省略 `temperature` 时 `min logprob = -2.118`（真实值）；显式设 `temperature=0.0` 时，全部 420~500 个 token 的 logprob **均为 0.000**，`top_logprobs` 里所有替代 token 也都是 0.000。参数存在但不携带信息。
+
+任何调用链（代理、`study.py`、OpenCode 的 provider 默认值）都不能把 `temperature` 固定为 0，否则采集到的 logprobs 全废且不会报错。
+
+### 5. 观测量修正（采集前冻结，替代原"哨兵率"）
+
+- **主指标**：`lowprob rate` = 每个样本中 `logprob <= τ` 的 token 占比，取 `τ ∈ {-2, -5}` 两档分别报告（不预设单一阈值，避免阈值选择变成自由度）。
+- **辅助标记**：`in_topn` = chosen 是否出现在返回的 `top_logprobs` 列表内。固定 `top_logprobs` 取值后它是良定义的一致指标；本次 `top_logprobs=5` 下为 8/500 = 1.6%。
+- **分布统计**：每个（token 类型 × 上下文类型）单元的 logprob 均值与低分位数，配合低概率率一起报告。
+- 原"哨兵率"表述在本文档其余部分等效替换为 `lowprob rate`。
+
+### 6. 初步信号（样本量小，仅记录不做推断）
+
+两段 `deepseek-flash` reasoning 里，logprob 最低的 token 全部是自然语言和标点——`' Trit'`、`' Need'`、`' including'`、`' Options'`、`'For'`、`' returns'`、`')'`、`' We'`——没有一个是 Triton/CUDA 专属语法。冷启动单轮、`after_error`、`cuda_cpp` 三个场景下 `logprob <= -5` 的比例分别为 1.5%、0%、0%，且 `after_error`（给出编译错误要求修复）的最低 logprob 只有 -0.215，是三者中最"确定"的。
+
+这与计划假设的方向一致，但样本只有几段单轮回复，不构成证据，仅用于确认观测量有力可测。
+
+### 7. OpenCode 端到端接入（同日）
+
+接入方式：项目自带 `lowprob-attribution/opencode-proxy.jsonc`，用 `OPENCODE_CONFIG` 环境变量加载，把内置 deepseek provider 的 `baseURL` 指向 `http://127.0.0.1:8765/v1`。不写进全局配置，也不在仓库根放 `opencode.json`——代理停着时该 provider 会整体不可用，不能让它成为默认。四种发现：
+
+**7.1 调用方式必须与 `study.py` 一致。** 裸跑 `opencode run "..."` 会挂住不返回，因为缺少 `--auto`（工具自动批准）、`--format json`、`OPENCODE_DISABLE_AUTOUPDATE`，以及 stdin 的 EOF（`study.py` 用 `subprocess.DEVNULL`）。补齐后 `exit=0`，事件流 `step_start` → `text` → `step_finish` 正常。
+
+**7.2 代理曾丢弃 SSE 空行，导致 OpenCode 报 JSON 解析错误。** 旧实现在迭代响应时先 `strip()` 再判断 `startswith("data:")`，空行被 `continue` 跳过，而空行正是 SSE 的事件终止符；同时 `[DONE]` 在 `finally` 里被重复写入一次。现已改为原样转发每一行（含空行）、`[DONE]` 只发一次。修复前后差别是 `exit=1 + UnknownError(JSON parsing)` 与 `exit=0`。
+
+**7.3 OpenCode 发出的 `temperature` 不是 0，而是 0.5。** 会话标题生成那次请求则完全不带 `temperature`（代理里记为 `None`，被 `--temperature-override 1.0` 补上）。代理现已在 side-record 中记录实际发送的 `temperature`。此前"opencode 传 temperature=0 导致 logprobs 退化"的猜测不成立——第一次端到端里 logprobs 几乎为 0，真实原因是任务过简（"回复 ok"）加上长系统提示，模型极度确定。
+
+**7.4 OpenCode 会额外发一次"生成会话标题"的辅助请求，其 logprobs 同样进入 side-record。** 实测该请求的 reasoning 内容形如 `We need answer? The user asks "Generate a title for this con...`。它不属于任务轨迹，必须在对齐阶段按 messages 内容过滤掉，否则每个 run 会混入一条无关样本。
+
+**7.5 `events.jsonl` 不记录 reasoning 文本，`--thinking` 也不改变这一点。** 带 `--thinking` 跑完后事件类型仍只有 `step_start` / `text` / `step_finish`。后果：`content` 部分的逐 token logprobs 可以用文本前缀对齐到 `text` 事件，而 `reasoning_content` 部分没有可对齐的文本载体——而推理模型的绝大多数 token 恰在 reasoning 里（一次实测 345 个里占 345）。对齐方案见 7.8。
+
+### 8. Phase 1 首次采集暴露的两个环境问题
+
+**8.1 OpenCode 不遵守 `Popen` 的 `cwd`，必须在命令行显式传 `--dir`。** `study.py` 用 `subprocess.Popen(..., cwd=work)` 把进程启动在隔离工作区里，但实测 agent 会去读 `E:\Project\Git\Research\ai4cuda-try-and-error\candidate.py`（仓库根）并列出了仓库根的内容——隔离工作区在系统 temp 下，agent 完全没在那里工作。在命令里加 `--dir <work>` 之后，agent 才在 `...\ai4cuda-task-xxxx\work\` 里读 `reference.py` / `candidate.py`。`study.py` 已按此修改；这条对 **cuda-skill-efficiency 的历史 18 次运行同样成立**，那些运行的 agent 是否在隔离工作区里工作未经核实，属于该实验自身要复核的问题，不在本轮修改范围。
+
+**8.2 工具调用的 token 没有 logprobs。** 一次 trial 的 step 记账是 `output=349, reasoning=811`，代理记录为 `reasoning_logprobs=811, content_logprobs=0`。reasoning 数量精确相等，但 349 个 visible output token 一个 logprob 都没有——它们落在工具调用（`write` / `bash` 的 JSON 参数）上，既不进 `content` 也不进 `reasoning_content`。**后果：`classify.py` 里的 `tool_syntax` 类别在本数据上无法测量**，须写进报告 limitations。
+
+### 9. 对齐单位定为「请求」
+
+原设计按 completion 文本前缀匹配 `text` 事件，这在 7.5 下只能覆盖 content 那一小部分。改为按请求配对：
+
+- 代理每条记录 = 一次 chat completion；`events.jsonl` 每对 `step_start`/`step_finish` = 一次 chat completion。两者同粒度，按顺序配对。
+- **用 step 自身的账目校验每一对**：`step_finish.part.tokens.reasoning` 必须等于该记录 `len(reasoning_logprobs)`。实测逐条相等，这是可验证的对齐键。
+- 配对前先剔除 OpenCode 自己的会话标题请求，依据代理新记录的 `first_user_message` 字段。
+- 上下文类型由**上一个 step 内**的工具结果决定（模型只在下一个请求里看到它）：工具输出含 mismatch / not close → `after_correctness_fail`；含 error / traceback / failed → `after_compile_error`；含 speedup / median / ms → `after_profiling`；其余 → `after_tool`（`after_tool` 是相对原四分类新增的一档，用于 read / write 这类既非报错也非计时的观察）。
+
+`align.py` 已按此重写，`classify.py` 的观测量同步换成 `in_topn` + 两档 lowprob 标记，并修掉了原先"按子串在哪个 segment 里就归哪类"的粗糙映射，改为按 token 流推进游标定位。
+
+### 10. 工具调用 token 的概率：API 边界与绕法（实测）
+
+**问题**。第一次采集的 565 个 token 全是自然语言推理，没有一个代码 token。原因是 agent 通过 `write` 工具把整份文件写出去，不在正文里逐行写；而第一批数据里"工具调用没有 logprobs"这个判断是从 token 数量差推出来的（step 报 `output=349, reasoning=811` 而 `content_logprobs=0`），没有直接看过一次工具调用响应。
+
+**实测**（`scripts/check_tool_logprobs.py`，带 `tools` 定义强制触发工具调用）：
+
+| 观测项 | 结果 |
+|---|---|
+| `finish_reason` | `tool_calls` |
+| `message` 键 | `content`, `reasoning_content`, `role`, `tool_calls` |
+| `logprobs` 键 | 只有 `content` 与 `reasoning_content` |
+| `tool_calls` | 1 个，`write_file`，arguments 3804 字符（完整 Triton 代码） |
+| `logprobs.content` | 49 个 token，全部是正文里那句引子 |
+| arguments 文本是否出现在 `logprobs.content` 里 | 否 |
+
+**结论**：工具调用的**内容**可监测——`events.jsonl` 的 `tool_use` 事件带完整 arguments；**概率不可监测**——API 的 `logprobs` 只覆盖 `content` 与 `reasoning_content`，工具参数不在其内。这是返回值范围决定的，不是采集端漏接。
+
+**绕法（已验证）**：在 prompt 里要求模型先把完整代码写在回复正文、再调用工具写入同一份内容。同一请求下：
+
+| 指令 | `logprobs.content` tokens | 正文是否含代码 |
+|---|---|---|
+| 直接调工具 | 49 | 否 |
+| 先写正文再调工具 | **860** | 是（`tl.load` / `tl.store` / `triton.jit`） |
+
+**代价与配套要求**：这条指令改变了 agent 的自然行为，代码会在正文与工具参数里各出现一次且未必逐字一致；须写进报告，并在分析时记录模型对该指令的遵守率（不遵守的 step 应计入"正文无代码"的比例，而不是当作缺失值丢弃）。
+
+### 11. 转向本地 vLLM：工具参数概率的唯一可行路径（2026-10-16）
+
+**为什么必须换**。第 10 节的绕法在真实 agent 里**不被遵守**：用 `--prompt-suffix` 要求"先把代码写在正文"后，6 轮里 0 轮照做，代码仍然只走 `tool_calls`（实测记录见提交 `4d7e7e0`）。而跨厂商的核对结论是：**所有 OpenAI 兼容接口的 `logprobs` 都只有 `content`（+`refusal`），结构上没有 `tool_calls` 的位置**——这不是某家的疏漏，是接口设计。详见 [related-work.md](related-work.md)。
+
+**选择 vLLM 的依据**：它是唯一能把工具调用参数当作普通生成 token 记入 `logprobs` 的后端（HF TRL 的公开 artifact 已是先例，本机已复现）：
+
+| 后端 | `tools`+`logprobs` 共存 | 工具参数带概率 |
+|---|---|---|
+| DeepSeek 官方 API | 可以 | **否** |
+| LM Studio（llama.cpp） | **400 拒绝** | — |
+| llama-server（绕过 LM Studio） | 可以 | **否** |
+| **vLLM** | 可以 | **是** |
+
+**本机环境**：WSL2(Ubuntu) + RTX 5060 Laptop（8GB，sm_120 / Blackwell）。装成 `vllm 0.31.0 + torch 2.13.0+cu130`。**sm_120 与 cu130 的配对是能跑起来的前提**——旧版 torch 不支持 Blackwell。
+
+**启动命令**：
+
+```bash
+VLLM_USE_FLASHINFER_SAMPLER=0 vllm serve /root/models/Qwen3-4B-AWQ \
+  --port 8000 --max-model-len 8192 --gpu-memory-utilization 0.86 \
+  --served-model-name qwen3-4b \
+  --enable-auto-tool-choice --tool-call-parser hermes
+```
+
+**四个必踩的坑**（都已解决）：
+
+1. **模型下载 401** — 新版 `huggingface_hub` 默认走 Xet 后端，hf-mirror 不支持。用 `HF_ENDPOINT=https://hf-mirror.com` + `HF_HUB_DISABLE_XET=1`。
+2. **`Failed to find C compiler`** — vLLM 用 torch.compile 现编 kernel，需 `apt-get install gcc g++ build-essential`。
+3. **`Could not find nvcc`** — flashinfer 采样 kernel 要 nvcc。用 `VLLM_USE_FLASHINFER_SAMPLER=0` 绕过，不必装几 GB 的 CUDA toolkit。
+4. **`"auto" tool choice requires --enable-auto-tool-choice`** — vLLM 默认不开工具解析，须显式加 `--enable-auto-tool-choice --tool-call-parser hermes`。
+
+**8B 装不下（硬约束）**：卡总 7.93 GiB − Windows 桌面占 1.06 = **可用 6.87 GiB**；8B-AWQ 权重 5.71 GiB，剩 1.16 GiB 不够 KV cache＋激活。尝试 fp8 压缩 KV cache 时又撞 `FlashInfer backend is not available`（依赖 nvcc）。**故 4B 是本机的上限**。
+
+**决定性验证**（`tool_choice: "required"` 强制后）：
+
+```
+finish_reason    : tool_calls
+arguments length : 833          ← 完整 Triton 代码
+logprobs keys    : ['content']  content tokens: 264
+>>> ARGUMENTS text inside logprobs.content: True
+    'tl.load' / 'tl.store' / 'triton.jit' in logged tokens: True
+logprob min=-3.511  mean=-0.107  lowprob(≤-2)=3
+```
+
+**模型行为差异（须记录为边界）**：4B 在普通 prompt 下**不主动调工具**，会把代码全写进正文（`tool_calls: 0`）。加 `tool_choice: "required"` 后才走工具路径。这条指令与第 10 节的 prompt-suffix 同属"用指令改变 agent 行为"，须写进报告边界。
+
+**采集配置**：`opencode-vllm-proxy.jsonc` 定义 `vllm` provider 指向记录代理，`collect.py --upstream http://127.0.0.1:8000 --model vllm/qwen3-4b`。provider 必须声明 `limit: {context: 8192, output: 4096}`——否则 OpenCode 请求 `max_tokens=32000`，vLLM 会以 `max_model_len=8192` 拒掉。
+
+**待办**：等显存空闲后，用该配置跑一次完整 trial，验证 agent 多轮轨迹下工具参数概率可稳定采集。
+
+### 12. 本轮结论：判读 1 命中，因果链起点不成立（2026-10-17）
+
+**采集**：`row_reduce` × 12 次，全部 `complete`（2 个 `agent_failed` 但仍有记录），15987 个 token，对齐零失配。
+
+**核心统计**（在**全部 content token** 上按关键词表匹配，不从分类器划定的分段取子集）：
+
+| 分组 | n | 平均 logprob | lowprob(≤-2) |
+|---|---|---|---|
+| CUDA/Triton API 名（`tl`/`load`/`zeros`/`store`/…） | 451 | -0.122 | **1.55%** |
+| 非 API | 15536 | -0.080 | **0.95%** |
+
+**Fisher 精确检验 p = 0.211 —— 不显著。**
+
+逐 token 复核（同一字符串在全部出现位置）：`tl` n=7 全部 -0.0；`.store` n=12 全部 ≈ -0.0；`.load` n=18 中仅 2 次低（-2.634 / -1.490）；`.zeros` n=5 中 2 次低。**这些 token 的概率绝大多数时候就是 1.0。**
+
+**判读结论**：命中**判读 1**——CUDA/Triton 语法 token **没有**显著高于 generic_code，因此 **CUDA Agent 的因果链起点不成立**（与 user 2026-09-13 调研稿的判断一致："这些 token 恰恰非常固定、非常模式化"）。
+
+**独立于分类的一条观察**：同一个 token 跨位置的概率波动极大（`' for'` n=114 sd 0.565；`'\n'` n=415 sd 0.484，最低 -8.09；`'The'` n=9 sd 1.812）。→ **"低概率"是位置属性，不是 token 属性。** 该结论直接由原始 logprob 算出，不经过分类器。
+
+#### ★ 撤回清单（此前基于有偏子集作出的结论，全部作废）
+
+1. **`triton_specific` 低概率率 10.00%、mean -0.481、Fisher p=0.0156** —— 作废。该类别只包含 20 个 token（在 `classify.py` 划定的 code/tool 段内匹配到的），而全量 API 名有 451 个，**漏报 96%**；这 20 个恰好含 2 个极端采样值。
+2. **"机制是 API 选择点"** —— 作废。建立在同一偏差样本上；且按"下一个 token 是否为 `.`"分组后，正在选方法的位置低概率率反而更低（0.60% vs 1.01%）。
+3. **基于该类别的一切细分**：分位数分布（p10 = -1.492）、按工具×区域（`edit` 1.28% vs `write` 0.25%）、按位置（first_quarter 1.26%）、成簇/复用/失败对比 —— **全部作废**。
+4. `results/report-triton.html` 与 `results/deep-triton.json` 中对应小节**不再代表结论**。
+
+#### 偏差的产生机制（留存备查）
+
+`classify.py` 在散文段**刻意排除**了 `load`/`zeros`/`store`（理由：这些词在英文散文里也出现，怕误判）。后果是同一个词按所在段被切进不同类别：
+
+```
+load 判为 NL_reasoning      n=6   mean=-0.044  lowprob= 0.00%
+load 判为 triton_specific   n=4   mean=-1.034  lowprob=25.00%
+```
+
+**组间差异由分类规则制造，而非数据本身。** 教训：任何按类别做的统计，必须先做一次"放宽定义边界后结论是否仍成立"的稳健性检查——本例中做一次就会立刻暴露 451 vs 20。
+
+#### 结论的射程（写报告时须照抄）
+
+- **模型**：Qwen3-4B-AWQ。本机 8GB 显存可承载的最大模型；改用本地是**环境约束下的既定条件**（闭源 API 不返回工具调用参数的 logprob），非方法选择失误。但这意味着**结论不能直接外推到 Seed1.6**。
+- **任务**：1 道（`row_reduce`），原计划 6 道。
+- **无干预对照**（完整反馈 vs 截断反馈），Phase 3 第 3 项分析未执行。
+- **样本**：12 次 trial / 15987 token。
+
+#### 下一步（待用户确认）
+
+**首选**：不走 agent 框架，改为**自建多轮对话脚本**直接打 DeepSeek chat completions，让代码出现在正文（logprob 必然覆盖），由脚本负责执行与反馈。这样同时解决：模型回到强模型、API 限制绕开（不需工具参数概率）、干预对照可做（反馈文本自己拼）。
+**前置最小验证**：一道题、单轮，确认正文中的代码 token 是否被 `logprobs.content` 完整覆盖。**该验证不通过则此路作废。**
+
+### 13. 换路线执行完毕：plain chat 路线成立，判读 1 的两个条件均成立（2026-10-17）
+
+**最小验证（`scripts/check_plaintext_logprobs.py`）：VIABLE。** 不提供 tools、要求把 kernel 写在正文时，**448/448 个代码 token 全部带 logprob**。坑：`max_tokens=4000` 会被推理模型的思考吃光、content 返空；16000 才出内容。
+
+**模型定案（实测）**：`deepseek-flash`（推理）把预算烧在 reasoning 上、content 常为空；**`deepseek-chat`（非推理）content 直出，reasoning_tokens=0**。
+
+**架构（`scripts/loop_driver.py`）**：不用 agent 框架，多轮对话直接打 chat-completions；驱动自己写 `candidate.py`、跑独立评测器、拼反馈文本。两个反馈条件在采集前定死：`full`（评测器原文）/ `truncated`（一行）。两个实现坑：评测器 `argv[1]` 是 **candidate 文件**而非目录（传目录 `PermissionError`）；评测器需带 torch 的解释器（`--python` 指向 anaconda）。
+
+#### ★ 结果（64 run = 4 任务 × 2 条件 × 8 重复，全部 complete，49,450 个 content token）
+
+**主对比（两种定义边界，方向一致）**：
+
+| 分组 | n | mean | lowprob(≤-2) |
+|---|---|---|---|
+| API 名（宽松表） | 2287 | -0.030 | **0.35%** |
+| 其他 | 47163 | -0.069 | 0.95% |
+| 严格表（含 CUDA 原生） | 1198 | -0.014 | **0.17%** |
+| 其他 | 48252 | -0.068 | 0.94% |
+
+Fisher p = **0.0016 / 0.0019** —— **CUDA 相关 token 的概率显著更高，不是更低。**
+
+**上下文（效应远强于 token 类型）**：
+
+| context | n | mean | lowprob | p10 |
+|---|---|---|---|---|
+| **after_failure** | 2142 | -0.237 | **3.22%** | -0.812 |
+| after_success | 23399 | -0.053 | 0.81% | -0.000 |
+| initial | 23909 | -0.065 | 0.82% | -0.038 |
+
+`after_failure` 约为其余上下文的 **4 倍**。按任务 `softmax_rows` 1.59% 最高（layernorm 0.33% 最低）。**最低的 token 几乎全是自然语言**（`' constants'` -17.75、`' backed'` -11.27），无一为代码 token。
+
+#### ★ 判读结论
+
+**判读 1 的两个条件同时成立**：
+
+1. CUDA/Triton token 的低概率率**不高于**其他（**反而显著更低**）；
+2. `after_failure` **明显高于** `initial`（3.22% vs 0.82%）。
+
+→ **CUDA Agent 的因果链起点不成立；"低概率来自多轮 agent 的分布外上下文"这一替代解释成立。**
+
+#### ★ 干预对照：预期的效果没有出现
+
+PLAN 第四节第 3 项分析预期"压缩工具反馈能消除低概率尾部"。实测 **full 0.94% vs truncated 0.89%，几乎无差**。→ 该预期**不成立**：低概率不来自反馈文本的长度或信息量。
+
+#### 对本项目原假设的最终状态
+
+用户 2026-09-13 调研稿的两条判断**均得到支持**：① "这些 token 非常固定、非常模式化"（故不该低概率）；② "更可能是长工具 Agent 吞入分布外上下文"。
+
+**仍在的边界**：模型为 `deepseek-chat`（非 Seed1.6，但已是可用 API 中与论文最接近的一档）；任务 4 道；`after_failure` 样本 2142 个 token（占全量 4.3%）。
+
+
+

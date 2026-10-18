@@ -1,0 +1,19 @@
+{
+  "pdf_pages": 21,
+  "word_render_pages": 22,
+  "display_equations": 12,
+  "figures": 4,
+  "latex_overfull": 0,
+  "undefined_references": 0,
+  "figure_preflight": {
+    "ready": true,
+    "strict": true,
+    "counts": {
+      "PASS": 14,
+      "WARN": 0,
+      "FAIL": 0
+    }
+  },
+  "citation_locations": 29,
+  "cited_references": 14
+}

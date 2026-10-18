@@ -1,0 +1,44 @@
+{
+  // Experiment-only config. Load with:
+  //   OPENCODE_CONFIG=lowprob-attribution/opencode-proxy.jsonc opencode run ...
+  // Routes the DeepSeek provider through the local recording proxy, whose
+  // upstream is the local vLLM server. Do NOT merge it into the global config:
+  // with the proxy stopped, every request on this provider fails.
+  //
+  // `models` must be declared explicitly. OpenCode knows only the built-in
+  // DeepSeek model ids, so requesting `deepseek/qwen3-4b` without this block
+  // fails with an opaque "Unexpected server error" and the request never
+  // reaches the proxy.
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    // The default OpenCode agent carries a system prompt plus 53 loaded skills,
+    // which together exceed half of this machine's 8192-token window and drive
+    // the session into an endless context-compaction loop. `skill: false`
+    // removes that section from the system prompt entirely; the short prompt
+    // below keeps the task framing that the experiment actually needs.
+    "cuda-min": {
+      "description": "Minimal CUDA task agent: no skills, short prompt",
+      "prompt": "You are a CUDA/Triton kernel engineer. The task directory holds candidate.py and reference.py. You MUST implement the computation as a Triton GPU kernel: write @triton.jit kernels and use tl.load / tl.store, launching them from Python. A plain Python loop, a list comprehension, torch, or numpy implementation is NOT acceptable and will be rejected. Read reference.py first, then write the Triton implementation into candidate.py, then use bash to check that candidate.py imports and runs. Be concise.",
+      "tools": {
+        "skill": false
+      },
+      "steps": 12
+    }
+  },
+  "provider": {
+    "deepseek": {
+      "options": {
+        "baseURL": "http://127.0.0.1:8765/v1"
+      },
+      "models": {
+        "qwen3-4b": {
+          "name": "qwen3-4b",
+          "limit": {
+            "context": 8192,
+            "output": 2048
+          }
+        }
+      }
+    }
+  }
+}

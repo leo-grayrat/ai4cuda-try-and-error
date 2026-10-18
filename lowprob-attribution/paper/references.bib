@@ -1,0 +1,74 @@
+@misc{cudaagent,
+  title        = {{CUDA Agent}: Large-Scale Agentic {RL} for High-Performance {CUDA} Kernel Generation},
+  eprint       = {2602.24286},
+  archivePrefix= {arXiv},
+  year         = {2026},
+  note         = {Reports $\pi_\theta(a_t \mid s_t) \approx 10^{-9}$ as the stated root cause of instability}
+}
+
+@misc{cudaagentblog,
+  title        = {{CUDA Agent}: Agentic {RL} for High-Performance {CUDA} Kernel Generation},
+  howpublished = {Technical blog},
+  year         = {2026},
+  month        = mar,
+  note         = {\url{https://jianyuh.github.io/systems/cuda/2026/03/03/cuda-agent.html}}
+}
+
+@misc{drkernel,
+  title        = {{DR. KERNEL}: Reinforcement Learning Done Right for {Triton} Kernel Generations},
+  eprint       = {2602.05885},
+  archivePrefix= {arXiv},
+  year         = {2026},
+  note         = {Geometric mismatch rejection sampling plus token-level veto; stabilises training without raising the ceiling}
+}
+
+@misc{liuoffpolicy,
+  title        = {Your Efficient {RL} Framework Secretly Brings You Off-Policy {RL} Training},
+  author       = {Liu and others},
+  year         = {2025},
+  note         = {Off-policy drift induced by framework efficiency machinery}
+}
+
+@misc{jetrl,
+  title        = {{Jet-RL}: Precision Mismatch in Reinforcement Learning Training},
+  year         = {2026},
+  note         = {Cited by \cite{cudaagent} for precision-floor sensitivity}
+}
+
+@misc{precisionmismatch,
+  title        = {Precision Mismatch in Reasoning Models},
+  year         = {2026},
+  note         = {Cited by \cite{cudaagent}}
+}
+
+@misc{firstorder,
+  title        = {First-Order Approximation for Stable {LLM-RL} Training},
+  year         = {2026},
+  note         = {Stability analysis near the probability floor}
+}
+
+@inproceedings{carlini,
+  title        = {Stealing Part of a Production Language Model},
+  author       = {Carlini, Nicholas and others},
+  booktitle    = {International Conference on Machine Learning},
+  year         = {2024},
+  note         = {Recovering model properties from output distributions}
+}
+
+@misc{howopen,
+  title        = {How Open Must Language Models be to Enable Reliable Scientific Inference?},
+  year         = {2026},
+  note         = {Names versioning, credit assignment and information restriction as obstacles to closed-model science}
+}
+
+@misc{surrogate,
+  title        = {Surrogate Fidelity: When Can Open {LLMs} Explain Closed Ones?},
+  year         = {2026},
+  note         = {Notes that APIs at best expose log-probabilities over output tokens}
+}
+
+@misc{logprobtracking,
+  title        = {Log Probability Tracking of {LLM} {APIs}},
+  year         = {2026},
+  note         = {OpenReview; reviewer notes that most providers withhold logprobs}
+}

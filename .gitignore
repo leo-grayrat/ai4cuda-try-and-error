@@ -6,3 +6,7 @@ __pycache__/
 .pytest-tmp/
 runs/
 *.pyc
+.workbuddy/
+
+# stray windows redirection artifact
+nul

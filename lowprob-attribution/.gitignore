@@ -1,0 +1,24 @@
+runs/*
+!runs/.gitkeep
+results/*
+!results/.gitkeep
+proxy-records/
+*.zstd
+__pycache__/
+
+# collected data directories (runs, runs-formal, runs-kb2, runs-triton, ...)
+runs-*/
+# server logs
+*.log
+# LaTeX intermediate files from the paper build
+paper/main.aux
+paper/main.fdb_latexmk
+paper/main.fls
+paper/main.log
+paper/main.xdv
+paper/main.blg
+paper/main.bbl
+paper/main.pdf
+paper/*.png
+v2/stage5_finalize/build/
+v2/stage5_finalize/main.old.pdf
