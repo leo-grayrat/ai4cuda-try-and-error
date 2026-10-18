@@ -1,0 +1,137 @@
+{
+  "status": "draft for semantic review before formal freeze",
+  "spec_sha256": "864690d2e52a6878c546bf07931fbd49523d64de1907bc5908dd45aefdfdea50",
+  "base_sha256": "3161860fb45dea51a688f3fe217ace664df6bd16808d8865824684a58a786d63",
+  "source_bullet_count": 75,
+  "coverage_is_not_equivalence": true,
+  "stages": [
+    {
+      "stage": 1,
+      "clauses": [
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05"
+      ],
+      "conditions": {
+        "raw": {
+          "path": "evidence/growth-01/cumulative.md",
+          "sha256": "a0d6e30adba303a1161efd5842852916cc7bc9a8237fb2e05182292d069e890a",
+          "lines": 411,
+          "text_tokens": 4307
+        },
+        "compressed": {
+          "path": "materials/growth-conditions/stage-01-compressed.md",
+          "sha256": "a353e240c30e1a52838d7329d8a32cacf955e7eb5fb7ba349fe6c793fc210d10",
+          "lines": 390,
+          "text_tokens": 3895
+        }
+      }
+    },
+    {
+      "stage": 2,
+      "clauses": [
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05",
+        "P06",
+        "P07",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "conditions": {
+        "raw": {
+          "path": "evidence/growth-02/cumulative.md",
+          "sha256": "33560e182e2e2431a7895e8eaf2d75b42027cb28a48fa4849418e7cf0f225161",
+          "lines": 444,
+          "text_tokens": 5164
+        },
+        "compressed": {
+          "path": "materials/growth-conditions/stage-02-compressed.md",
+          "sha256": "fd0a2fc3bf299b827c05491f844c71033702a8e923fbf3276b571492c2b141bc",
+          "lines": 400,
+          "text_tokens": 4314
+        }
+      }
+    },
+    {
+      "stage": 3,
+      "clauses": [
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05",
+        "P06",
+        "P07",
+        "P08",
+        "P09",
+        "P10",
+        "P11",
+        "P12",
+        "P13",
+        "P17",
+        "P18",
+        "P19",
+        "P20"
+      ],
+      "conditions": {
+        "raw": {
+          "path": "evidence/growth-03/cumulative.md",
+          "sha256": "0967a8a6982c72b9b3d85994554633a436a87b408739c4ea3b911798fe246c76",
+          "lines": 480,
+          "text_tokens": 6077
+        },
+        "compressed": {
+          "path": "materials/growth-conditions/stage-03-compressed.md",
+          "sha256": "7f3028f58e8ffd2bec844491166864819056aa73d8962eee5d04f205cacf22e3",
+          "lines": 414,
+          "text_tokens": 4735
+        }
+      }
+    },
+    {
+      "stage": 4,
+      "clauses": [
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05",
+        "P06",
+        "P07",
+        "P08",
+        "P09",
+        "P10",
+        "P11",
+        "P12",
+        "P13",
+        "P17",
+        "P18",
+        "P19",
+        "P20",
+        "P14",
+        "P15",
+        "P16"
+      ],
+      "conditions": {
+        "raw": {
+          "path": "evidence/growth-04/cumulative.md",
+          "sha256": "77bb56a280b39bee60e1cb87fcdf1a381e2a06e69d3b7a668afc636413e6f25a",
+          "lines": 509,
+          "text_tokens": 6913
+        },
+        "compressed": {
+          "path": "materials/growth-conditions/stage-04-compressed.md",
+          "sha256": "e87e56803d4023f02dcc9f65e470232e036de5fc8a12da30a2b6f3521895c94f",
+          "lines": 420,
+          "text_tokens": 5012
+        }
+      }
+    }
+  ]
+}

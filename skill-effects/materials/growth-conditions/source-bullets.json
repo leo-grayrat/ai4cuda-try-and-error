@@ -1,0 +1,752 @@
+[
+  {
+    "id": "G01-01",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 5,
+    "text": "Use only the public allocation exception already allowed by this document. For bindings, prefer the documented `torch::empty_like(...)` allocation path.",
+    "mapped_clauses": [
+      "P01"
+    ]
+  },
+  {
+    "id": "G01-02",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 6,
+    "text": "Do not use `at::detail::empty_cuda`, other `at::detail::*` symbols, or version-private ATen internals to bypass the dispatcher. These are not stable extension APIs.",
+    "mapped_clauses": [
+      "P01"
+    ]
+  },
+  {
+    "id": "G01-03",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 7,
+    "text": "If compilation reports an error such as `'empty_cuda': is not a member of 'at::detail'`, replace the internal allocation call with the documented allocation path. Do not keep the internal call or add guessed headers to force it to compile.",
+    "mapped_clauses": [
+      "P01"
+    ]
+  },
+  {
+    "id": "G01-04",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 8,
+    "text": "Fix binding compile errors in the binding files, not by changing kernel math. A missing binding symbol or undeclared allocation API is not evidence that the CUDA kernel algorithm is wrong.",
+    "mapped_clauses": [
+      "P02"
+    ]
+  },
+  {
+    "id": "G01-05",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 9,
+    "text": "Do not replace a compiling binding with a speculative “lean hot path” using internal APIs. Allocation micro-optimizations are lower priority than compile success and correctness; if attempted, isolate the change and keep a known-good fallback.",
+    "mapped_clauses": [
+      "P01"
+    ]
+  },
+  {
+    "id": "G01-06",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 10,
+    "text": "When a binding specializes to float32/contiguous CUDA tensors, enforce that specialization with `TORCH_CHECK`/equivalent validation or ensure `model_new.py` guarantees it. Do not reinterpret arbitrary tensor storage as `float*`.",
+    "mapped_clauses": [
+      "P02"
+    ]
+  },
+  {
+    "id": "G01-07",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 14,
+    "text": "The final submitted files must be the exact files that passed compile, verification, and benchmark. Any write after the last successful verification/benchmark invalidates those results.",
+    "mapped_clauses": [
+      "P03"
+    ]
+  },
+  {
+    "id": "G01-08",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 15,
+    "text": "Final sequence: finish cleanup and final edits, then compile, then run verification, then run profiling/benchmark. Do not stop immediately after a write.",
+    "mapped_clauses": [
+      "P03"
+    ]
+  },
+  {
+    "id": "G01-09",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 16,
+    "text": "Do not perform a post-benchmark speculative rewrite of `kernels/*` or `model_new.py` and declare completion. If optimizing after a passing result, preserve or restore the known-good version; re-run compile, verification, and benchmark; if the new version fails, revert and leave the known-good version as final.",
+    "mapped_clauses": [
+      "P03"
+    ]
+  },
+  {
+    "id": "G01-10",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 17,
+    "text": "A successful earlier compile does not excuse a later compile failure. Do not submit an uncompiled final candidate.",
+    "mapped_clauses": [
+      "P03"
+    ]
+  },
+  {
+    "id": "G01-11",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 18,
+    "text": "Final cleanup counts as an edit. Run compile, verification, and benchmark after cleanup, or perform cleanup before the final validation sequence.",
+    "mapped_clauses": [
+      "P03"
+    ]
+  },
+  {
+    "id": "G01-12",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 19,
+    "text": "On compile failure, use the first actionable compiler error. If the reported compile log path cannot be read, use the compile tool output or rerun compile; do not make unrelated kernel changes based on a log-path failure.",
+    "mapped_clauses": [
+      "P02"
+    ]
+  },
+  {
+    "id": "G01-13",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 23,
+    "text": "Keep `ModelNew.forward` as the normal method and let the harness use `nn.Module.__call__`.",
+    "mapped_clauses": [
+      "P04"
+    ]
+  },
+  {
+    "id": "G01-14",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 24,
+    "text": "Do not add `__call__ = forward` or otherwise bypass `nn.Module` hook machinery as a speculative shortcut. It can change harness/hook behavior. Use such a bypass only if explicitly required and revalidated; otherwise remove it before final validation.",
+    "mapped_clauses": [
+      "P04"
+    ]
+  },
+  {
+    "id": "G01-15",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 25,
+    "text": "Preserve the constructor and `forward` signatures expected by `model.py`.",
+    "mapped_clauses": [
+      "P04"
+    ]
+  },
+  {
+    "id": "G01-16",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 26,
+    "text": "Keep `model_new.py` limited to allowed tensor creation and custom extension ops. Do not add unsupported Python-side torch operations to compensate for binding or kernel issues.",
+    "mapped_clauses": [
+      "P04"
+    ]
+  },
+  {
+    "id": "G01-17",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 30,
+    "text": "For `workspace` writes, pass `operation: \"write\"`, `path`, and `content` as separate fields. Do not put file content or Markdown into the `operation` field.",
+    "mapped_clauses": [
+      "P05"
+    ]
+  },
+  {
+    "id": "G01-18",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 31,
+    "text": "Treat `ValueError: unknown operation`, missing `operation` errors, malformed tool payloads, and log encoding/mojibake as tooling issues, not CUDA coding mistakes.",
+    "mapped_clauses": [
+      "P05"
+    ]
+  },
+  {
+    "id": "G01-19",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 32,
+    "text": "After any failed or ambiguous write, read the target file before compiling. A failed tool call does not prove the file is unchanged or correct.",
+    "mapped_clauses": [
+      "P05"
+    ]
+  },
+  {
+    "id": "G01-20",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 33,
+    "text": "If a write/read fails due to tool transport or encoding, retry the tool call cleanly. Do not change CUDA kernel or binding logic solely in response to the tool failure.",
+    "mapped_clauses": [
+      "P05"
+    ]
+  },
+  {
+    "id": "G01-21",
+    "stage": 1,
+    "source": "evidence/growth-01/addition.md",
+    "source_line": 34,
+    "text": "A missing utility file or unreadable path is a workspace/file-availability issue, not evidence that the kernel is incorrect. Use the documented utilities or list the directory to discover the actual files.",
+    "mapped_clauses": [
+      "P05"
+    ]
+  },
+  {
+    "id": "G02-01",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 5,
+    "text": "Treat `model_new.py` as part of the correctness surface. Changing the selected kernel `config`, wrapper arguments, or forward path can change numerical behavior; a benchmark-only run after such a change does not validate it.",
+    "mapped_clauses": [
+      "P06"
+    ]
+  },
+  {
+    "id": "G02-02",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 6,
+    "text": "After any candidate change to `kernels/*`, bindings, or `model_new.py`, run verification before using or reporting benchmark results. A fast benchmark from an unverified candidate is only a performance probe.",
+    "mapped_clauses": [
+      "P06"
+    ]
+  },
+  {
+    "id": "G02-03",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 7,
+    "text": "The final validation sequence must run on the exact final files: finish all edits and cleanup, compile if any C++/CUDA/binding file changed, run verification, then run benchmark. Any write after verification makes that verification stale.",
+    "mapped_clauses": [
+      "P06"
+    ]
+  },
+  {
+    "id": "G02-04",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 8,
+    "text": "If a compile and a later write occur in the same step, do not count that compile as final validation for the later file. Ensure the last compile precedes the verified final state, or explicitly confirm no compiled file changed and keep the binary consistent with the verified files.",
+    "mapped_clauses": [
+      "P06"
+    ]
+  },
+  {
+    "id": "G02-05",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 9,
+    "text": "Do not end an episode immediately after a benchmark-only edit. If the step budget is nearly exhausted, preserve or restore the last fully validated version rather than making an unverified last-moment change.",
+    "mapped_clauses": [
+      "P06"
+    ]
+  },
+  {
+    "id": "G02-06",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 10,
+    "text": "If verification fails after a tuning change, reject the faster benchmark. Either fix the kernel/config and rerun compile, verification, and benchmark, or revert to the last verified version.",
+    "mapped_clauses": [
+      "P06"
+    ]
+  },
+  {
+    "id": "G02-07",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 14,
+    "text": "Do not hardcode a tuned `config` in `model_new.py` solely because it benchmarked fastest. Verify that exact config on all verification cases and seeds before leaving it as the final selection.",
+    "mapped_clauses": [
+      "P07"
+    ]
+  },
+  {
+    "id": "G02-08",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 15,
+    "text": "For shape-specialized dispatch, ensure every non-default config either has a correct fallback or is unreachable from the final `model_new.py`. A fast path that is wrong for one harness shape must not remain selected.",
+    "mapped_clauses": [
+      "P07"
+    ]
+  },
+  {
+    "id": "G02-09",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 16,
+    "text": "When a config-specific case fails, first inspect dispatch guards, supported `F`/`N` assumptions, and fallback coverage. Do not change unrelated kernel math or move the failure into Python.",
+    "mapped_clauses": [
+      "P07"
+    ]
+  },
+  {
+    "id": "G02-10",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 17,
+    "text": "Auto/default passing does not validate a hardcoded config. After switching `model_new.py` from auto/default to a fixed config, rerun verification on that exact final config.",
+    "mapped_clauses": [
+      "P06"
+    ]
+  },
+  {
+    "id": "G02-11",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 18,
+    "text": "Diagnostic, no-op, copy-only, or debug configs must not be reachable in the final model path.",
+    "mapped_clauses": [
+      "P07"
+    ]
+  },
+  {
+    "id": "G02-12",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 22,
+    "text": "Before final validation, remove diagnostic no-op/copy kernels, unused tuning branches, and intermediate kernel versions from `kernels/` unless they are still required by the final default path.",
+    "mapped_clauses": [
+      "P08"
+    ]
+  },
+  {
+    "id": "G02-13",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 23,
+    "text": "If multiple tuning configs remain, ensure they are all semantically correct for supported shapes, or remove/disable the unused ones. Do not leave a known-wrong config available to be selected accidentally.",
+    "mapped_clauses": [
+      "P07"
+    ]
+  },
+  {
+    "id": "G02-14",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 24,
+    "text": "Do not submit a kernel containing diagnostic configs that produce no output or copy only, even if they were useful during tuning.",
+    "mapped_clauses": [
+      "P08"
+    ]
+  },
+  {
+    "id": "G02-15",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 25,
+    "text": "Cleanup is an edit. After cleanup, run the full final sequence on the exact cleaned files; a successful earlier compile or benchmark does not validate cleaned files.",
+    "mapped_clauses": [
+      "P06"
+    ]
+  },
+  {
+    "id": "G02-16",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 29,
+    "text": "Environment warnings such as “Failed to find real location of python.exe” accompanying a successful compile are not compiler errors or CUDA kernel bugs. Use the compile success/failure status and actionable compiler errors.",
+    "mapped_clauses": [
+      "P09"
+    ]
+  },
+  {
+    "id": "G02-17",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 30,
+    "text": "If a write/read fails because of a malformed workspace payload or missing `operation`, retry the tool call cleanly. A tool failure by itself is not evidence that the CUDA kernel or binding logic is wrong.",
+    "mapped_clauses": [
+      "P05"
+    ]
+  },
+  {
+    "id": "G02-18",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 31,
+    "text": "After any failed or ambiguous write, read the target file before compiling. Do not change CUDA kernel or binding logic solely in response to a tool transport/encoding/payload failure.",
+    "mapped_clauses": [
+      "P05"
+    ]
+  },
+  {
+    "id": "G02-19",
+    "stage": 2,
+    "source": "evidence/growth-02/addition.md",
+    "source_line": 32,
+    "text": "If a reported compile-log path cannot be read, use the compile tool output or rerun compile; do not make unrelated kernel changes based on a log-path failure.",
+    "mapped_clauses": [
+      "P10"
+    ]
+  },
+  {
+    "id": "G03-01",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 5,
+    "text": "Compile success, verification success, and benchmark success are separate gates. A successful compile does not validate kernel math or wrapper semantics, and a benchmark without preceding verification on the same files is not evidence of correctness.",
+    "mapped_clauses": [
+      "P19"
+    ]
+  },
+  {
+    "id": "G03-02",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 6,
+    "text": "After any edit to `kernels/*`, binding files, or `model_new.py`, use this order: finish edits/cleanup → compile if any C++/CUDA/binding file changed → verification → profiling/benchmark. The final benchmark must run on the exact files that passed verification.",
+    "mapped_clauses": [
+      "P19"
+    ]
+  },
+  {
+    "id": "G03-03",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 7,
+    "text": "Do not make a late `model_new.py` config or forward-path edit and stop after a benchmark-only run. If the edit selects a different config, dispatch branch, or wrapper path, rerun verification on that exact file, then rerun the benchmark.",
+    "mapped_clauses": [
+      "P19"
+    ]
+  },
+  {
+    "id": "G03-04",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 8,
+    "text": "A benchmark-only run may be used only as a tuning probe. Preserve the last verified selection and either verify the final selected file or revert to the verified one.",
+    "mapped_clauses": [
+      "P19"
+    ]
+  },
+  {
+    "id": "G03-05",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 9,
+    "text": "Do not end an episode on a write, a compile-only step, or a benchmark-only step after a change. If step budget is nearly exhausted, do not start another speculative optimization; leave or restore the last fully validated files.",
+    "mapped_clauses": [
+      "P19"
+    ]
+  },
+  {
+    "id": "G03-06",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 10,
+    "text": "A write after the last verification invalidates that verification. A compile after the last verification still leaves verification stale; recompile, verify, and benchmark before completion.",
+    "mapped_clauses": [
+      "P19"
+    ]
+  },
+  {
+    "id": "G03-07",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 11,
+    "text": "If a benchmark-only run is followed by another edit, the earlier benchmark is not final evidence for the new file.",
+    "mapped_clauses": [
+      "P19"
+    ]
+  },
+  {
+    "id": "G03-08",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 15,
+    "text": "If verification fails after a kernel, binding, or wrapper change, reject that candidate even if its benchmark is faster. Fix the failing path or revert to the last verified implementation, then recompile, verify, and benchmark.",
+    "mapped_clauses": [
+      "P19"
+    ]
+  },
+  {
+    "id": "G03-09",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 16,
+    "text": "Do not continue tuning `model_new.py` configs while the underlying kernel is failing verification. Correctness must be restored first.",
+    "mapped_clauses": [
+      "P11"
+    ]
+  },
+  {
+    "id": "G03-10",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 17,
+    "text": "When a rewrite breaks correctness, use the last passing kernel as the baseline and prefer a minimal fix over another broad rewrite. Keep a known-good copy until the replacement passes verification.",
+    "mapped_clauses": [
+      "P11"
+    ]
+  },
+  {
+    "id": "G03-11",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 18,
+    "text": "A config that is fast for one shape but unverified or incorrect for another harness case must not remain selected in final `model_new.py`.",
+    "mapped_clauses": [
+      "P20"
+    ]
+  },
+  {
+    "id": "G03-12",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 19,
+    "text": "Do not leave a faster but unverified or known-wrong config, dispatch branch, or wrapper path reachable from the final model path.",
+    "mapped_clauses": [
+      "P20"
+    ]
+  },
+  {
+    "id": "G03-13",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 23,
+    "text": "Temporary probe/diagnostic kernels, alternate bindings, and patch/debug files must not be part of the final module path. If they are added under `kernels/` or referenced by a binding, remove them and rerun compile, verification, and benchmark on the cleaned files.",
+    "mapped_clauses": [
+      "P17"
+    ]
+  },
+  {
+    "id": "G03-14",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 24,
+    "text": "Do not use a probe benchmark as evidence that the final implementation is correct.",
+    "mapped_clauses": [
+      "P19"
+    ]
+  },
+  {
+    "id": "G03-15",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 25,
+    "text": "Do not leave temporary patch files, probe launchers, or notes in `kernels/`; cleanup is an edit and must precede the final validation sequence.",
+    "mapped_clauses": [
+      "P17"
+    ]
+  },
+  {
+    "id": "G03-16",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 26,
+    "text": "After deleting a probe file or reverting a binding, recompile so the extension cannot retain stale symbols or an unintended old path.",
+    "mapped_clauses": [
+      "P17"
+    ]
+  },
+  {
+    "id": "G03-17",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 32,
+    "text": "A `FileNotFoundError` or unreadable path for a compile, verification, or profiling log is a tool/path issue. Use the tool’s returned output/status or rerun the tool; do not change kernel math, binding allocation, or `model_new.py` based on the failed read alone.",
+    "mapped_clauses": [
+      "P18"
+    ]
+  },
+  {
+    "id": "G03-18",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 33,
+    "text": "If a log path cannot be read, do not infer pass/fail from the missing file. Rerun verification/benchmark or use the tool result already returned.",
+    "mapped_clauses": [
+      "P18"
+    ]
+  },
+  {
+    "id": "G03-19",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 34,
+    "text": "After a failed or ambiguous workspace read/write, read the target file before compiling or editing further. A failed tool call is not evidence that the file is correct or incorrect.",
+    "mapped_clauses": [
+      "P12"
+    ]
+  },
+  {
+    "id": "G03-20",
+    "stage": 3,
+    "source": "evidence/growth-03/addition.md",
+    "source_line": 35,
+    "text": "Environment warnings such as failure to locate `python.exe` alongside an explicit compile/verify/benchmark success are not CUDA kernel errors; use the explicit status and actionable compiler/runtime errors.",
+    "mapped_clauses": [
+      "P13"
+    ]
+  },
+  {
+    "id": "G04-01",
+    "stage": 4,
+    "source": "evidence/growth-04/addition.md",
+    "source_line": 5,
+    "text": "When a vector load (`float2`, `float4`) spans the non-reduced axis, each component belongs to a different output column and must have its own reduction accumulator and its own reciprocal normalization value. Do not sum the components into one scalar, and do not broadcast one scalar result across the vector lanes.",
+    "mapped_clauses": [
+      "P14"
+    ]
+  },
+  {
+    "id": "G04-02",
+    "stage": 4,
+    "source": "evidence/growth-04/addition.md",
+    "source_line": 6,
+    "text": "Store and combine vector partials as vector/per-lane values in shared memory (for example, `float4` accumulators), not as one scalar per thread. Apply the same per-lane requirement when scaling and storing the output.",
+    "mapped_clauses": [
+      "P14"
+    ]
+  },
+  {
+    "id": "G04-03",
+    "stage": 4,
+    "source": "evidence/growth-04/addition.md",
+    "source_line": 7,
+    "text": "A vectorized reduction failure with most elements mismatched and the same wrong values across different block shapes is evidence to inspect lane packing/reduction semantics first, not automatically a race or launch-config problem. Isolate it by testing the scalar path, a vectorized copy/indexing path without the reduction, and then the vectorized reduction.",
+    "mapped_clauses": [
+      "P14"
+    ]
+  },
+  {
+    "id": "G04-04",
+    "stage": 4,
+    "source": "evidence/growth-04/addition.md",
+    "source_line": 8,
+    "text": "Keep diagnostic configs that skip reduction or copy data out of the final path. After fixing the vector path, verify both vector-eligible shapes and non-vector fallback shapes.",
+    "mapped_clauses": [
+      "P14"
+    ]
+  },
+  {
+    "id": "G04-05",
+    "stage": 4,
+    "source": "evidence/growth-04/addition.md",
+    "source_line": 12,
+    "text": "Do not add PyTorch reference calculations (`pow`, `mean`, `sqrt`, etc.) or other debug tensor ops to `model_new.py`/`ModelNew.forward` to diagnose a kernel. The verifier rejects PyTorch computation during candidate forward; that failure is an instrumentation violation, not evidence that the CUDA math is wrong.",
+    "mapped_clauses": [
+      "P15"
+    ]
+  },
+  {
+    "id": "G04-06",
+    "stage": 4,
+    "source": "evidence/growth-04/addition.md",
+    "source_line": 13,
+    "text": "Perform any reference comparison outside the submitted forward path, and remove the diagnostic before final validation. Do not leave debug instrumentation in `model_new.py`.",
+    "mapped_clauses": [
+      "P15"
+    ]
+  },
+  {
+    "id": "G04-07",
+    "stage": 4,
+    "source": "evidence/growth-04/addition.md",
+    "source_line": 14,
+    "text": "A benchmark-only sweep after changing `model_new.py`—including a hardcoded `config`, dispatch branch, or wrapper argument—is a tuning probe. Before treating that selection as final, run verification on the exact final file, then benchmark. A passing verification of an earlier/default config does not validate the new selection.",
+    "mapped_clauses": [
+      "P06"
+    ]
+  },
+  {
+    "id": "G04-08",
+    "stage": 4,
+    "source": "evidence/growth-04/addition.md",
+    "source_line": 15,
+    "text": "Do not treat compile success as correctness validation. If a new candidate is compiled, run verification before using its benchmark as final evidence. If verification fails, reject the faster candidate or revert to the last verified version.",
+    "mapped_clauses": [
+      "P06"
+    ]
+  },
+  {
+    "id": "G04-09",
+    "stage": 4,
+    "source": "evidence/growth-04/addition.md",
+    "source_line": 19,
+    "text": "Absolute candidate latencies in this environment can change by roughly 2× between runs as GPU clock state changes. Do not rank tuning variants solely by absolute microseconds measured in separate runs.",
+    "mapped_clauses": [
+      "P16"
+    ]
+  },
+  {
+    "id": "G04-10",
+    "stage": 4,
+    "source": "evidence/growth-04/addition.md",
+    "source_line": 20,
+    "text": "Compare candidate and `torch.compile` baseline in the same benchmark invocation, or repeat/interleave measurements and report the candidate/baseline ratio. A result is more trustworthy when the ratio is stable across clock states.",
+    "mapped_clauses": [
+      "P16"
+    ]
+  },
+  {
+    "id": "G04-11",
+    "stage": 4,
+    "source": "evidence/growth-04/addition.md",
+    "source_line": 21,
+    "text": "Do not use a fast but unverified benchmark under one clock state to justify leaving a different final configuration. Final evidence must come from the exact final files after the required compile → verify → benchmark order.",
+    "mapped_clauses": [
+      "P06"
+    ]
+  },
+  {
+    "id": "G04-12",
+    "stage": 4,
+    "source": "evidence/growth-04/addition.md",
+    "source_line": 25,
+    "text": "For workspace writes, pass `operation: \"write\"`, `path`, and `content` as separate fields. Do not omit `operation` or put file content/Markdown in the `operation` field.",
+    "mapped_clauses": [
+      "P05"
+    ]
+  },
+  {
+    "id": "G04-13",
+    "stage": 4,
+    "source": "evidence/growth-04/addition.md",
+    "source_line": 26,
+    "text": "A `ValueError: operation must be one of ...` or a missing-`operation` error is a tool payload problem, not a CUDA kernel or binding bug. Retry the write/read correctly; do not change kernel math or allocation logic in response to that error alone.",
+    "mapped_clauses": [
+      "P05"
+    ]
+  },
+  {
+    "id": "G04-14",
+    "stage": 4,
+    "source": "evidence/growth-04/addition.md",
+    "source_line": 27,
+    "text": "After a failed or ambiguous write, read the target file before compiling or making further edits. A failed tool call does not prove the file is correct or incorrect.",
+    "mapped_clauses": [
+      "P05"
+    ]
+  },
+  {
+    "id": "G04-15",
+    "stage": 4,
+    "source": "evidence/growth-04/addition.md",
+    "source_line": 28,
+    "text": "Environment warnings such as “Failed to find real location of python.exe” alongside an explicit compile/verify success are not CUDA errors; use the explicit status and actionable compiler/runtime output.",
+    "mapped_clauses": [
+      "P13"
+    ]
+  }
+]

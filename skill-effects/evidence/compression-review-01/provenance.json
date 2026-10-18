@@ -1,0 +1,20 @@
+{
+  "started_utc": "2026-10-18T23:43:08.216158+00:00",
+  "purpose": "fresh-context semantic material audit, not a task-effect trial",
+  "spec_sha256": "6f83cea716d42d96e49ba4b053c6e377baae62cd9de9ab317225048cbbfecf63",
+  "status": "incomplete",
+  "finish_reason": "length",
+  "usage": {
+    "prompt_tokens": 9358,
+    "completion_tokens": 32768,
+    "total_tokens": 42126,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 32768
+    },
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 9358
+  }
+}

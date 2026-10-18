@@ -1,0 +1,15 @@
+{
+  "purpose": "semantic audit retry with thinking disabled after the initial 32768-token thinking-only response",
+  "completed_utc": "2026-10-18T23:46:44.305976+00:00",
+  "finish_reason": "stop",
+  "usage": {
+    "prompt_tokens": 9332,
+    "completion_tokens": 9948,
+    "total_tokens": 19280,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 9332
+  }
+}
