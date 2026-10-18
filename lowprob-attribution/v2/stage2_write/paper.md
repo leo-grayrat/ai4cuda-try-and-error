@@ -250,6 +250,10 @@ In Family A, CUDA/Triton vocabulary has a lower threshold rate than the remainin
 
 A separate keyword-based structural group, comprising `for`, `if`, `def`, `return`, `in` and `not`, has a rate of 1.54%, compared with 0.81% for other tokens. Inspection of its low-probability examples reveals substantial contamination by prose. Of the 40 low-probability structural matches, 16 are ordinary English uses, including phrases such as `If you want to push speed further` and `Key design points for why`. The structural keyword count therefore combines programming syntax with natural-language occurrences. Section~\ref{manual-classification-of-low-probability-tokens} examines the tokens in context to distinguish these uses.
 
+Figure~\ref{fig:vocabulary} compares the two vocabulary definitions and shows the strict groups' empirical cumulative distributions. The tail view makes the difference visible across probability levels, complementing the threshold counts above.
+
+![Vocabulary-level token distributions in Family A (98,533 tokens). Panel a shows the percentage of tokens with log-probability at or below −2 under strict and loose definitions. Panel b shows the empirical cumulative percentage for the strict groups on a logarithmic vertical scale; the dotted line marks the threshold.](../figures/fig1_vocabulary.png){#fig:vocabulary width=100%}
+
 ### RQ2: spatial distribution of the probability cost
 
 The Family B collection contains 322,375 tokens inside fenced blocks and 220,236 outside them. Across all five tasks, the low-probability rate is higher outside the fenced region. The aggregate rates are 0.60% for code and 13.56% for prose, corresponding to a density ratio of 22.4:
@@ -275,6 +279,10 @@ Comments contribute to the tail within code fences. Removing in-block comments l
 | **total (310,935 tokens)** | 0.60% | **0.33%** |
 
 After this exclusion, the prose rate is approximately 41 times the code rate. The fence-based figure of 0.60% retains the same region rule used for Family A's 0.67%, allowing the two collections to be compared under that definition. In the complete Family B collection, frequent low-probability tokens include `the` (118 occurrences), the backtick (116), the comma (70), the full stop (64), `and` (63) and `I` (55), reflecting the contribution of prose function words and punctuation.
+
+The regional separation is visible in each task in Figure~\ref{fig:regions}. Its cumulative distributions also show how the difference extends beyond the single threshold used in the table, with the prose tail reaching lower probabilities than the code tail.
+
+![Regional distributions in Family B. Panel a connects the code and prose threshold rates within each task. Panel b plots their empirical cumulative percentages on a logarithmic vertical scale, with the quoted probability floor marked by a dotted line. Fence-based assignment includes comments within the code region.](../figures/fig2_regions.png){#fig:regions width=100%}
 
 ### RQ3: effect of task difficulty
 
@@ -347,6 +355,10 @@ A value of 0.981 at the 5% cutoff means that those tokens contribute 98.1% of th
 
 Code has a sharply concentrated cost distribution: the lowest-probability 5% contributes 98.1% of its total. Prose has a broader distribution, with the corresponding subset contributing 30.3%. Its total negative log-probability is 12.6 times the code total despite containing only about 68% as many tokens, giving a per-token cost approximately 18 times higher.
 
+Figure~\ref{fig:tail} places the cost concentration and regional minima together. The early rise of the code curve shows how a small fraction of tokens contributes most of its negative log-probability, while the prose curve accumulates that cost more gradually.
+
+![Tail magnitude and concentration in Family B (322,375 code tokens and 220,236 prose tokens). Panel a accumulates each region's negative log-probability after sorting tokens from lowest to highest probability; the dotted line marks the first 5% of tokens. Panel b shows the observed regional minimum probabilities on a logarithmic horizontal axis, alongside the quoted floor.](../figures/fig3_tail.png){#fig:tail width=100%}
+
 ### Context type
 
 Responses are grouped by the evaluation context preceding them. In Family B, the threshold rate increases from 1.88% in initial responses to 4.26% after success and 6.37% after failure:
@@ -358,6 +370,10 @@ Responses are grouped by the evaluation context preceding them. In Family B, the
 | after_failure | 474,728 | **6.37%** |
 
 Failure-following responses have the highest aggregate rate and contribute 87.5% of the tokens. Family A also shows an increase after failure, with a rate 4.6 times the initial-response rate. The two collections thus associate failure-following contexts with a larger low-probability tail. Their differing proportions of initial, successful and unsuccessful interactions also affect any comparison of aggregate rates.
+
+Figure~\ref{fig:context} displays the context mixture alongside the corresponding threshold rates. Showing these quantities separately makes the dominance of failure-following output visible without conflating its frequency with its per-token rate.
+
+![Evaluation-context composition and threshold rates in Family B (542,611 tokens). Panel a gives each context's share of all generated tokens. Panel b gives the percentage of low-probability tokens within that context. Categories and probabilities are computed from the saved response records using the same grouping as the reported table.](../figures/fig4_context.png){#fig:context width=100%}
 
 ### Manual classification of low-probability tokens
 
@@ -515,7 +531,7 @@ python scripts/loop_driver.py --tasks-root tasks-kb2 \
 
 # Analysis
 python scripts/stream_stats.py lowprob-attribution/runs-kb2
-python scripts/make_figures.py
+python lowprob-attribution/scripts/make_v2_figures.py
 
 # Audit saved local tool-call code and its probabilities (from repository root)
 python lowprob-attribution/scripts/audit_local_tool_logprobs.py
