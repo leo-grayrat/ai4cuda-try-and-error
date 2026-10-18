@@ -37,3 +37,9 @@
 `runs/environment-02/`：将编译器输出的解码设为 UTF-8 并替换不可解码字节后，三份原始 C++/CUDA 源码编译成功（20.42 秒），原版正确性验证返回 0（13.55 秒）。原版 profiling 也返回 0，但日志报告 CUPTI 初始化失败，三个计时全为 0；这项计时无效。继续用 CUDA event 测量真实调用，并保持此处失败日志原样。
 
 随后 CUDA event 探针完成三种实现的交错测量，各保存 7 组、每组 100 次完整调用的结果。各组均为正数；eager、compiled 和示例扩展的中位调用时间分别约为 26.92、43.33、12.46 微秒。此处输入只有上游示例的 128 个元素，数值用于验证测量链路；正式任务将另外验证稳定性、形状和真实 kernel 活动记录。可复核的原始样本保存在 `evidence/environment-02/`。
+
+Nsight Compute 2025.2.1 的命令行探针已捕获到 `void axpby_kernel<256>(...)` 在 sm_120 上的实际启动，stream 为 7，block 为 256，grid 为 1，并记录了正的 kernel 执行时长（复测 2,624 ns）。原始 CSV 输出保存于 `evidence/environment-02/nsight-kernel-launch.log`。这项指标是单个 kernel 的 GPU 执行时间，与前述整段 Python 调用 CUDA event 时间的口径不同。正式报告须区分二者，不能把调用间隙与 kernel 计算混为一谈。
+
+Nsight 在默认受限环境中无法添加其规则目录，退出码为 1；在提升执行权限后正常工作。按 NVIDIA 官方说明设置 `NV_COMPUTE_PROFILER_DISABLE_STOCK_FILE_DEPLOYMENT=1`，避免向用户 Documents 目录部署规则文件。原版 torch profiler 在提升权限后依旧报告 CUPTI_ERROR_INVALID_DEVICE 并返回全零，因此只对 Nsight 路线确认了真实 kernel 采集。
+
+官方参数说明：https://docs.nvidia.com/nsight-compute/NsightComputeCli/ （Environment Variables）。

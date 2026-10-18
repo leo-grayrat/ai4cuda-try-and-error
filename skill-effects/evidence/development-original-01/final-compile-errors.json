@@ -1,0 +1,8 @@
+{
+  "raw_log_sha256": "7bed93257f83f8009e5ef3c53852da7b1613a4fbf5885c9b1f3e7c51821dfb74",
+  "errors": [
+    "E:\\Project\\Git\\Research\\ai4cuda-try-and-error\\skill-effects\\runs\\dev-axpby-original-01\\work\\kernels\\axpby_binding.cpp(18): error C2039: \"empty_cuda\": \ufffd\ufffd\ufffd\ufffd \"at::detail\" \ufffd\u0133\ufffd\u0531",
+    "E:\\Project\\Git\\Research\\ai4cuda-try-and-error\\skill-effects\\runs\\dev-axpby-original-01\\work\\kernels\\axpby_binding.cpp(18): error C3861: \ufffd\ufffdempty_cuda\ufffd\ufffd: \ufffd\u04b2\ufffd\ufffd\ufffd\ufffd\ufffd\u02b6\ufffd\ufffd"
+  ],
+  "events_sha256": "5bf3e4b99f508d2e1344458aacfaead64431d273a1b13c4bcccdef6d99009825"
+}

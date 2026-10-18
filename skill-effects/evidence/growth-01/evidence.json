@@ -1,0 +1,331 @@
+{
+  "task": "pinned upstream AXPBY example, unchanged model.py",
+  "state": "step_budget",
+  "source_findings": {},
+  "changed_infrastructure": [],
+  "timeline": [
+    {
+      "request": 0,
+      "function": "workspace",
+      "operation": "list",
+      "path": ".",
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 0,
+      "function": "workspace",
+      "operation": "read",
+      "path": "model.py",
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 1,
+      "function": "workspace",
+      "operation": "read",
+      "path": "binding.cpp",
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 1,
+      "function": "workspace",
+      "operation": "read",
+      "path": "binding_registry.h",
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 1,
+      "function": "workspace",
+      "operation": "read",
+      "path": "model_new.py",
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 1,
+      "function": "workspace",
+      "operation": "read",
+      "path": "utils/benchmark.py",
+      "ok": false,
+      "error": "FileNotFoundError: [Errno 2] No such file or directory: 'E:\\\\Project\\\\Git\\\\Research\\\\ai4cuda-try-and-error\\\\skill-effects\\\\runs\\\\dev-axpby-original-01\\\\work\\\\utils\\\\benchmark.py'",
+      "log": null
+    },
+    {
+      "request": 2,
+      "function": "workspace",
+      "operation": "read",
+      "path": "utils/profiling.py",
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 2,
+      "function": "workspace",
+      "operation": "read",
+      "path": "utils/verification.py",
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 3,
+      "function": "workspace",
+      "operation": "read",
+      "path": "utils/compile.py",
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 3,
+      "function": "workspace",
+      "operation": "read",
+      "path": "utils/compile.sh",
+      "ok": null,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 4,
+      "function": "workspace",
+      "operation": "write",
+      "path": "kernels/axpby.cu",
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 4,
+      "function": "workspace",
+      "operation": "write",
+      "path": "kernels/axpby_binding.cpp",
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 5,
+      "function": "workspace",
+      "operation": "write\">\n<｜｜DSML｜｜ parameter name=\"content\" string=\"true\">// Fused elementwise kernel: out = alpha * a + b\n// Single-launch, vectorized (float4) implementation tuned for tiny tensors.\n#include <cuda_runtime.h>\n#include <cuda_fp16.h>\n#include <cuda_bf16.h>\n\n// ---------------------------------------------------------------------------\n// Vectorized float4 kernel.  Each thread handles one float4 (16 bytes).\n// The (optional) tail of up to 3 scalars is handled by thread 0 of block 0 so\n// that everything fits in a single kernel launch.\n// ---------------------------------------------------------------------------\n__global__ void axpby_vec4_kernel(float4* __restrict__ out,\n                                  const float4* __restrict__ a,\n                                  const float4* __restrict__ b,\n                                  int n4,\n                                  int tail_offset,\n                                  int n,\n                                  float alpha) {\n    int i = blockIdx.x * blockDim.x + threadIdx.x;\n    if (i < n4) {\n        float4 av = a[i];\n        float4 bv = b[i];\n        float4 r;\n        r.x = fmaf(alpha, av.x, bv.x);\n        r.y = fmaf(alpha, av.y, bv.y);\n        r.z = fmaf(alpha, av.z, bv.z);\n        r.w = fmaf(alpha, av.w, bv.w);\n        out[i] = r;\n    }\n    if (tail_offset >= 0 && blockIdx.x == 0 && threadIdx.x == 0) {\n        const float* af = reinterpret_cast<const float*>(a);\n        const float* bf = reinterpret_cast<const float*>(b);\n        float* of = reinterpret_cast<float*>(out);\n        for (int j = tail_offset; j < n; ++j) {\n            of[j] = fmaf(alpha, af[j], bf[j]);\n        }\n    }\n}\n\n// ---------------------------------------------------------------------------\n// Generic scalar kernel (any float-ish dtype, any alignment / length).\n// ---------------------------------------------------------------------------\ntemplate <typename T, typename ACC>\n__global__ void axpby_scalar_kernel(T* __restrict__ out,\n                                    const T* __restrict__ a,\n                                    const T* __restrict__ b,\n                                    long long n,\n                                    ACC alpha) {\n    long long i = (long long)blockIdx.x * blockDim.x + threadIdx.x;\n    long long stride = (long long)gridDim.x * blockDim.x;\n    for (; i < n; i += stride) {\n        ACC v = alpha * (ACC)a[i] + (ACC)b[i];\n        out[i] = (T)v;\n    }\n}\n\n// ---------------------------------------------------------------------------\n// C launchers\n// ---------------------------------------------------------------------------\nextern \"C\" void axpby_float_launcher(float* out,\n                                     const float* a,\n                                     const float* b,\n                                     long long n,\n                                     float alpha,\n                                     int nblocks,\n                                     int nthreads,\n                                     cudaStream_t stream) {\n    // Vectorized path requires 16B alignment of all three pointers.\n    bool aligned = ((reinterpret_cast<uintptr_t>(out) | reinterpret_cast<uintptr_t>(a) |\n                     reinterpret_cast<uintptr_t>(b)) & 15u) == 0u;\n    if (aligned && n >= 4) {\n        int n4 = (int)(n >> 2);\n        int tail_offset = (int)(n4 << 2);\n        int threads = nthreads > 0 ? (int)nthreads : 32;\n        if (n4 < threads) threads = n4;\n        int blocks = nblocks > 0 ? (int)nblocks : ((n4 + threads - 1) / threads);\n        if (blocks < 1) blocks = 1;\n        axpby_vec4_kernel<<<blocks, threads, 0, stream>>>(\n            reinterpret_cast<float4*>(out), reinterpret_cast<const float4*>(a),\n            reinterpret_cast<const float4*>(b), n4, tail_offset, (int)n, alpha);\n    } else {\n        const int threads = 128;\n        long long blocks = (n + threads - 1) / threads;\n        if (blocks < 1) blocks = 1;\n        if (blocks > 65535) blocks = 65535;\n        axpby_scalar_kernel<float, float><<<(int)blocks, threads, 0, stream>>>(\n            out, a, b, n, alpha);\n    }\n}\n\nextern \"C\" void axpby_double_launcher(double* out,\n                                      const double* a,\n                                      const double* b,\n                                      long long n,\n                                      double alpha,\n                                      cudaStream_t stream) {\n    const int threads = 128;\n    long long blocks = (n + threads - 1) / threads;\n    if (blocks < 1) blocks = 1;\n    if (blocks > 65535) blocks = 65535;\n    axpby_scalar_kernel<double, double><<<(int)blocks, threads, 0, stream>>>(\n        out, a, b, n, alpha);\n}\n\nextern \"C\" void axpby_half_launcher(void* out,\n                                    const void* a,\n                                    const void* b,\n                                    long long n,\n                                    float alpha,\n                                    cudaStream_t stream) {\n    const int threads = 128;\n    long long blocks = (n + threads - 1) / threads;\n    if (blocks < 1) blocks = 1;\n    if (blocks > 65535) blocks = 65535;\n    axpby_scalar_kernel<__half, float><<<(int)blocks, threads, 0, stream>>>(\n        reinterpret_cast<__half*>(out), reinterpret_cast<const __half*>(a),\n        reinterpret_cast<const __half*>(b), n, alpha);\n}\n\nextern \"C\" void axpby_bfloat16_launcher(void* out,\n                                        const void* a,\n                                        const void* b,\n                                        long long n,\n                                        float alpha,\n                                        cudaStream_t stream) {\n    const int threads = 128;\n    long long blocks = (n + threads - 1) / threads;\n    if (blocks < 1) blocks = 1;\n    if (blocks > 65535) blocks = 65535;\n    axpby_scalar_kernel<__nv_bfloat16, float><<<(int)blocks, threads, 0, stream>>>(\n        reinterpret_cast<__nv_bfloat16*>(out),\n        reinterpret_cast<const __nv_bfloat16*>(a),\n        reinterpret_cast<const __nv_bfloat16*>(b), n, alpha);\n}\n",
+      "path": "kernels/axpby.cu",
+      "ok": false,
+      "error": "ValueError: unknown operation",
+      "log": null
+    },
+    {
+      "request": 5,
+      "function": "workspace",
+      "operation": "write",
+      "path": "model_new.py",
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 6,
+      "function": "workspace",
+      "operation": "write",
+      "path": "kernels/axpby.cu",
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 7,
+      "function": "workspace",
+      "operation": "compile",
+      "path": null,
+      "ok": false,
+      "error": null,
+      "log": "tool-016-compile.log"
+    },
+    {
+      "request": 8,
+      "function": "workspace",
+      "operation": "read",
+      "path": "tool-016-compile.log",
+      "ok": false,
+      "error": "FileNotFoundError: [Errno 2] No such file or directory: 'E:\\\\Project\\\\Git\\\\Research\\\\ai4cuda-try-and-error\\\\skill-effects\\\\runs\\\\dev-axpby-original-01\\\\work\\\\tool-016-compile.log'",
+      "log": null
+    },
+    {
+      "request": 9,
+      "function": "workspace",
+      "operation": "write",
+      "path": "kernels/axpby_binding.cpp",
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 10,
+      "function": "workspace",
+      "operation": "compile",
+      "path": null,
+      "ok": false,
+      "error": null,
+      "log": "tool-019-compile.log"
+    },
+    {
+      "request": 11,
+      "function": "workspace",
+      "operation": "write",
+      "path": "kernels/axpby.cu",
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 11,
+      "function": "write",
+      "operation": null,
+      "path": "kernels/axpby_binding.cpp",
+      "ok": false,
+      "error": "ValueError: unknown tool",
+      "log": null
+    },
+    {
+      "request": 12,
+      "function": "workspace",
+      "operation": "write",
+      "path": "kernels/axpby_binding.cpp",
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 13,
+      "function": "workspace",
+      "operation": "compile",
+      "path": null,
+      "ok": true,
+      "error": null,
+      "log": "tool-022-compile.log"
+    },
+    {
+      "request": 14,
+      "function": "workspace",
+      "operation": null,
+      "path": "kernels/axpby.cu",
+      "ok": false,
+      "error": "KeyError: 'operation'",
+      "log": null
+    },
+    {
+      "request": 15,
+      "function": "workspace",
+      "operation": "write",
+      "path": "kernels/axpby.cu",
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 16,
+      "function": "workspace",
+      "operation": "compile",
+      "path": null,
+      "ok": false,
+      "error": null,
+      "log": "tool-025-compile.log"
+    },
+    {
+      "request": 17,
+      "function": "workspace",
+      "operation": null,
+      "path": "kernels/axpby_binding.cpp",
+      "ok": false,
+      "error": "KeyError: 'operation'",
+      "log": null
+    },
+    {
+      "request": 18,
+      "function": "workspace",
+      "operation": "write",
+      "path": "kernels/axpby_binding.cpp",
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 19,
+      "function": "workspace",
+      "operation": "compile",
+      "path": null,
+      "ok": true,
+      "error": null,
+      "log": "tool-028-compile.log"
+    },
+    {
+      "request": 20,
+      "function": "workspace",
+      "operation": "verify",
+      "path": null,
+      "ok": true,
+      "error": null,
+      "log": "tool-029-verify.log"
+    },
+    {
+      "request": 20,
+      "function": "workspace",
+      "operation": "benchmark",
+      "path": null,
+      "ok": true,
+      "error": null,
+      "log": "tool-030-benchmark.log"
+    },
+    {
+      "request": 21,
+      "function": "workspace",
+      "operation": null,
+      "path": "kernels/axpby_binding.cpp",
+      "ok": false,
+      "error": "KeyError: 'operation'",
+      "log": null
+    },
+    {
+      "request": 21,
+      "function": "workspace",
+      "operation": null,
+      "path": "model_new.py",
+      "ok": false,
+      "error": "KeyError: 'operation'",
+      "log": null
+    },
+    {
+      "request": 22,
+      "function": "workspace",
+      "operation": "write",
+      "path": "kernels/axpby_binding.cpp",
+      "ok": true,
+      "error": null,
+      "log": null
+    },
+    {
+      "request": 23,
+      "function": "workspace",
+      "operation": "write",
+      "path": "model_new.py",
+      "ok": true,
+      "error": null,
+      "log": null
+    }
+  ],
+  "final_logs": {
+    "compile": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\nCompiling 3 files: binding.cpp, kernels\\axpby.cu, kernels\\axpby_binding.cpp\nCompilation failed.\nError building extension 'cuda_extension': [1/4] C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9\\bin\\nvcc -MD -MF axpby.cuda.o.d -Xcudafe --diag_suppress=dll_interface_conflict_dllexport_assumed -Xcudafe --diag_suppress=dll_interface_conflict_none_assumed -Xcudafe --diag_suppress=field_without_dll_interface -Xcudafe --diag_suppress=base_class_has_different_dll_interface -Xcompiler /EHsc -Xcompiler /wd4068 -Xcompiler /wd4067 -Xcompiler /wd4624 -Xcompiler /wd4190 -Xcompiler /wd4018 -Xcompiler /wd4275 -Xcompiler /wd4267 -Xcompiler /wd4244 -Xcompiler /wd4251 -Xcompiler /wd4819 -Xcompiler /MD -DTORCH_EXTENSION_NAME=cuda_extension -DTORCH_API_INCLUDE_EXTENSION_H -IC:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include -IC:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include\\torch\\csrc\\api\\include \"-IC:\\Program Files\\N\n[diagnostic excerpts; complete raw log retained]\nCompilation failed.\nError building extension 'cuda_extension': [1/4] C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9\\bin\\nvcc -MD -MF axpby.cuda.o.d -Xcudafe --diag_suppress=dll_interface_conflict_dllexport_assumed -Xcudafe --diag_suppress=dll_interface_conflict_none_assumed -Xcudafe --diag_suppress=field_without_dll_interface -Xcudafe --diag_suppress=base_class_has_different_dll_interface -Xcompiler /EHsc -Xcompiler /wd4068 -Xcompiler /wd4067 -Xcompiler /wd4624 -Xcompiler /wd4190 -Xcompiler /wd4018 -Xcompiler /wd4275 -Xcompiler /wd4267 -Xcompiler /wd4244 -Xcompiler /wd4251 -Xcompiler /wd4819 -Xcompiler /MD -DTORCH_EXTENSION_NAME=cuda_extension -DTORCH_API_INCLUDE_EXTENSION_H -IC:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include -IC:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include\\torch\\csrc\\api\\include \"-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9\\include\" -IC:\\Users\\34788\\anaconda3\\Include -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr -gencode=arch=compute_120,code=sm_120 -std=c++17 -O3 --use_fast_math -c E:\\Project\\Git\\Research\\ai4cuda-try-and-error\\skill-effects\\runs\\dev-axpby-original-01\\work\\kernels\\axpby.cu -o axpby.cuda.o \n\naxpby.cu\n\n[2/4] cl /showIncludes -DTORCH_EXTENSION_NAME=cuda_extension -DTORCH_API_INCLUDE_EXTENSION_H -IC:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include -IC:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include\\torch\\csrc\\api\\include \"-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9\\include\" -IC:\\Users\\34788\\anaconda3\\Include /std:c++17 /O2 /std:c++17 /MD /wd4819 /wd4251 /wd4244 /wd4267 /wd4275 /wd4018 /wd4190 /wd4624 /wd4067 /wd4068 /EHsc -c E:\\Project\\Git\\Research\\ai4cuda-try-and-error\\skill-effects\\runs\\dev-axpby-original-01\\work\\binding.cpp /Fobinding.o \n\n���� x64 �� Microsoft (R) C/C++ �Ż������� 19.44.35217 ��\nע��: �����ļ�:    C:\\software\\professional\\VisualStudio\\VC\\Tools\\MSVC\\14.44.35207\\include\\deque\nע��: �����ļ�:  E:\\Project\\Git\\Research\\ai4cuda-try-and-error\\skill-effects\\runs\\dev-axpby-original-01\\work\\binding_registry.h\nע��: �����ļ�:   C:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include\\pybind11/stl.h\nע��: �����ļ�:    C:\\software\\professional\\VisualStudio\\VC\\Tools\\MSVC\\14.44.35207\\include\\map\n\n[3/4] cl /showIncludes -DTORCH_EXTENSION_NAME=cuda_extension -DTORCH_API_INCLUDE_EXTENSION_H -IC:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include -IC:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include\\torch\\csrc\\api\\include \"-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9\\include\" -IC:\\Users\\34788\\anaconda3\\Include /std:c++17 /O2 /std:c++17 /MD /wd4819 /wd4251 /wd4244 /wd4267 /wd4275 /wd4018 /wd4190 /wd4624 /wd4067 /wd4068 /EHsc -c E:\\Project\\Git\\Research\\ai4cuda-try-and-error\\skill-effects\\runs\\dev-axpby-original-01\\work\\kernels\\axpby_binding.cpp /Foaxpby_binding.o \n\nFAILED: axpby_binding.o \n\ncl /showIncludes -DTORCH_EXTENSION_NAME=cuda\n[last log lines]\n88\\anaconda3\\Lib\\site-packages\\torch\\include\\c10/core/impl/GPUTrace.h\nע��: �����ļ�:    C:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include\\c10/cuda/CUDAException.h\nע��: �����ļ�:     C:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include\\c10/cuda/CUDADeviceAssertionHost.h\nע��: �����ļ�:      C:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include\\c10/cuda/CUDAMacros.h\nע��: �����ļ�:       C:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include\\c10/cuda/impl/cuda_cmake_macros.h\nע��: �����ļ�:     C:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include\\c10/cuda/CUDAMiscFunctions.h\nע��: �����ļ�:      C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9\\include\\cuda_runtime.h\nע��: �����ļ�:     C:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include\\c10/macros/Macros.h\nע��: �����ļ�:     C:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include\\c10/util/Exception.h\nע��: �����ļ�:     C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9\\include\\cuda.h\nע��: �����ļ�:    C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9\\include\\cuda_runtime_api.h\nע��: �����ļ�:   C:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include\\c10/util/Exception.h\nע��: �����ļ�:  E:\\Project\\Git\\Research\\ai4cuda-try-and-error\\skill-effects\\runs\\dev-axpby-original-01\\work\\kernels\\../binding_registry.h\nE:\\Project\\Git\\Research\\ai4cuda-try-and-error\\skill-effects\\runs\\dev-axpby-original-01\\work\\kernels\\axpby_binding.cpp(18): error C2039: \"empty_cuda\": ���� \"at::detail\" �ĳ�Ա\nC:\\Users\\34788\\anaconda3\\Lib\\site-packages\\torch\\include\\ATen/record_function.h(552): note: �μ���at::detail��������\nE:\\Project\\Git\\Research\\ai4cuda-try-and-error\\skill-effects\\runs\\dev-axpby-original-01\\work\\kernels\\axpby_binding.cpp(18): error C3861: ��empty_cuda��: �Ҳ�����ʶ��\n\nninja: build stopped: subcommand failed.\n\n\n"
+  },
+  "candidate": {
+    "model_new.py": "import torch\nimport torch.nn as nn\nimport cuda_extension\n\n_axpby = cuda_extension.axpby\n\n\nclass ModelNew(nn.Module):\n    def __init__(self, alpha):\n        super().__init__()\n        self.alpha = alpha\n        self._alpha = float(alpha)\n\n    def forward(self, a, b):\n        return _axpby(a, b, self._alpha)\n\n    # Bypass nn.Module.__call__ hook machinery on the hot path.\n    __call__ = forward\n",
+    "kernels\\axpby.cu": "// Fused elementwise kernel: out = alpha * a + b\n#include <cuda_runtime.h>\n\n__global__ void axpby_vec4_kernel(float4* __restrict__ out,\n                                  const float4* __restrict__ a,\n                                  const float4* __restrict__ b,\n                                  int n4,\n                                  int tail_offset,\n                                  int n,\n                                  float alpha) {\n    int i = blockIdx.x * blockDim.x + threadIdx.x;\n    if (i < n4) {\n        float4 av = a[i];\n        float4 bv = b[i];\n        float4 r;\n        r.x = fmaf(alpha, av.x, bv.x);\n        r.y = fmaf(alpha, av.y, bv.y);\n        r.z = fmaf(alpha, av.z, bv.z);\n        r.w = fmaf(alpha, av.w, bv.w);\n        out[i] = r;\n    }\n    if (tail_offset >= 0 && blockIdx.x == 0 && threadIdx.x == 0) {\n        const float* af = reinterpret_cast<const float*>(a);\n        const float* bf = reinterpret_cast<const float*>(b);\n        float* of = reinterpret_cast<float*>(out);\n        for (int j = tail_offset; j < n; ++j) {\n            of[j] = fmaf(alpha, af[j], bf[j]);\n        }\n    }\n}\n\n__global__ void axpby_scalar_float_kernel(float* __restrict__ out,\n                                          const float* __restrict__ a,\n                                          const float* __restrict__ b,\n                                          long long n,\n                                          float alpha) {\n    long long i = (long long)blockIdx.x * blockDim.x + threadIdx.x;\n    long long stride = (long long)gridDim.x * blockDim.x;\n    for (; i < n; i += stride) {\n        out[i] = alpha * a[i] + b[i];\n    }\n}\n\nextern \"C\" void axpby_float_launcher(float* out,\n                                     const float* a,\n                                     const float* b,\n                                     long long n,\n                                     float alpha,\n                                     int nblocks,\n                                     int nthreads,\n                                     cudaStream_t stream) {\n    bool aligned = ((reinterpret_cast<size_t>(out) | reinterpret_cast<size_t>(a) |\n                     reinterpret_cast<size_t>(b)) & 15u) == 0u;\n    if (aligned && n >= 4) {\n        int n4 = (int)(n >> 2);\n        int tail_offset = (int)(n4 << 2);\n        int threads = nthreads > 0 ? (int)nthreads : 32;\n        if (n4 < threads) threads = n4;\n        int blocks = nblocks > 0 ? (int)nblocks : ((n4 + threads - 1) / threads);\n        if (blocks < 1) blocks = 1;\n        axpby_vec4_kernel<<<blocks, threads, 0, stream>>>(\n            reinterpret_cast<float4*>(out), reinterpret_cast<const float4*>(a),\n            reinterpret_cast<const float4*>(b), n4, tail_offset, (int)n, alpha);\n    } else {\n        const int threads = 128;\n        long long blocks = (n + threads - 1) / threads;\n        if (blocks < 1) blocks = 1;\n        if (blocks > 65535) blocks = 65535;\n        axpby_scalar_float_kernel<<<(int)blocks, threads, 0, stream>>>(out, a, b, n,\n                                                                      alpha);\n    }\n}\n",
+    "kernels\\axpby_binding.cpp": "#include <torch/types.h>\n#include <ATen/ATen.h>\n#include <ATen/EmptyTensor.h>\n#include <torch/csrc/utils/pybind.h>\n\n#include <cuda_runtime.h>\n#include <c10/cuda/CUDAStream.h>\n#include \"../binding_registry.h\"\n\nextern \"C\" void axpby_float_launcher(float* out, const float* a, const float* b,\n                                     long long n, float alpha, int nblocks,\n                                     int nthreads, cudaStream_t stream);\n\n// Lean hot path: no dispatcher for allocation, no dtype dispatch, no defaults.\nstatic at::Tensor axpby_forward(const at::Tensor& a, const at::Tensor& b,\n                                const double alpha) {\n    at::Tensor out(\n        at::detail::empty_cuda(a.sizes(), at::kFloat, a.device(), std::nullopt));\n    axpby_float_launcher(static_cast<float*>(out.data_ptr()),\n                         static_cast<const float*>(a.data_ptr()),\n                         static_cast<const float*>(b.data_ptr()),\n                         static_cast<long long>(a.numel()),\n                         static_cast<float>(alpha), 0, 0,\n                         c10::cuda::getCurrentCUDAStream());\n    return out;\n}\n\nvoid register_axpby(pybind11::module& m) {\n    m.def(\"axpby\", &axpby_forward, \"out = alpha * a + b\");\n}\n\nREGISTER_BINDING(axpby, register_axpby);\n"
+  }
+}

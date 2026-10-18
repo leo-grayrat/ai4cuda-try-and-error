@@ -1,0 +1,25 @@
+{
+  "state": "step_budget",
+  "seconds": 228.5817145000001,
+  "requests": 24,
+  "usage": {
+    "input_tokens": 550246,
+    "uncached_input_tokens": 20326,
+    "cached_input_tokens": 529920,
+    "output_tokens": 24368,
+    "reasoning_tokens": 12334,
+    "total_tokens": 574614
+  },
+  "source_findings": {},
+  "changed_infrastructure": [],
+  "final_evaluation": {
+    "compile": {
+      "ok": false,
+      "returncode": 1,
+      "seconds": 17.43747760000042,
+      "log": "tool-035-compile.log",
+      "changed_infrastructure": []
+    }
+  },
+  "status": "development only; compiler-feedback truncation was revised after this trial"
+}

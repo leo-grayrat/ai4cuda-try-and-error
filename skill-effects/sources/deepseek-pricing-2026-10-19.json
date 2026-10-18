@@ -1,0 +1,13 @@
+{
+  "source": "https://api-docs.deepseek.com/quick_start/pricing/",
+  "retrieved_local_date": "2026-10-19",
+  "model_alias": "deepseek-flash",
+  "published_serving_version": "DeepSeek-V4.1-Flash-1017",
+  "currency": "USD",
+  "per_tokens": 1000000,
+  "off_peak": {"uncached_input": 0.15, "cached_input": 0.003, "output": 0.6},
+  "peak": {"uncached_input": 0.3, "cached_input": 0.006, "output": 1.2},
+  "peak_utc_hours": [[1, 4], [6, 10]],
+  "peak_days": "Monday through Friday excluding Chinese public holidays",
+  "notes": "Official published rates, not a bill. Model responses may expose only the alias; record actual response model and request timestamps. Apply holiday treatment before reporting an exact weekday estimate."
+}

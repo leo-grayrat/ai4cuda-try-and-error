@@ -6,9 +6,12 @@
 - [研究设计](DESIGN.zh.md)
 - [调查与环境实测](INVESTIGATION.zh.md)
 - [执行计划](PLAN.zh.md)
+- [真实要求映射与内容核对](materials/SOURCE_AUDIT.zh.md)
+- [第一次失败驱动的规则追加](materials/GROWTH_CASE_01.zh.md)
+- [执行记录与实验选择](RUN_LOG.zh.md)
 - [CUDA Agent 原始 skill](sources/CUDA-Agent.SKILL.md)与[来源](sources/provenance.json)
 - [FlashRT 原始文档](sources/FlashRT.AGENTS.md)与[来源](sources/FlashRT.provenance.json)
 
-本轮位于 `research/skill-effects` 分支。当前完成来源冻结、设计首稿和 CUDA C++ 开发示例的编译及正确性验证；正式效果实验尚未运行。执行记录保存在本目录被忽略的 `runs/`；核对后的汇总与证据摘录另行入库。
+本轮位于 `research/skill-effects` 分支。当前已有真实来源的 45 项要求映射、统一工具运行器、实际 API 开发轨迹，以及从一次失败追加 34 行的第一份累积快照；正式效果实验尚未运行。执行记录保存在本目录被忽略的 `runs/`，核对后的汇总与证据摘录保存在 `evidence/`。
 
 环境探针：`python skill-effects/environment_probe.py --name environment-03`。每次使用新的名称保存完整过程；Windows 下使用已安装 MSVC 与 CUDA 12.9，适配内容逐项记录。原始资料不被探针修改。

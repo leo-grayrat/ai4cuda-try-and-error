@@ -1,0 +1,51 @@
+[
+  {
+    "request_index": 7,
+    "operation": "compile",
+    "ok": false,
+    "log": "tool-016-compile.log",
+    "error": null
+  },
+  {
+    "request_index": 10,
+    "operation": "compile",
+    "ok": false,
+    "log": "tool-019-compile.log",
+    "error": null
+  },
+  {
+    "request_index": 13,
+    "operation": "compile",
+    "ok": true,
+    "log": "tool-022-compile.log",
+    "error": null
+  },
+  {
+    "request_index": 16,
+    "operation": "compile",
+    "ok": false,
+    "log": "tool-025-compile.log",
+    "error": null
+  },
+  {
+    "request_index": 19,
+    "operation": "compile",
+    "ok": true,
+    "log": "tool-028-compile.log",
+    "error": null
+  },
+  {
+    "request_index": 20,
+    "operation": "verify",
+    "ok": true,
+    "log": "tool-029-verify.log",
+    "error": null
+  },
+  {
+    "request_index": 20,
+    "operation": "benchmark",
+    "ok": true,
+    "log": "tool-030-benchmark.log",
+    "error": null
+  }
+]
