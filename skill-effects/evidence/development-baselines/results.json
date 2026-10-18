@@ -1,0 +1,204 @@
+[
+  {
+    "task": "dev_rmsnorm",
+    "case_index": 0,
+    "split": "development",
+    "globals": {
+      "batch_size": 16,
+      "features": 64,
+      "dim1": 32,
+      "dim2": 33
+    },
+    "seed": 20261019,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        16,
+        64,
+        32,
+        33
+      ]
+    ],
+    "input_bytes": 4325376,
+    "parameters": 0,
+    "peak_allocated_bytes": 46530560,
+    "iterations_per_sample": 100,
+    "samples_us": {
+      "eager": [
+        69.75840091705322,
+        65.90559959411621,
+        61.773438453674316,
+        72.76639938354492,
+        63.90687942504883,
+        88.69791984558105,
+        80.81343650817871
+      ],
+      "compiled": [
+        40.301761627197266,
+        41.336002349853516,
+        40.49088001251221,
+        37.75808095932007,
+        38.5152006149292,
+        49.62719917297363,
+        45.9276819229126
+      ]
+    },
+    "median_us": {
+      "eager": 69.75840091705322,
+      "compiled": 40.49088001251221
+    },
+    "seconds": 24.22064920000048
+  },
+  {
+    "task": "dev_rmsnorm",
+    "case_index": 1,
+    "split": "development",
+    "globals": {
+      "batch_size": 3,
+      "features": 17,
+      "dim1": 5,
+      "dim2": 7
+    },
+    "seed": 20261020,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        3,
+        17,
+        5,
+        7
+      ]
+    ],
+    "input_bytes": 7140,
+    "parameters": 0,
+    "peak_allocated_bytes": 33575936,
+    "iterations_per_sample": 100,
+    "samples_us": {
+      "eager": [
+        92.80096054077148,
+        96.29504203796387,
+        92.48479843139648,
+        93.88352394104004,
+        92.49664306640625,
+        94.61119651794434,
+        96.3526439666748
+      ],
+      "compiled": [
+        69.96895790100098,
+        68.31552028656006,
+        67.94879913330078,
+        67.42271900177002,
+        67.20767974853516,
+        66.69631958007812,
+        67.21536159515381
+      ]
+    },
+    "median_us": {
+      "eager": 93.88352394104004,
+      "compiled": 67.42271900177002
+    },
+    "seconds": 1.0235156000017014
+  },
+  {
+    "task": "dev_cumsum",
+    "case_index": 0,
+    "split": "development",
+    "globals": {
+      "batch_size": 257,
+      "input_shape": [
+        4099
+      ],
+      "dim": 1
+    },
+    "seed": 20261019,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        257,
+        4099
+      ]
+    ],
+    "input_bytes": 4213772,
+    "parameters": 0,
+    "peak_allocated_bytes": 46197248,
+    "iterations_per_sample": 100,
+    "samples_us": {
+      "eager": [
+        41.540799140930176,
+        41.9974422454834,
+        41.48032188415527,
+        41.507201194763184,
+        41.43904209136963,
+        41.640000343322754,
+        41.324801445007324
+      ],
+      "compiled": [
+        110.22368431091309,
+        89.3887996673584,
+        85.3609561920166,
+        82.55200386047363,
+        83.58240127563477,
+        84.71712112426758,
+        76.77343845367432
+      ]
+    },
+    "median_us": {
+      "eager": 41.507201194763184,
+      "compiled": 84.71712112426758
+    },
+    "seconds": 0.7655338000004122
+  },
+  {
+    "task": "dev_cumsum",
+    "case_index": 1,
+    "split": "development",
+    "globals": {
+      "batch_size": 17,
+      "input_shape": [
+        513
+      ],
+      "dim": 1
+    },
+    "seed": 20261020,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        17,
+        513
+      ]
+    ],
+    "input_bytes": 34884,
+    "parameters": 0,
+    "peak_allocated_bytes": 284160,
+    "iterations_per_sample": 100,
+    "samples_us": {
+      "eager": [
+        12.127039432525635,
+        11.770559549331665,
+        12.264319658279419,
+        11.593279838562012,
+        20.429439544677734,
+        16.522239446640015,
+        12.29632019996643
+      ],
+      "compiled": [
+        42.82944202423096,
+        45.633277893066406,
+        55.25279998779297,
+        54.573121070861816,
+        39.670400619506836,
+        68.81120204925537,
+        56.39808177947998
+      ]
+    },
+    "median_us": {
+      "eager": 12.264319658279419,
+      "compiled": 54.573121070861816
+    },
+    "seconds": 0.2463008999984595
+  }
+]

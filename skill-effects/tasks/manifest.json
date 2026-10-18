@@ -1,0 +1,193 @@
+{
+  "repository": "https://github.com/ScalingIntelligence/KernelBench",
+  "commit": "423217d9fda91e0c2d67e4a43bf62f96f6d104f1",
+  "status": "input specification verified on 2026-10-19; formal document conditions and run schedule are not yet frozen",
+  "tasks": [
+    {
+      "id": "sigmoid",
+      "split": "heldout",
+      "source": "level1/21_Sigmoid.py",
+      "overrides": {
+        "batch_size": 16
+      },
+      "reason": "Reduce only batch count from 4096 to 16 for the 8 GB GPU; preserve original dim=393216 and Model code.",
+      "cases": [
+        {
+          "batch_size": 16,
+          "dim": 393216
+        },
+        {
+          "batch_size": 17,
+          "dim": 4103
+        },
+        {
+          "batch_size": 1,
+          "dim": 257
+        }
+      ],
+      "source_sha256": "8f3ae78284ddd70b5c2fff66e066e967780245dee262fbf8cd2432498833796a",
+      "model_sha256": "fe2dd4b584e9b62c6cdb66bf5e2d8804260f4b831774c87934335d4eb05c8430",
+      "normalized_model_text_sha256": "5dbd95a8ed0bad66ed9a9aeac4ceb479d363906bc98894d49ef9f13fc649ff46",
+      "model_ast_unchanged": true
+    },
+    {
+      "id": "softmax",
+      "split": "heldout",
+      "source": "level1/23_Softmax.py",
+      "overrides": {
+        "batch_size": 128
+      },
+      "reason": "Reduce only nominal batch count from 4096 to 128, preserving the original 393216-wide reduction. Include a ragged 393217-wide case; do not substitute a common 4096-wide reduction.",
+      "cases": [
+        {
+          "batch_size": 128,
+          "dim": 393216
+        },
+        {
+          "batch_size": 17,
+          "dim": 393217
+        },
+        {
+          "batch_size": 7,
+          "dim": 33
+        }
+      ],
+      "operator_checks": {
+        "row_sum_atol": 0.0001,
+        "row_sum_rtol": 0.0001,
+        "row_L1_error_max": 0.001
+      },
+      "source_sha256": "c9fa418447f2d64d5aeb4763d817137c1cb5a6b411a580f0b6291a7b29301d75",
+      "model_sha256": "7ea33cfc364bf6e5956fa335964f885d0047e5ec1db9096bd87b6ec71785e8c9",
+      "normalized_model_text_sha256": "b1bf2ef7dded8677d6894973798bf034d9ee00ba36259968b2bb5d06076ed65b",
+      "model_ast_unchanged": true
+    },
+    {
+      "id": "layernorm",
+      "split": "heldout",
+      "source": "level1/40_LayerNorm.py",
+      "overrides": {},
+      "reason": "Preserve original nominal shape 16 x 64 x 256 x 256 and affine parameters; do not replace with the old no-affine toy task.",
+      "cases": [
+        {
+          "batch_size": 16,
+          "features": 64,
+          "dim1": 256,
+          "dim2": 256
+        },
+        {
+          "batch_size": 3,
+          "features": 17,
+          "dim1": 5,
+          "dim2": 33
+        },
+        {
+          "batch_size": 1,
+          "features": 1,
+          "dim1": 1,
+          "dim2": 257
+        }
+      ],
+      "source_sha256": "8d975d7cee6946513dcfb6ba84c971e53a890f9d9c6f0a4fb828904941f25975",
+      "model_sha256": "a6bacd9bb9dbf1cfd60714bdaa32d97c97fa5f58b831d9014b7eb720e933d4a0",
+      "normalized_model_text_sha256": "8d975d7cee6946513dcfb6ba84c971e53a890f9d9c6f0a4fb828904941f25975",
+      "model_ast_unchanged": true
+    },
+    {
+      "id": "gemm_chain",
+      "split": "heldout",
+      "source": "level2/12_Gemm_Multiply_LeakyReLU.py",
+      "overrides": {},
+      "reason": "Preserve original GEMM dimensions and parameters, plus multiplication and LeakyReLU; cuBLAS is an allowed implementation choice.",
+      "cases": [
+        {
+          "batch_size": 1024,
+          "in_features": 8192,
+          "out_features": 8192,
+          "multiplier": 2.0,
+          "negative_slope": 0.1
+        },
+        {
+          "batch_size": 77,
+          "in_features": 257,
+          "out_features": 389,
+          "multiplier": 1.3,
+          "negative_slope": 0.2
+        },
+        {
+          "batch_size": 1,
+          "in_features": 33,
+          "out_features": 17,
+          "multiplier": -0.7,
+          "negative_slope": 0.03
+        }
+      ],
+      "source_sha256": "0150537a4e53a29b1436d22667aa05b26c30301dd865d5ccf0f929b2c0cc29f6",
+      "model_sha256": "89e6ea28f0d6078b0fe926d9c1b4900689e69720bf8c8fcbe8aa112c7faca5c4",
+      "normalized_model_text_sha256": "0150537a4e53a29b1436d22667aa05b26c30301dd865d5ccf0f929b2c0cc29f6",
+      "model_ast_unchanged": true
+    },
+    {
+      "id": "dev_rmsnorm",
+      "split": "development",
+      "source": "level1/36_RMSNorm_.py",
+      "overrides": {
+        "batch_size": 16,
+        "features": 64,
+        "dim1": 32,
+        "dim2": 33
+      },
+      "reason": "Development-only normalization task; reduce original multi-buffer memory demand, preserving feature-axis RMS semantics.",
+      "cases": [
+        {
+          "batch_size": 16,
+          "features": 64,
+          "dim1": 32,
+          "dim2": 33
+        },
+        {
+          "batch_size": 3,
+          "features": 17,
+          "dim1": 5,
+          "dim2": 7
+        }
+      ],
+      "source_sha256": "8f6ee1b9ee212f3cee1069eff2b7935482713c99596b1024801868065e5a2b1d",
+      "model_sha256": "1c54c2ada30dcf47ab56b7e6c750f09e3282d42de4d03b4c62462e378e50760b",
+      "normalized_model_text_sha256": "6592e5ef01f79e0d20893d71786abb1e844f64023a2aabe77d2d03173561a06d",
+      "model_ast_unchanged": true
+    },
+    {
+      "id": "dev_cumsum",
+      "split": "development",
+      "source": "level1/89_cumsum.py",
+      "overrides": {
+        "batch_size": 257,
+        "input_shape": [
+          4099
+        ]
+      },
+      "reason": "Development-only scan; original 32768 squared FP32 input plus output and comparison buffers exceeds 8 GB.",
+      "cases": [
+        {
+          "batch_size": 257,
+          "input_shape": [
+            4099
+          ],
+          "dim": 1
+        },
+        {
+          "batch_size": 17,
+          "input_shape": [
+            513
+          ],
+          "dim": 1
+        }
+      ],
+      "source_sha256": "24eea19436dc41aa36ae3364b422d784c4f20175903f894e06beeb9cff15c02d",
+      "model_sha256": "dbfea408a829342cc1431cdccbcf6763adf34bd2bd62399a221e8429a22775e8",
+      "normalized_model_text_sha256": "ca35a7f7fc344208c5f3834f9906b19e0e0164bb9909c472cde8535518a2ab83",
+      "model_ast_unchanged": true
+    }
+  ]
+}

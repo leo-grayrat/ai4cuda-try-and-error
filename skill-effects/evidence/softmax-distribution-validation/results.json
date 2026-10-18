@@ -1,0 +1,47 @@
+[
+  {
+    "task": "softmax",
+    "case_index": 0,
+    "model_sha256": "7ea33cfc364bf6e5956fa335964f885d0047e5ec1db9096bd87b6ec71785e8c9",
+    "globals": {
+      "batch_size": 128,
+      "dim": 393216
+    },
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "validation_only": true,
+    "softmax_distribution_checks": true,
+    "seconds": 21.639971099997638,
+    "gpu_wait_seconds": 0.00031099999978323467
+  },
+  {
+    "task": "softmax",
+    "case_index": 1,
+    "model_sha256": "7ea33cfc364bf6e5956fa335964f885d0047e5ec1db9096bd87b6ec71785e8c9",
+    "globals": {
+      "batch_size": 17,
+      "dim": 393217
+    },
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "validation_only": true,
+    "softmax_distribution_checks": true,
+    "seconds": 1.7472366000001784,
+    "gpu_wait_seconds": 15.674933500002226
+  },
+  {
+    "task": "softmax",
+    "case_index": 2,
+    "model_sha256": "7ea33cfc364bf6e5956fa335964f885d0047e5ec1db9096bd87b6ec71785e8c9",
+    "globals": {
+      "batch_size": 7,
+      "dim": 33
+    },
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "validation_only": true,
+    "softmax_distribution_checks": true,
+    "seconds": 0.5542857999971602,
+    "gpu_wait_seconds": 0.00023259999943547882
+  }
+]

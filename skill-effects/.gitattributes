@@ -1,3 +1,4 @@
 # Preserve downloaded source bytes and hash manifests across Windows checkouts.
 sources/** -text
 evidence/** -text
+tasks/** -text

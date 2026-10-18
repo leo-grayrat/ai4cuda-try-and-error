@@ -1,0 +1,602 @@
+{
+  "selection": "Original large LayerNorm/GEMM cases plus width-preserving Sigmoid/Softmax revision; prior 4096-wide softmax is superseded.",
+  "rows": [
+    {
+      "task": "layernorm",
+      "case_index": 0,
+      "split": "heldout",
+      "globals": {
+        "batch_size": 16,
+        "features": 64,
+        "dim1": 256,
+        "dim2": 256
+      },
+      "seed": 20261019,
+      "correct_compiled_vs_eager": true,
+      "nondefault_stream_correct": true,
+      "input_shapes": [
+        [
+          16,
+          64,
+          256,
+          256
+        ]
+      ],
+      "input_bytes": 268435456,
+      "parameters": 8388608,
+      "peak_allocated_bytes": 2181038080,
+      "iterations_per_sample": 3,
+      "samples_us": {
+        "eager": [
+          7478.527704874675,
+          7461.813608805339,
+          7468.746821085612,
+          7445.791880289714,
+          7471.6370900472,
+          7459.4987233479815,
+          7475.9572347005205
+        ],
+        "compiled": [
+          4057.994524637858,
+          4421.322822570801,
+          4053.450584411621,
+          4064.746538798014,
+          4069.141387939453,
+          4071.1466471354165,
+          4033.3226521809897
+        ]
+      },
+      "median_us": {
+        "eager": 7468.746821085612,
+        "compiled": 4064.746538798014
+      },
+      "seconds": 2.4767508000004455
+    },
+    {
+      "task": "layernorm",
+      "case_index": 1,
+      "split": "heldout",
+      "globals": {
+        "batch_size": 3,
+        "features": 17,
+        "dim1": 5,
+        "dim2": 33
+      },
+      "seed": 20261020,
+      "correct_compiled_vs_eager": true,
+      "nondefault_stream_correct": true,
+      "input_shapes": [
+        [
+          3,
+          17,
+          5,
+          33
+        ]
+      ],
+      "input_bytes": 33660,
+      "parameters": 5610,
+      "peak_allocated_bytes": 33678336,
+      "iterations_per_sample": 100,
+      "samples_us": {
+        "eager": [
+          37.14463949203491,
+          35.22207975387573,
+          35.57215929031372,
+          36.55328035354614,
+          36.1516809463501,
+          35.39232015609741,
+          34.00576114654541
+        ],
+        "compiled": [
+          73.09408187866211,
+          73.57952117919922,
+          70.56863784790039,
+          71.14880084991455,
+          69.32544231414795,
+          69.23744201660156,
+          69.30880069732666
+        ]
+      },
+      "median_us": {
+        "eager": 35.57215929031372,
+        "compiled": 70.56863784790039
+      },
+      "seconds": 0.7298884999981965
+    },
+    {
+      "task": "layernorm",
+      "case_index": 2,
+      "split": "heldout",
+      "globals": {
+        "batch_size": 1,
+        "features": 1,
+        "dim1": 1,
+        "dim2": 257
+      },
+      "seed": 20261021,
+      "correct_compiled_vs_eager": true,
+      "nondefault_stream_correct": true,
+      "input_shapes": [
+        [
+          1,
+          1,
+          1,
+          257
+        ]
+      ],
+      "input_bytes": 1028,
+      "parameters": 514,
+      "peak_allocated_bytes": 15872,
+      "iterations_per_sample": 100,
+      "samples_us": {
+        "eager": [
+          22.773759365081787,
+          23.6028790473938,
+          29.658238887786865,
+          28.43168020248413,
+          33.06335926055908,
+          25.33184051513672,
+          26.14464044570923
+        ],
+        "compiled": [
+          53.966078758239746,
+          57.00831890106201,
+          48.90848159790039,
+          55.7209587097168,
+          50.3439998626709,
+          52.39391803741455,
+          41.462721824645996
+        ]
+      },
+      "median_us": {
+        "eager": 26.14464044570923,
+        "compiled": 52.39391803741455
+      },
+      "seconds": 0.3217153000005055
+    },
+    {
+      "task": "gemm_chain",
+      "case_index": 0,
+      "split": "heldout",
+      "globals": {
+        "batch_size": 1024,
+        "in_features": 8192,
+        "out_features": 8192,
+        "multiplier": 2.0,
+        "negative_slope": 0.1
+      },
+      "seed": 20261019,
+      "correct_compiled_vs_eager": true,
+      "nondefault_stream_correct": true,
+      "input_shapes": [
+        [
+          1024,
+          8192
+        ]
+      ],
+      "input_bytes": 33554432,
+      "parameters": 67117056,
+      "peak_allocated_bytes": 554991616,
+      "iterations_per_sample": 2,
+      "samples_us": {
+        "eager": [
+          19664.31999206543,
+          19397.647857666016,
+          19719.823837280273,
+          21329.56886291504,
+          19808.143615722656,
+          20198.863983154297,
+          25279.056549072266
+        ],
+        "compiled": [
+          18060.12725830078,
+          16013.168334960938,
+          17230.976104736328,
+          17881.263732910156,
+          17623.31199645996,
+          18809.343338012695,
+          17932.607650756836
+        ]
+      },
+      "median_us": {
+        "eager": 19808.143615722656,
+        "compiled": 17881.263732910156
+      },
+      "seconds": 5.887322900001891
+    },
+    {
+      "task": "gemm_chain",
+      "case_index": 1,
+      "split": "heldout",
+      "globals": {
+        "batch_size": 77,
+        "in_features": 257,
+        "out_features": 389,
+        "multiplier": 1.3,
+        "negative_slope": 0.2
+      },
+      "seed": 20261020,
+      "correct_compiled_vs_eager": true,
+      "nondefault_stream_correct": true,
+      "input_shapes": [
+        [
+          77,
+          257
+        ]
+      ],
+      "input_bytes": 79156,
+      "parameters": 100362,
+      "peak_allocated_bytes": 53347328,
+      "iterations_per_sample": 100,
+      "samples_us": {
+        "eager": [
+          81.87456130981445,
+          77.22271919250488,
+          80.81343650817871,
+          77.73183822631836,
+          74.80000019073486,
+          87.3574447631836,
+          90.9712028503418
+        ],
+        "compiled": [
+          104.38207626342773,
+          97.07967758178711,
+          91.44384384155273,
+          116.2054443359375,
+          103.59647750854492,
+          111.21408462524414,
+          119.61471557617188
+        ]
+      },
+      "median_us": {
+        "eager": 80.81343650817871,
+        "compiled": 104.38207626342773
+      },
+      "seconds": 0.902874300001713
+    },
+    {
+      "task": "gemm_chain",
+      "case_index": 2,
+      "split": "heldout",
+      "globals": {
+        "batch_size": 1,
+        "in_features": 33,
+        "out_features": 17,
+        "multiplier": -0.7,
+        "negative_slope": 0.03
+      },
+      "seed": 20261021,
+      "correct_compiled_vs_eager": true,
+      "nondefault_stream_correct": true,
+      "input_shapes": [
+        [
+          1,
+          33
+        ]
+      ],
+      "input_bytes": 132,
+      "parameters": 578,
+      "peak_allocated_bytes": 60174848,
+      "iterations_per_sample": 100,
+      "samples_us": {
+        "eager": [
+          105.81791877746582,
+          112.25279808044434,
+          109.80671882629395,
+          110.82880020141602,
+          105.21759986877441,
+          105.28960227966309,
+          119.76736068725586
+        ],
+        "compiled": [
+          110.18431663513184,
+          112.20895767211914,
+          111.62112236022949,
+          108.76832008361816,
+          109.52608108520508,
+          105.89056015014648,
+          115.57791709899902
+        ]
+      },
+      "median_us": {
+        "eager": 109.80671882629395,
+        "compiled": 110.18431663513184
+      },
+      "seconds": 0.9355286999998498
+    },
+    {
+      "task": "sigmoid",
+      "model_sha256": "fe2dd4b584e9b62c6cdb66bf5e2d8804260f4b831774c87934335d4eb05c8430",
+      "case_index": 0,
+      "split": "heldout",
+      "globals": {
+        "batch_size": 16,
+        "dim": 393216
+      },
+      "seed": 20261019,
+      "correct_compiled_vs_eager": true,
+      "nondefault_stream_correct": true,
+      "input_shapes": [
+        [
+          16,
+          393216
+        ]
+      ],
+      "input_bytes": 25165824,
+      "parameters": 0,
+      "peak_allocated_bytes": 201326592,
+      "iterations_per_sample": 4,
+      "samples_us": {
+        "eager": [
+          5395.7037925720215,
+          169.20800507068634,
+          167.68799722194672,
+          169.21600699424744,
+          170.06400227546692,
+          168.2319939136505,
+          167.62399673461914
+        ],
+        "compiled": [
+          3260.960102081299,
+          184.28799510002136,
+          175.47200620174408,
+          189.520001411438,
+          179.1280061006546,
+          181.7760020494461,
+          175.38399994373322
+        ]
+      },
+      "median_us": {
+        "eager": 169.20800507068634,
+        "compiled": 181.7760020494461
+      },
+      "seconds": 17.42785079999885,
+      "gpu_wait_seconds": 14.062227200000052
+    },
+    {
+      "task": "sigmoid",
+      "model_sha256": "fe2dd4b584e9b62c6cdb66bf5e2d8804260f4b831774c87934335d4eb05c8430",
+      "case_index": 1,
+      "split": "heldout",
+      "globals": {
+        "batch_size": 17,
+        "dim": 4103
+      },
+      "seed": 20261020,
+      "correct_compiled_vs_eager": true,
+      "nondefault_stream_correct": true,
+      "input_shapes": [
+        [
+          17,
+          4103
+        ]
+      ],
+      "input_bytes": 279004,
+      "parameters": 0,
+      "peak_allocated_bytes": 34391552,
+      "iterations_per_sample": 100,
+      "samples_us": {
+        "eager": [
+          16.550079584121704,
+          17.963520288467407,
+          17.297279834747314,
+          17.057600021362305,
+          18.503040075302124,
+          18.94368052482605,
+          17.848000526428223
+        ],
+        "compiled": [
+          71.88992023468018,
+          69.22048091888428,
+          68.78335952758789,
+          67.84416198730469,
+          66.38879776000977,
+          65.08927822113037,
+          66.40927791595459
+        ]
+      },
+      "median_us": {
+        "eager": 17.848000526428223,
+        "compiled": 67.84416198730469
+      },
+      "seconds": 0.42443510000157403,
+      "gpu_wait_seconds": 15.56996970000182
+    },
+    {
+      "task": "sigmoid",
+      "model_sha256": "fe2dd4b584e9b62c6cdb66bf5e2d8804260f4b831774c87934335d4eb05c8430",
+      "case_index": 2,
+      "split": "heldout",
+      "globals": {
+        "batch_size": 1,
+        "dim": 257
+      },
+      "seed": 20261021,
+      "correct_compiled_vs_eager": true,
+      "nondefault_stream_correct": true,
+      "input_shapes": [
+        [
+          1,
+          257
+        ]
+      ],
+      "input_bytes": 1028,
+      "parameters": 0,
+      "peak_allocated_bytes": 33559040,
+      "iterations_per_sample": 100,
+      "samples_us": {
+        "eager": [
+          14.42911982536316,
+          12.239359617233276,
+          11.954879760742188,
+          11.495360136032104,
+          11.687359809875488,
+          12.788480520248413,
+          10.811519622802734
+        ],
+        "compiled": [
+          49.642882347106934,
+          39.00223970413208,
+          46.93408012390137,
+          42.22464084625244,
+          47.358078956604004,
+          42.96031951904297,
+          80.87679862976074
+        ]
+      },
+      "median_us": {
+        "eager": 11.954879760742188,
+        "compiled": 46.93408012390137
+      },
+      "seconds": 0.3328466000020853,
+      "gpu_wait_seconds": 0.00023689999943599105
+    },
+    {
+      "task": "softmax",
+      "model_sha256": "7ea33cfc364bf6e5956fa335964f885d0047e5ec1db9096bd87b6ec71785e8c9",
+      "case_index": 0,
+      "split": "heldout",
+      "globals": {
+        "batch_size": 128,
+        "dim": 393216
+      },
+      "seed": 20261019,
+      "correct_compiled_vs_eager": true,
+      "nondefault_stream_correct": true,
+      "input_shapes": [
+        [
+          128,
+          393216
+        ]
+      ],
+      "input_bytes": 201326592,
+      "parameters": 0,
+      "peak_allocated_bytes": 1610612736,
+      "iterations_per_sample": 7,
+      "samples_us": {
+        "eager": [
+          2900.7726396833145,
+          2908.274241856166,
+          2908.2284654889786,
+          2904.5486450195312,
+          2390.016010829381,
+          2395.296096801758,
+          2390.8707754952566
+        ],
+        "compiled": [
+          2231.4056668962753,
+          2224.896022251674,
+          2236.1006055559433,
+          2185.938290187291,
+          1857.325690133231,
+          1845.2982221330915,
+          1834.0891429356166
+        ]
+      },
+      "median_us": {
+        "eager": 2900.7726396833145,
+        "compiled": 2185.938290187291
+      },
+      "seconds": 2.479433299999073,
+      "gpu_wait_seconds": 0.0002514000007067807
+    },
+    {
+      "task": "softmax",
+      "model_sha256": "7ea33cfc364bf6e5956fa335964f885d0047e5ec1db9096bd87b6ec71785e8c9",
+      "case_index": 1,
+      "split": "heldout",
+      "globals": {
+        "batch_size": 17,
+        "dim": 393217
+      },
+      "seed": 20261020,
+      "correct_compiled_vs_eager": true,
+      "nondefault_stream_correct": true,
+      "input_shapes": [
+        [
+          17,
+          393217
+        ]
+      ],
+      "input_bytes": 26738756,
+      "parameters": 0,
+      "peak_allocated_bytes": 216794112,
+      "iterations_per_sample": 61,
+      "samples_us": {
+        "eager": [
+          206.51698503337923,
+          202.82964237400742,
+          204.32472229003906,
+          200.2229534211706,
+          270.8154897220799,
+          198.2431411743164,
+          202.18072172071112
+        ],
+        "compiled": [
+          309.0113968145652,
+          309.0381622314453,
+          309.89743842453254,
+          310.17653668513066,
+          310.67225972159963,
+          309.5039930499968,
+          342.47082569560064
+        ]
+      },
+      "median_us": {
+        "eager": 202.82964237400742,
+        "compiled": 309.89743842453254
+      },
+      "seconds": 1.8788745999991079,
+      "gpu_wait_seconds": 17.132955199998833
+    },
+    {
+      "task": "softmax",
+      "model_sha256": "7ea33cfc364bf6e5956fa335964f885d0047e5ec1db9096bd87b6ec71785e8c9",
+      "case_index": 2,
+      "split": "heldout",
+      "globals": {
+        "batch_size": 7,
+        "dim": 33
+      },
+      "seed": 20261021,
+      "correct_compiled_vs_eager": true,
+      "nondefault_stream_correct": true,
+      "input_shapes": [
+        [
+          7,
+          33
+        ]
+      ],
+      "input_bytes": 924,
+      "parameters": 0,
+      "peak_allocated_bytes": 33557504,
+      "iterations_per_sample": 100,
+      "samples_us": {
+        "eager": [
+          37.85919904708862,
+          36.758079528808594,
+          44.12799835205078,
+          45.48128128051758,
+          39.2524790763855,
+          39.92192029953003,
+          37.27391958236694
+        ],
+        "compiled": [
+          82.96192169189453,
+          86.40095710754395,
+          91.8950366973877,
+          94.80511665344238,
+          87.89983749389648,
+          87.37152099609375,
+          83.62239837646484
+        ]
+      },
+      "median_us": {
+        "eager": 39.2524790763855,
+        "compiled": 87.37152099609375
+      },
+      "seconds": 0.6074579999985872,
+      "gpu_wait_seconds": 0.0002575999969849363
+    }
+  ]
+}

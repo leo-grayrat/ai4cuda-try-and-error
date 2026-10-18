@@ -1,0 +1,170 @@
+{
+  "source_repository": "https://github.com/ScalingIntelligence/KernelBench",
+  "source_commit": "423217d9fda91e0c2d67e4a43bf62f96f6d104f1",
+  "status": "input specification verified on 2026-10-19; formal document conditions and run schedule are not yet frozen",
+  "dtype": "float32",
+  "tasks": [
+    {
+      "id": "sigmoid",
+      "split": "heldout",
+      "source": "level1/21_Sigmoid.py",
+      "overrides": {
+        "batch_size": 16
+      },
+      "reason": "Reduce only batch count from 4096 to 16 for the 8 GB GPU; preserve original dim=393216 and Model code.",
+      "cases": [
+        {
+          "batch_size": 16,
+          "dim": 393216
+        },
+        {
+          "batch_size": 17,
+          "dim": 4103
+        },
+        {
+          "batch_size": 1,
+          "dim": 257
+        }
+      ]
+    },
+    {
+      "id": "softmax",
+      "split": "heldout",
+      "source": "level1/23_Softmax.py",
+      "overrides": {
+        "batch_size": 128
+      },
+      "reason": "Reduce only nominal batch count from 4096 to 128, preserving the original 393216-wide reduction. Include a ragged 393217-wide case; do not substitute a common 4096-wide reduction.",
+      "cases": [
+        {
+          "batch_size": 128,
+          "dim": 393216
+        },
+        {
+          "batch_size": 17,
+          "dim": 393217
+        },
+        {
+          "batch_size": 7,
+          "dim": 33
+        }
+      ],
+      "operator_checks": {
+        "row_sum_atol": 0.0001,
+        "row_sum_rtol": 0.0001,
+        "row_L1_error_max": 0.001
+      }
+    },
+    {
+      "id": "layernorm",
+      "split": "heldout",
+      "source": "level1/40_LayerNorm.py",
+      "overrides": {},
+      "reason": "Preserve original nominal shape 16 x 64 x 256 x 256 and affine parameters; do not replace with the old no-affine toy task.",
+      "cases": [
+        {
+          "batch_size": 16,
+          "features": 64,
+          "dim1": 256,
+          "dim2": 256
+        },
+        {
+          "batch_size": 3,
+          "features": 17,
+          "dim1": 5,
+          "dim2": 33
+        },
+        {
+          "batch_size": 1,
+          "features": 1,
+          "dim1": 1,
+          "dim2": 257
+        }
+      ]
+    },
+    {
+      "id": "gemm_chain",
+      "split": "heldout",
+      "source": "level2/12_Gemm_Multiply_LeakyReLU.py",
+      "overrides": {},
+      "reason": "Preserve original GEMM dimensions and parameters, plus multiplication and LeakyReLU; cuBLAS is an allowed implementation choice.",
+      "cases": [
+        {
+          "batch_size": 1024,
+          "in_features": 8192,
+          "out_features": 8192,
+          "multiplier": 2.0,
+          "negative_slope": 0.1
+        },
+        {
+          "batch_size": 77,
+          "in_features": 257,
+          "out_features": 389,
+          "multiplier": 1.3,
+          "negative_slope": 0.2
+        },
+        {
+          "batch_size": 1,
+          "in_features": 33,
+          "out_features": 17,
+          "multiplier": -0.7,
+          "negative_slope": 0.03
+        }
+      ]
+    },
+    {
+      "id": "dev_rmsnorm",
+      "split": "development",
+      "source": "level1/36_RMSNorm_.py",
+      "overrides": {
+        "batch_size": 16,
+        "features": 64,
+        "dim1": 32,
+        "dim2": 33
+      },
+      "reason": "Development-only normalization task; reduce original multi-buffer memory demand, preserving feature-axis RMS semantics.",
+      "cases": [
+        {
+          "batch_size": 16,
+          "features": 64,
+          "dim1": 32,
+          "dim2": 33
+        },
+        {
+          "batch_size": 3,
+          "features": 17,
+          "dim1": 5,
+          "dim2": 7
+        }
+      ]
+    },
+    {
+      "id": "dev_cumsum",
+      "split": "development",
+      "source": "level1/89_cumsum.py",
+      "overrides": {
+        "batch_size": 257,
+        "input_shape": [
+          4099
+        ]
+      },
+      "reason": "Development-only scan; original 32768 squared FP32 input plus output and comparison buffers exceeds 8 GB.",
+      "cases": [
+        {
+          "batch_size": 257,
+          "input_shape": [
+            4099
+          ],
+          "dim": 1
+        },
+        {
+          "batch_size": 17,
+          "input_shape": [
+            513
+          ],
+          "dim": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,587 @@
+[
+  {
+    "task": "sigmoid",
+    "case_index": 0,
+    "split": "heldout",
+    "globals": {
+      "batch_size": 256,
+      "dim": 16384
+    },
+    "seed": 20261019,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        256,
+        16384
+      ]
+    ],
+    "input_bytes": 16777216,
+    "parameters": 0,
+    "peak_allocated_bytes": 134217728,
+    "iterations_per_sample": 7,
+    "samples_us": {
+      "eager": [
+        3612.352098737444,
+        1460.832050868443,
+        1428.4159796578545,
+        1457.901682172503,
+        1422.1394402640205,
+        1454.2262213570732,
+        1425.8057730538505
+      ],
+      "compiled": [
+        1454.8845291137695,
+        1473.3668736049108,
+        1478.7108557564873,
+        1446.0983276367188,
+        1424.809183393206,
+        1426.093646458217,
+        1429.0148871285576
+      ]
+    },
+    "median_us": {
+      "eager": 1454.2262213570732,
+      "compiled": 1446.0983276367188
+    },
+    "seconds": 19.06931430000259
+  },
+  {
+    "task": "sigmoid",
+    "case_index": 1,
+    "split": "heldout",
+    "globals": {
+      "batch_size": 17,
+      "dim": 4103
+    },
+    "seed": 20261020,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        17,
+        4103
+      ]
+    ],
+    "input_bytes": 279004,
+    "parameters": 0,
+    "peak_allocated_bytes": 34391552,
+    "iterations_per_sample": 100,
+    "samples_us": {
+      "eager": [
+        11.594239473342896,
+        10.881600379943848,
+        12.417919635772705,
+        11.855039596557617,
+        11.265599727630615,
+        10.488640069961548,
+        11.019840240478516
+      ],
+      "compiled": [
+        40.772480964660645,
+        44.36351776123047,
+        46.51872158050537,
+        44.55679893493652,
+        38.95071983337402,
+        43.99551868438721,
+        39.359679222106934
+      ]
+    },
+    "median_us": {
+      "eager": 11.265599727630615,
+      "compiled": 43.99551868438721
+    },
+    "seconds": 0.6006231999999727
+  },
+  {
+    "task": "sigmoid",
+    "case_index": 2,
+    "split": "heldout",
+    "globals": {
+      "batch_size": 1,
+      "dim": 257
+    },
+    "seed": 20261021,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        1,
+        257
+      ]
+    ],
+    "input_bytes": 1028,
+    "parameters": 0,
+    "peak_allocated_bytes": 33559040,
+    "iterations_per_sample": 100,
+    "samples_us": {
+      "eager": [
+        15.983999967575073,
+        11.842559576034546,
+        11.65120005607605,
+        12.202880382537842,
+        12.212159633636475,
+        19.408639669418335,
+        13.722560405731201
+      ],
+      "compiled": [
+        59.50175762176514,
+        51.22176170349121,
+        51.24288082122803,
+        47.717437744140625,
+        45.12351989746094,
+        38.401920795440674,
+        43.05952072143555
+      ]
+    },
+    "median_us": {
+      "eager": 12.212159633636475,
+      "compiled": 47.717437744140625
+    },
+    "seconds": 0.33338000000003376
+  },
+  {
+    "task": "softmax",
+    "case_index": 0,
+    "split": "heldout",
+    "globals": {
+      "batch_size": 512,
+      "dim": 4096
+    },
+    "seed": 20261019,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        512,
+        4096
+      ]
+    ],
+    "input_bytes": 8388608,
+    "parameters": 0,
+    "peak_allocated_bytes": 67108864,
+    "iterations_per_sample": 100,
+    "samples_us": {
+      "eager": [
+        39.26431894302368,
+        39.56000089645386,
+        47.742719650268555,
+        47.7459192276001,
+        43.99040222167969,
+        44.247679710388184,
+        40.952959060668945
+      ],
+      "compiled": [
+        89.78719711303711,
+        90.26304244995117,
+        85.79968452453613,
+        92.00703620910645,
+        87.56511688232422,
+        87.74944305419922,
+        89.52223777770996
+      ]
+    },
+    "median_us": {
+      "eager": 43.99040222167969,
+      "compiled": 89.52223777770996
+    },
+    "seconds": 2.087191399998119
+  },
+  {
+    "task": "softmax",
+    "case_index": 1,
+    "split": "heldout",
+    "globals": {
+      "batch_size": 17,
+      "dim": 4103
+    },
+    "seed": 20261020,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        17,
+        4103
+      ]
+    ],
+    "input_bytes": 279004,
+    "parameters": 0,
+    "peak_allocated_bytes": 34391552,
+    "iterations_per_sample": 100,
+    "samples_us": {
+      "eager": [
+        36.3590407371521,
+        38.635520935058594,
+        37.979838848114014,
+        37.181758880615234,
+        51.72351837158203,
+        45.747199058532715,
+        41.28672122955322
+      ],
+      "compiled": [
+        105.07072448730469,
+        109.55488204956055,
+        101.83839797973633,
+        102.54912376403809,
+        105.07488250732422,
+        108.39263916015625,
+        105.35327911376953
+      ]
+    },
+    "median_us": {
+      "eager": 38.635520935058594,
+      "compiled": 105.07488250732422
+    },
+    "seconds": 0.84533250000095
+  },
+  {
+    "task": "softmax",
+    "case_index": 2,
+    "split": "heldout",
+    "globals": {
+      "batch_size": 7,
+      "dim": 33
+    },
+    "seed": 20261021,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        7,
+        33
+      ]
+    ],
+    "input_bytes": 924,
+    "parameters": 0,
+    "peak_allocated_bytes": 33557504,
+    "iterations_per_sample": 100,
+    "samples_us": {
+      "eager": [
+        36.8720006942749,
+        41.129279136657715,
+        38.736000061035156,
+        38.50271940231323,
+        37.58527994155884,
+        38.23263883590698,
+        38.48639965057373
+      ],
+      "compiled": [
+        86.48127555847168,
+        97.59455680847168,
+        85.5840015411377,
+        88.39103698730469,
+        84.39295768737793,
+        83.00224304199219,
+        85.9171199798584
+      ]
+    },
+    "median_us": {
+      "eager": 38.48639965057373,
+      "compiled": 85.9171199798584
+    },
+    "seconds": 0.6124468999987585
+  },
+  {
+    "task": "layernorm",
+    "case_index": 0,
+    "split": "heldout",
+    "globals": {
+      "batch_size": 16,
+      "features": 64,
+      "dim1": 256,
+      "dim2": 256
+    },
+    "seed": 20261019,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        16,
+        64,
+        256,
+        256
+      ]
+    ],
+    "input_bytes": 268435456,
+    "parameters": 8388608,
+    "peak_allocated_bytes": 2181038080,
+    "iterations_per_sample": 3,
+    "samples_us": {
+      "eager": [
+        7478.527704874675,
+        7461.813608805339,
+        7468.746821085612,
+        7445.791880289714,
+        7471.6370900472,
+        7459.4987233479815,
+        7475.9572347005205
+      ],
+      "compiled": [
+        4057.994524637858,
+        4421.322822570801,
+        4053.450584411621,
+        4064.746538798014,
+        4069.141387939453,
+        4071.1466471354165,
+        4033.3226521809897
+      ]
+    },
+    "median_us": {
+      "eager": 7468.746821085612,
+      "compiled": 4064.746538798014
+    },
+    "seconds": 2.4767508000004455
+  },
+  {
+    "task": "layernorm",
+    "case_index": 1,
+    "split": "heldout",
+    "globals": {
+      "batch_size": 3,
+      "features": 17,
+      "dim1": 5,
+      "dim2": 33
+    },
+    "seed": 20261020,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        3,
+        17,
+        5,
+        33
+      ]
+    ],
+    "input_bytes": 33660,
+    "parameters": 5610,
+    "peak_allocated_bytes": 33678336,
+    "iterations_per_sample": 100,
+    "samples_us": {
+      "eager": [
+        37.14463949203491,
+        35.22207975387573,
+        35.57215929031372,
+        36.55328035354614,
+        36.1516809463501,
+        35.39232015609741,
+        34.00576114654541
+      ],
+      "compiled": [
+        73.09408187866211,
+        73.57952117919922,
+        70.56863784790039,
+        71.14880084991455,
+        69.32544231414795,
+        69.23744201660156,
+        69.30880069732666
+      ]
+    },
+    "median_us": {
+      "eager": 35.57215929031372,
+      "compiled": 70.56863784790039
+    },
+    "seconds": 0.7298884999981965
+  },
+  {
+    "task": "layernorm",
+    "case_index": 2,
+    "split": "heldout",
+    "globals": {
+      "batch_size": 1,
+      "features": 1,
+      "dim1": 1,
+      "dim2": 257
+    },
+    "seed": 20261021,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        1,
+        1,
+        1,
+        257
+      ]
+    ],
+    "input_bytes": 1028,
+    "parameters": 514,
+    "peak_allocated_bytes": 15872,
+    "iterations_per_sample": 100,
+    "samples_us": {
+      "eager": [
+        22.773759365081787,
+        23.6028790473938,
+        29.658238887786865,
+        28.43168020248413,
+        33.06335926055908,
+        25.33184051513672,
+        26.14464044570923
+      ],
+      "compiled": [
+        53.966078758239746,
+        57.00831890106201,
+        48.90848159790039,
+        55.7209587097168,
+        50.3439998626709,
+        52.39391803741455,
+        41.462721824645996
+      ]
+    },
+    "median_us": {
+      "eager": 26.14464044570923,
+      "compiled": 52.39391803741455
+    },
+    "seconds": 0.3217153000005055
+  },
+  {
+    "task": "gemm_chain",
+    "case_index": 0,
+    "split": "heldout",
+    "globals": {
+      "batch_size": 1024,
+      "in_features": 8192,
+      "out_features": 8192,
+      "multiplier": 2.0,
+      "negative_slope": 0.1
+    },
+    "seed": 20261019,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        1024,
+        8192
+      ]
+    ],
+    "input_bytes": 33554432,
+    "parameters": 67117056,
+    "peak_allocated_bytes": 554991616,
+    "iterations_per_sample": 2,
+    "samples_us": {
+      "eager": [
+        19664.31999206543,
+        19397.647857666016,
+        19719.823837280273,
+        21329.56886291504,
+        19808.143615722656,
+        20198.863983154297,
+        25279.056549072266
+      ],
+      "compiled": [
+        18060.12725830078,
+        16013.168334960938,
+        17230.976104736328,
+        17881.263732910156,
+        17623.31199645996,
+        18809.343338012695,
+        17932.607650756836
+      ]
+    },
+    "median_us": {
+      "eager": 19808.143615722656,
+      "compiled": 17881.263732910156
+    },
+    "seconds": 5.887322900001891
+  },
+  {
+    "task": "gemm_chain",
+    "case_index": 1,
+    "split": "heldout",
+    "globals": {
+      "batch_size": 77,
+      "in_features": 257,
+      "out_features": 389,
+      "multiplier": 1.3,
+      "negative_slope": 0.2
+    },
+    "seed": 20261020,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        77,
+        257
+      ]
+    ],
+    "input_bytes": 79156,
+    "parameters": 100362,
+    "peak_allocated_bytes": 53347328,
+    "iterations_per_sample": 100,
+    "samples_us": {
+      "eager": [
+        81.87456130981445,
+        77.22271919250488,
+        80.81343650817871,
+        77.73183822631836,
+        74.80000019073486,
+        87.3574447631836,
+        90.9712028503418
+      ],
+      "compiled": [
+        104.38207626342773,
+        97.07967758178711,
+        91.44384384155273,
+        116.2054443359375,
+        103.59647750854492,
+        111.21408462524414,
+        119.61471557617188
+      ]
+    },
+    "median_us": {
+      "eager": 80.81343650817871,
+      "compiled": 104.38207626342773
+    },
+    "seconds": 0.902874300001713
+  },
+  {
+    "task": "gemm_chain",
+    "case_index": 2,
+    "split": "heldout",
+    "globals": {
+      "batch_size": 1,
+      "in_features": 33,
+      "out_features": 17,
+      "multiplier": -0.7,
+      "negative_slope": 0.03
+    },
+    "seed": 20261021,
+    "correct_compiled_vs_eager": true,
+    "nondefault_stream_correct": true,
+    "input_shapes": [
+      [
+        1,
+        33
+      ]
+    ],
+    "input_bytes": 132,
+    "parameters": 578,
+    "peak_allocated_bytes": 60174848,
+    "iterations_per_sample": 100,
+    "samples_us": {
+      "eager": [
+        105.81791877746582,
+        112.25279808044434,
+        109.80671882629395,
+        110.82880020141602,
+        105.21759986877441,
+        105.28960227966309,
+        119.76736068725586
+      ],
+      "compiled": [
+        110.18431663513184,
+        112.20895767211914,
+        111.62112236022949,
+        108.76832008361816,
+        109.52608108520508,
+        105.89056015014648,
+        115.57791709899902
+      ]
+    },
+    "median_us": {
+      "eager": 109.80671882629395,
+      "compiled": 110.18431663513184
+    },
+    "seconds": 0.9355286999998498
+  }
+]
