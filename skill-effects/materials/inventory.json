@@ -1,0 +1,15 @@
+{
+  "source": "CUDA-Agent.SKILL.md",
+  "rules": 45,
+  "by_kind": {
+    "example": 4,
+    "recommendation": 19,
+    "requirement": 22
+  },
+  "conditions": {
+    "core": 9,
+    "workflow": 23,
+    "condensed": 45
+  },
+  "status": "first manual source mapping; requires coverage audit before formal freeze"
+}

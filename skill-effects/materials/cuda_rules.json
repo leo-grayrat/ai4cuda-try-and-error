@@ -1,0 +1,887 @@
+[
+  {
+    "id": "C01",
+    "category": "goal",
+    "kind": "requirement",
+    "source_lines": "1;249;352;359",
+    "introduced_in": "core",
+    "text": "Produce correct CUDA C++ extension output and achieve candidate latency <= 0.95 times torch.compile, then seek the best attainable performance.",
+    "observation": "Independent correctness and paired timing.",
+    "source_evidence": [
+      {
+        "start": 1,
+        "end": 1,
+        "text": "You are a PyTorch and CUDA expert. Accelerate the given PyTorch Model by creating a high-performance CUDA C++ extension, targeting the best possible performance with a minimum requirement of 5% faster than torch.compile baseline."
+      },
+      {
+        "start": 249,
+        "end": 249,
+        "text": "**MINIMUM: Must be at least 5% faster than torch.compile baseline**"
+      },
+      {
+        "start": 352,
+        "end": 352,
+        "text": "- 🎯 **MINIMUM REQUIREMENT**: At least 5% faster than torch.compile (≤ 0.95× baseline time)"
+      },
+      {
+        "start": 359,
+        "end": 359,
+        "text": "  - MINIMUM: Your implementation must be ≤ 0.95ms (5% faster)"
+      }
+    ]
+  },
+  {
+    "id": "C02",
+    "category": "compute",
+    "kind": "requirement",
+    "source_lines": "6;15",
+    "introduced_in": "core",
+    "text": "Use raw CUDA computation rather than torch C++ compute operators; tensor types, binding metadata, and allocation such as torch::empty_like are allowed.",
+    "observation": "Review C++ operations; source ban is interpreted with its explicit allocation exception.",
+    "source_evidence": [
+      {
+        "start": 6,
+        "end": 6,
+        "text": "- **NO torch operators in C++**: NEVER use `torch::*` or `torch::nn::functional::*` in binding.cpp or .cu files"
+      },
+      {
+        "start": 15,
+        "end": 15,
+        "text": "- **Memory**: torch::empty_like for allocation only"
+      }
+    ]
+  },
+  {
+    "id": "C03",
+    "category": "compute",
+    "kind": "requirement",
+    "source_lines": "7;14;159-163",
+    "introduced_in": "core",
+    "text": "In model_new.py forward, use custom extension ops, allocation and tensor properties; do not implement tensor computation with PyTorch operations.",
+    "observation": "AST findings plus semantic source review and execution.",
+    "source_evidence": [
+      {
+        "start": 7,
+        "end": 7,
+        "text": "- **NO torch operations in model_new.py**: Only tensor creation and your custom ops allowed"
+      },
+      {
+        "start": 14,
+        "end": 14,
+        "text": "- **Python**: torch.tensor creation, custom extension ops, tensor properties (.shape, .device)"
+      },
+      {
+        "start": 159,
+        "end": 163,
+        "text": "    def forward(self, x):\n        # Use custom ops only - NO torch operations\n        x = cuda_extension.my_kernel_forward(x, config=0)\n        x = cuda_extension.gemm_forward(x, self.weight, self.bias)\n        return x"
+      }
+    ]
+  },
+  {
+    "id": "C04",
+    "category": "dependencies",
+    "kind": "requirement",
+    "source_lines": "8;13",
+    "introduced_in": "core",
+    "text": "Use no third-party compute libraries except cuBLAS for GEMM and cuDNN for convolution; use cuDNN for Conv and ConvTranspose.",
+    "observation": "Inspect includes and calls; convolution clause applies only to convolution tasks.",
+    "source_evidence": [
+      {
+        "start": 8,
+        "end": 8,
+        "text": "- **NO third-party libraries**: Except cuBLAS (GEMM only) and cuDNN (Conv only)"
+      },
+      {
+        "start": 13,
+        "end": 13,
+        "text": "- **C++**: Raw CUDA kernels (for custom ops), cuBLAS (for GEMM), cuDNN (MANDATORY for Conv/ConvTranspose)"
+      }
+    ]
+  },
+  {
+    "id": "C05",
+    "category": "permissions",
+    "kind": "requirement",
+    "source_lines": "9;25",
+    "introduced_in": "core",
+    "text": "Do not modify utils/ infrastructure.",
+    "observation": "Compare file hashes and tool write attempts.",
+    "source_evidence": [
+      {
+        "start": 9,
+        "end": 9,
+        "text": "- **NO modifications to utils/ directory**"
+      },
+      {
+        "start": 25,
+        "end": 25,
+        "text": "├── utils/                # DO NOT modify - Compilation, verification and profiling tools "
+      }
+    ]
+  },
+  {
+    "id": "C06",
+    "category": "permissions",
+    "kind": "requirement",
+    "source_lines": "10;22-23",
+    "introduced_in": "core",
+    "text": "Do not modify root binding.cpp or binding_registry.h.",
+    "observation": "Compare file hashes and tool write attempts.",
+    "source_evidence": [
+      {
+        "start": 10,
+        "end": 10,
+        "text": "- **NO modifications to binding.cpp or binding_registry.h**: These are fixed infrastructure"
+      },
+      {
+        "start": 22,
+        "end": 23,
+        "text": "├── binding_registry.h    # Do NOT modify - registration system\n├── binding.cpp           # Do NOT modify - main module binding"
+      }
+    ]
+  },
+  {
+    "id": "C07",
+    "category": "permissions",
+    "kind": "requirement",
+    "source_lines": "26",
+    "introduced_in": "core",
+    "text": "Keep the original model.py unchanged.",
+    "observation": "Compare model.py hash against frozen reference.",
+    "source_evidence": [
+      {
+        "start": 26,
+        "end": 26,
+        "text": "├── model.py              # DO NOT modify - Original PyTorch model"
+      }
+    ]
+  },
+  {
+    "id": "C08",
+    "category": "workspace",
+    "kind": "requirement",
+    "source_lines": "16;24;27;39;244;368",
+    "introduced_in": "core",
+    "text": "Implement the candidate in model_new.py and kernels/; kernel fixes belong in kernels/*.cu and *_binding.cpp.",
+    "observation": "Source paths and edit history; model_new.py is explicitly allowed by workspace diagram.",
+    "source_evidence": [
+      {
+        "start": 16,
+        "end": 16,
+        "text": "- **Focus**: Implement kernels in `kernels/` directory only"
+      },
+      {
+        "start": 24,
+        "end": 24,
+        "text": "├── kernels/              # YOUR WORK: Implement all kernels here"
+      },
+      {
+        "start": 27,
+        "end": 27,
+        "text": "└── model_new.py          # YOUR WORK: Your optimized model using custom ops."
+      },
+      {
+        "start": 39,
+        "end": 39,
+        "text": "Create paired files in `kernels/`:"
+      },
+      {
+        "start": 244,
+        "end": 244,
+        "text": "3. Fix in kernels/*.cu and *_binding.cpp ONLY"
+      },
+      {
+        "start": 368,
+        "end": 368,
+        "text": "3. **Focus modifications in kernels/ directory** - Never modify infrastructure files"
+      }
+    ]
+  },
+  {
+    "id": "C09",
+    "category": "structure",
+    "kind": "requirement",
+    "source_lines": "31-33;366",
+    "introduced_in": "workflow",
+    "text": "Keep custom CUDA kernels in .cu files and tensor/Python bindings in separate *_binding.cpp files; .cpp compute wrappers are for cuBLAS/cuDNN rather than custom CUDA kernels.",
+    "observation": "Inspect source files and actual compiled sources.",
+    "source_evidence": [
+      {
+        "start": 31,
+        "end": 33,
+        "text": "- **`.cu` files**: CUDA kernels with `__global__` functions (custom implementations)\n- **`.cpp` files**: cuDNN/cuBLAS API calls (NO custom kernels)\n- **`_binding.cpp` files**: PyTorch tensor handling and Python bindings"
+      },
+      {
+        "start": 366,
+        "end": 366,
+        "text": "1. **Keep .cu and _binding.cpp files separate** - Faster compilation"
+      }
+    ]
+  },
+  {
+    "id": "C10",
+    "category": "interface",
+    "kind": "example",
+    "source_lines": "93-95",
+    "introduced_in": "condensed",
+    "text": "Prefer torch/types.h and torch/csrc/utils/pybind.h instead of torch/extension.h for faster binding compilation.",
+    "observation": "Conditional compile-cost suggestion, not a correctness failure.",
+    "source_evidence": [
+      {
+        "start": 93,
+        "end": 95,
+        "text": "// Use this two headers to replace torch/extension.h for faster compilation\n#include <torch/types.h>\n#include <torch/csrc/utils/pybind.h>"
+      }
+    ]
+  },
+  {
+    "id": "C11",
+    "category": "interface",
+    "kind": "example",
+    "source_lines": "112-115",
+    "introduced_in": "condensed",
+    "text": "Validate CUDA placement, contiguity and supported dtype in the binding.",
+    "observation": "Inspect guards and invalid-input tests.",
+    "source_evidence": [
+      {
+        "start": 112,
+        "end": 115,
+        "text": "    // Input validation\n    TORCH_CHECK(input.is_cuda(), \"Input must be a CUDA tensor\");\n    TORCH_CHECK(input.is_contiguous(), \"Input must be contiguous\");\n    TORCH_CHECK(input.dtype() == torch::kFloat32, \"Input must be float32\");"
+      }
+    ]
+  },
+  {
+    "id": "C12",
+    "category": "interface",
+    "kind": "example",
+    "source_lines": "119-120",
+    "introduced_in": "condensed",
+    "text": "Launch on the current PyTorch CUDA stream.",
+    "observation": "Inspect launcher stream and test a non-default stream.",
+    "source_evidence": [
+      {
+        "start": 119,
+        "end": 120,
+        "text": "    // Get current CUDA stream (correct way)\n    cudaStream_t stream = c10::cuda::getCurrentCUDAStream().stream();"
+      }
+    ]
+  },
+  {
+    "id": "C13",
+    "category": "interface",
+    "kind": "example",
+    "source_lines": "134-143",
+    "introduced_in": "workflow",
+    "text": "Register custom binding functions through REGISTER_BINDING.",
+    "observation": "Successful build/import and binding registry inspection.",
+    "source_evidence": [
+      {
+        "start": 134,
+        "end": 143,
+        "text": "// Registration function\nvoid register_my_kernel(pybind11::module& m) {\n    m.def(\"my_kernel_forward\", &my_kernel_forward, \n          \"My kernel forward\",\n          py::arg(\"input\"),\n          py::arg(\"config\") = 0);\n}\n\n// Auto-register\nREGISTER_BINDING(my_kernel, register_my_kernel);"
+      }
+    ]
+  },
+  {
+    "id": "C14",
+    "category": "interface",
+    "kind": "requirement",
+    "source_lines": "153",
+    "introduced_in": "workflow",
+    "text": "Match the original Model constructor signature in ModelNew.",
+    "observation": "Instantiate with frozen constructor arguments.",
+    "source_evidence": [
+      {
+        "start": 153,
+        "end": 153,
+        "text": "    def __init__(self, ...):  # MUST match Model signature exactly"
+      }
+    ]
+  },
+  {
+    "id": "C15",
+    "category": "interface",
+    "kind": "requirement",
+    "source_lines": "155-157",
+    "introduced_in": "workflow",
+    "text": "Preserve parameter structure so the original state_dict loads into ModelNew.",
+    "observation": "Load randomized original parameters, including non-default weights.",
+    "source_evidence": [
+      {
+        "start": 155,
+        "end": 157,
+        "text": "        # Initialize parameters - preserve original structure for state_dict compatibility\n        self.weight = nn.Parameter(torch.randn(...))\n        self.bias = nn.Parameter(torch.zeros(...))"
+      }
+    ]
+  },
+  {
+    "id": "C16",
+    "category": "workflow",
+    "kind": "requirement",
+    "source_lines": "166-173;285-292",
+    "introduced_in": "workflow",
+    "text": "Compile for the actual GPU architecture, then execute verification and profiling using the supplied platform-equivalent commands.",
+    "observation": "Tool events, exit codes and raw outputs; successful process exit alone is insufficient.",
+    "source_evidence": [
+      {
+        "start": 166,
+        "end": 173,
+        "text": "### Step 2: Compile and Test\n```bash\n# Compile with architecture-specific optimizations\nTORCH_CUDA_ARCH_LIST=9.0 bash utils/compile.sh\n\n# Test in sandbox \nsudo python3 -m utils.verification\nsudo python3 -m utils.profiling"
+      },
+      {
+        "start": 285,
+        "end": 292,
+        "text": "# Use sudo to run sandbox utilities\nsudo python3 -m utils.verification\nsudo python3 -m utils.profiling\n```\n\n### Compilation\n```bash\nTORCH_CUDA_ARCH_LIST=9.0 bash utils/compile.sh"
+      }
+    ]
+  },
+  {
+    "id": "C17",
+    "category": "optimization",
+    "kind": "recommendation",
+    "source_lines": "180-183;299-301",
+    "introduced_in": "condensed",
+    "text": "Prioritize algorithmic changes such as fusion, shared-memory reuse and coalesced memory access when applicable.",
+    "observation": "Review the optimization hypothesis against the task; not all techniques suit all tasks.",
+    "source_evidence": [
+      {
+        "start": 180,
+        "end": 183,
+        "text": "**Priority 1: Algorithmic (>50% impact)**\n- Kernel fusion - reduce memory traffic\n- Shared memory tiling - improve data reuse\n- Memory coalescing - consecutive access patterns"
+      },
+      {
+        "start": 299,
+        "end": 301,
+        "text": "- [ ] **Memory Coalescing**: Consecutive threads access consecutive addresses\n- [ ] **Kernel Fusion**: Combine operations to reduce memory traffic\n- [ ] **Shared Memory**: Cache frequently accessed data"
+      }
+    ]
+  },
+  {
+    "id": "C18",
+    "category": "optimization",
+    "kind": "recommendation",
+    "source_lines": "185-188;306-308",
+    "introduced_in": "condensed",
+    "text": "Next consider vectorized loads, warp primitives and occupancy tuning when useful.",
+    "observation": "Inspect implementation and measurements; no unconditional requirement to use all techniques.",
+    "source_evidence": [
+      {
+        "start": 185,
+        "end": 188,
+        "text": "**Priority 2: Hardware Utilization (20-50% impact)**\n- Vectorized loads (float2/float4)\n- Warp-level primitives (__shfl_sync, __ballot_sync)\n- Occupancy tuning (block size, register usage)"
+      },
+      {
+        "start": 306,
+        "end": 308,
+        "text": "- [ ] **Vectorized Memory**: Use float2/float4 for higher throughput\n- [ ] **Warp Primitives**: __shfl_sync for inter-thread communication\n- [ ] **Occupancy Tuning**: Balance block size and resource usage"
+      }
+    ]
+  },
+  {
+    "id": "C19",
+    "category": "optimization",
+    "kind": "recommendation",
+    "source_lines": "190-193;314;317",
+    "introduced_in": "condensed",
+    "text": "Consider instruction-level parallelism, appropriate mixed precision, prefetching and double buffering as finer optimizations.",
+    "observation": "Check accuracy and measured benefit when applied.",
+    "source_evidence": [
+      {
+        "start": 190,
+        "end": 193,
+        "text": "**Priority 3: Fine-tuning (<20% impact)**\n- Instruction-level parallelism\n- Mixed precision (FP16/TF32)\n- Prefetching and double buffering"
+      },
+      {
+        "start": 314,
+        "end": 314,
+        "text": "- [ ] **Mixed Precision**: FP16/TF32 where appropriate"
+      },
+      {
+        "start": 317,
+        "end": 317,
+        "text": "- [ ] **Double Buffering**: Overlap computation with memory transfers"
+      }
+    ]
+  },
+  {
+    "id": "C20",
+    "category": "workflow",
+    "kind": "requirement",
+    "source_lines": "195-196",
+    "introduced_in": "workflow",
+    "text": "Use parameter tuning as a last resort after algorithmic options are exhausted and performance is within 1.2 times the target.",
+    "observation": "Ordered tool/implementation history and measured proximity.",
+    "source_evidence": [
+      {
+        "start": 195,
+        "end": 196,
+        "text": "#### 3.2 Parameter Tuning (Last Resort)\nOnly when within 1.2x of target and algorithmic options exhausted:"
+      }
+    ]
+  },
+  {
+    "id": "C21",
+    "category": "interface",
+    "kind": "requirement",
+    "source_lines": "110-111;367",
+    "introduced_in": "workflow",
+    "text": "Expose configuration parameters through bindings for runtime tuning without recompilation.",
+    "observation": "Binding and ModelNew interfaces; distinguish capability from actual tuning need.",
+    "source_evidence": [
+      {
+        "start": 110,
+        "end": 111,
+        "text": "// PyTorch wrapper with config parameter\ntorch::Tensor my_kernel_forward(torch::Tensor input, int config = 0) {"
+      },
+      {
+        "start": 367,
+        "end": 367,
+        "text": "2. **Pass config parameters through bindings** - Enable runtime tuning without recompilation"
+      }
+    ]
+  },
+  {
+    "id": "C22",
+    "category": "workflow",
+    "kind": "requirement",
+    "source_lines": "236-245",
+    "introduced_in": "workflow",
+    "text": "When correctness fails, debug the failing kernel, fix it, recompile and retest until it passes within the external experiment budget.",
+    "observation": "Failure followed by actual repair and retest; budget termination remains a failure.",
+    "source_evidence": [
+      {
+        "start": 236,
+        "end": 245,
+        "text": "#### Correctness Failures\n**MUST iterate until correctness passes - NO EXCEPTIONS**\n1. Debug the specific failing kernel\n2. Common issues to check:\n   - Boundary conditions (tid < size)\n   - Synchronization (__syncthreads placement)\n   - Data types and precision\n   - Memory alignment\n3. Fix in kernels/*.cu and *_binding.cpp ONLY\n4. Recompile and test"
+      }
+    ]
+  },
+  {
+    "id": "C23",
+    "category": "explanation",
+    "kind": "requirement",
+    "source_lines": "251-252;370",
+    "introduced_in": "workflow",
+    "text": "Before implementing each optimization, document the expected effect and why it should help.",
+    "observation": "Visible pre-change explanation, not private reasoning or a retrospective claim.",
+    "source_evidence": [
+      {
+        "start": 251,
+        "end": 252,
+        "text": "For each iteration:\n1. **Document expectation**: \"Fusion will eliminate 3 kernels, expect ~20% speedup\""
+      },
+      {
+        "start": 370,
+        "end": 370,
+        "text": "5. **Document performance expectations** - Before implementing, state expected gains"
+      }
+    ]
+  },
+  {
+    "id": "C24",
+    "category": "workflow",
+    "kind": "requirement",
+    "source_lines": "253-254;369",
+    "introduced_in": "workflow",
+    "text": "Debug the optimized version instead of reverting to a slower version merely to avoid fixing it.",
+    "observation": "Version snapshots, correctness feedback and candidate timing.",
+    "source_evidence": [
+      {
+        "start": 253,
+        "end": 254,
+        "text": "2. **Apply optimization aggressively**: Don't revert to slow versions\n3. **Debug if correctness fails**: Fix the optimized version"
+      },
+      {
+        "start": 369,
+        "end": 369,
+        "text": "4. **Be aggressive with optimizations** - Don't revert to slow versions when debugging"
+      }
+    ]
+  },
+  {
+    "id": "C25",
+    "category": "explanation",
+    "kind": "requirement",
+    "source_lines": "255",
+    "introduced_in": "workflow",
+    "text": "Measure the optimization and explain why performance changed.",
+    "observation": "Explanation checked against the measured comparison, including regressions.",
+    "source_evidence": [
+      {
+        "start": 255,
+        "end": 255,
+        "text": "4. **Measure and analyze**: Understand why performance changed"
+      }
+    ]
+  },
+  {
+    "id": "C26",
+    "category": "workflow",
+    "kind": "requirement",
+    "source_lines": "256;258-263;362",
+    "introduced_in": "workflow",
+    "text": "Continue exploring improvements after the minimum target is met until no further improvement or diminishing returns; the source suggests 1-2 initial and 3-5 further iterations.",
+    "observation": "Iteration history under the common external budget; suggested counts are recorded separately from performance quality.",
+    "source_evidence": [
+      {
+        "start": 256,
+        "end": 256,
+        "text": "5. **Continue optimizing**: Even if you meet the minimum, keep pushing for better performance"
+      },
+      {
+        "start": 258,
+        "end": 263,
+        "text": "**Iteration strategy**:\n- First 1-2 iterations: Achieve the minimum 5% improvement\n- Next 3-5 iterations: Push for maximum possible speedup\n- Continue until no further improvements possible or diminishing returns\n\n**Remember**: The goal is the BEST possible performance, not just meeting the minimum!"
+      },
+      {
+        "start": 362,
+        "end": 362,
+        "text": "- Continue optimizing even after meeting the minimum requirement"
+      }
+    ]
+  },
+  {
+    "id": "C27",
+    "category": "cleanup",
+    "kind": "requirement",
+    "source_lines": "265-278;355;372",
+    "introduced_in": "workflow",
+    "text": "Before completion, retain only the final optimized kernels and bindings; remove intermediate versions, old/test attempts and backups.",
+    "observation": "Final artifact inventory with semantic review of necessary support files.",
+    "source_evidence": [
+      {
+        "start": 265,
+        "end": 278,
+        "text": "### Step 5: Final Cleanup (MANDATORY BEFORE COMPLETION)\n\nBefore declaring the task complete, clean up the kernels/ directory to contain ONLY the final optimized version:\n\n**Remove all intermediate attempts**:\n```bash\n# Remove version files, old attempts, test versions\nrm kernels/*_v[0-9].cu kernels/*_old.cu kernels/*_test.cu kernels/*.bak\n\n# Keep only the final optimized implementation\n# Example final structure:\n# kernels/\n#   ├── fused_kernel.cu           # Final implementation\n#   └── fused_kernel_binding.cpp  # Final binding"
+      },
+      {
+        "start": 355,
+        "end": 355,
+        "text": "- 🧹 **Clean Final Code**: kernels/ directory contains ONLY final optimized version (no intermediate attempts)"
+      },
+      {
+        "start": 372,
+        "end": 372,
+        "text": "7. **Clean up before completion** - Remove ALL intermediate attempts from kernels/, keep ONLY final version"
+      }
+    ]
+  },
+  {
+    "id": "C28",
+    "category": "correctness",
+    "kind": "recommendation",
+    "source_lines": "240;303;320",
+    "introduced_in": "condensed",
+    "text": "Check thread bounds and handle non-divisible input sizes.",
+    "observation": "Frozen boundary-size tests and memory-access review.",
+    "source_evidence": [
+      {
+        "start": 240,
+        "end": 240,
+        "text": "   - Boundary conditions (tid < size)"
+      },
+      {
+        "start": 303,
+        "end": 303,
+        "text": "- [ ] **Boundary Checks**: Validate all array accesses (tid < size)"
+      },
+      {
+        "start": 320,
+        "end": 320,
+        "text": "- [ ] **Thread Bounds**: Check tid < N before array access"
+      }
+    ]
+  },
+  {
+    "id": "C29",
+    "category": "correctness",
+    "kind": "recommendation",
+    "source_lines": "241;321",
+    "introduced_in": "condensed",
+    "text": "Place synchronization correctly before shared-memory reuse.",
+    "observation": "Kernel review and repeated numerical tests where shared memory is used.",
+    "source_evidence": [
+      {
+        "start": 241,
+        "end": 241,
+        "text": "   - Synchronization (__syncthreads placement)"
+      },
+      {
+        "start": 321,
+        "end": 321,
+        "text": "- [ ] **Synchronization**: __syncthreads() before shared memory reuse"
+      }
+    ]
+  },
+  {
+    "id": "C30",
+    "category": "correctness",
+    "kind": "recommendation",
+    "source_lines": "242;322",
+    "introduced_in": "condensed",
+    "text": "Use correct data types and conversions.",
+    "observation": "Independent correctness across declared supported dtypes.",
+    "source_evidence": [
+      {
+        "start": 242,
+        "end": 242,
+        "text": "   - Data types and precision"
+      },
+      {
+        "start": 322,
+        "end": 322,
+        "text": "- [ ] **Data Types**: Ensure correct types and conversions"
+      }
+    ]
+  },
+  {
+    "id": "C31",
+    "category": "correctness",
+    "kind": "recommendation",
+    "source_lines": "243;323",
+    "introduced_in": "condensed",
+    "text": "Respect memory alignment and avoid out-of-bounds access.",
+    "observation": "Edge cases and memory-access review; untested paths stay unverified.",
+    "source_evidence": [
+      {
+        "start": 243,
+        "end": 243,
+        "text": "   - Memory alignment"
+      },
+      {
+        "start": 323,
+        "end": 323,
+        "text": "- [ ] **Memory Safety**: No out-of-bounds access"
+      }
+    ]
+  },
+  {
+    "id": "C32",
+    "category": "correctness",
+    "kind": "recommendation",
+    "source_lines": "324;338",
+    "introduced_in": "condensed",
+    "text": "Use numerically stable algorithms and investigate NaN/Inf, division by zero and missing bounds checks.",
+    "observation": "Numerical edge inputs under the original task's supported domain.",
+    "source_evidence": [
+      {
+        "start": 324,
+        "end": 324,
+        "text": "- [ ] **Numerical Stability**: Handle NaN/Inf, use stable algorithms"
+      },
+      {
+        "start": 338,
+        "end": 338,
+        "text": "| NaN/Inf results | 1. Check division by zero<br>2. Verify numerical stability<br>3. Add bounds checking |"
+      }
+    ]
+  },
+  {
+    "id": "C33",
+    "category": "optimization",
+    "kind": "recommendation",
+    "source_lines": "302",
+    "introduced_in": "condensed",
+    "text": "Consider grid-stride loops for data larger than one grid.",
+    "observation": "Applicability review, not an unconditional syntax requirement.",
+    "source_evidence": [
+      {
+        "start": 302,
+        "end": 302,
+        "text": "- [ ] **Grid-Stride Loops**: Handle data larger than grid size"
+      }
+    ]
+  },
+  {
+    "id": "C34",
+    "category": "optimization",
+    "kind": "recommendation",
+    "source_lines": "309",
+    "introduced_in": "condensed",
+    "text": "Avoid shared-memory bank conflicts, for example with padding.",
+    "observation": "Only applicable when shared-memory access may conflict.",
+    "source_evidence": [
+      {
+        "start": 309,
+        "end": 309,
+        "text": "- [ ] **Bank Conflict Avoidance**: Pad shared memory arrays"
+      }
+    ]
+  },
+  {
+    "id": "C35",
+    "category": "optimization",
+    "kind": "recommendation",
+    "source_lines": "310",
+    "introduced_in": "condensed",
+    "text": "Consider loop unrolling for instruction-level parallelism.",
+    "observation": "Task-specific implementation and timing evidence.",
+    "source_evidence": [
+      {
+        "start": 310,
+        "end": 310,
+        "text": "- [ ] **Loop Unrolling**: Increase instruction-level parallelism"
+      }
+    ]
+  },
+  {
+    "id": "C36",
+    "category": "optimization",
+    "kind": "recommendation",
+    "source_lines": "313",
+    "introduced_in": "condensed",
+    "text": "Consider tensor cores for eligible GEMM operations.",
+    "observation": "Not applicable to elementwise or reduction-only tasks.",
+    "source_evidence": [
+      {
+        "start": 313,
+        "end": 313,
+        "text": "- [ ] **Tensor Cores**: Use WMMA/MMA for eligible GEMM operations"
+      }
+    ]
+  },
+  {
+    "id": "C37",
+    "category": "optimization",
+    "kind": "recommendation",
+    "source_lines": "315",
+    "introduced_in": "condensed",
+    "text": "Consider persistent kernels to retain data in registers when useful.",
+    "observation": "Task-specific applicability and benefit.",
+    "source_evidence": [
+      {
+        "start": 315,
+        "end": 315,
+        "text": "- [ ] **Persistent Kernels**: Keep data in registers across iterations"
+      }
+    ]
+  },
+  {
+    "id": "C38",
+    "category": "optimization",
+    "kind": "recommendation",
+    "source_lines": "316",
+    "introduced_in": "condensed",
+    "text": "Consider CUDA graphs to reduce launch overhead.",
+    "observation": "Task-specific applicability and timing methodology.",
+    "source_evidence": [
+      {
+        "start": 316,
+        "end": 316,
+        "text": "- [ ] **CUDA Graphs**: Reduce launch overhead"
+      }
+    ]
+  },
+  {
+    "id": "C39",
+    "category": "diagnostics",
+    "kind": "recommendation",
+    "source_lines": "331",
+    "introduced_in": "condensed",
+    "text": "For undefined-symbol errors, check matching extern C declarations.",
+    "observation": "Applies only after the corresponding compiler/linker failure.",
+    "source_evidence": [
+      {
+        "start": 331,
+        "end": 331,
+        "text": "| undefined symbol | Check extern \"C\" declarations match |"
+      }
+    ]
+  },
+  {
+    "id": "C40",
+    "category": "diagnostics",
+    "kind": "recommendation",
+    "source_lines": "332",
+    "introduced_in": "condensed",
+    "text": "For missing GPU kernel images, check that the compilation architecture matches the GPU.",
+    "observation": "Applies only to the corresponding runtime failure.",
+    "source_evidence": [
+      {
+        "start": 332,
+        "end": 332,
+        "text": "| no kernel image | Verify TORCH_CUDA_ARCH_LIST matches GPU |"
+      }
+    ]
+  },
+  {
+    "id": "C41",
+    "category": "diagnostics",
+    "kind": "recommendation",
+    "source_lines": "337",
+    "introduced_in": "condensed",
+    "text": "For incorrect values, inspect math and indexing and test simple inputs.",
+    "observation": "Failure-driven diagnostic trace.",
+    "source_evidence": [
+      {
+        "start": 337,
+        "end": 337,
+        "text": "| Wrong output values | 1. Check kernel math<br>2. Verify indexing<br>3. Test with simple inputs |"
+      }
+    ]
+  },
+  {
+    "id": "C42",
+    "category": "diagnostics",
+    "kind": "recommendation",
+    "source_lines": "339",
+    "introduced_in": "condensed",
+    "text": "For shape mismatches, inspect tensor shapes, dimension calculations and reduction logic.",
+    "observation": "Failure-driven diagnostic trace.",
+    "source_evidence": [
+      {
+        "start": 339,
+        "end": 339,
+        "text": "| Mismatched shapes | 1. Print tensor shapes<br>2. Check dimension calculations<br>3. Verify reduction logic |"
+      }
+    ]
+  },
+  {
+    "id": "C43",
+    "category": "diagnostics",
+    "kind": "recommendation",
+    "source_lines": "344-347",
+    "introduced_in": "condensed",
+    "text": "For poor performance, investigate missing fusion, occupancy, coalescing and excessive kernel count as relevant to the observed symptom.",
+    "observation": "Hypothesis and actual measurements, not mandatory use of every optimization.",
+    "source_evidence": [
+      {
+        "start": 344,
+        "end": 347,
+        "text": "| Slower than baseline | No fusion | Combine kernels |\n| Low SM efficiency | Poor occupancy | Tune block size |\n| Low memory throughput | Uncoalesced access | Restructure memory pattern |\n| High kernel count | Missing fusion | Implement compound operations |"
+      }
+    ]
+  },
+  {
+    "id": "C44",
+    "category": "correctness",
+    "kind": "requirement",
+    "source_lines": "354",
+    "introduced_in": "core",
+    "text": "Pass numerical comparison with atol=1e-2 and rtol=1e-2.",
+    "observation": "Independent execution against the frozen original model.",
+    "source_evidence": [
+      {
+        "start": 354,
+        "end": 354,
+        "text": "- ✅ **Correctness**: Test must pass (atol=1e-2, rtol=1e-2)"
+      }
+    ]
+  },
+  {
+    "id": "C45",
+    "category": "explanation",
+    "kind": "requirement",
+    "source_lines": "371",
+    "introduced_in": "workflow",
+    "text": "Give tests descriptive names that show the optimizations being tested.",
+    "observation": "Tool/test output and explanation, not merely presence of a heading.",
+    "source_evidence": [
+      {
+        "start": 371,
+        "end": 371,
+        "text": "6. **Test with descriptive names** - Show which optimizations are applied"
+      }
+    ]
+  }
+]
