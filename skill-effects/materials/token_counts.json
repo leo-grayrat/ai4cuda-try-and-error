@@ -2,7 +2,7 @@
   "tokenizer_repository": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash",
   "revision": "314113f8a7dadb388215396ba5fbee2c610a04d6",
   "tokenizer_sha256": "c90dfa01249db1be4245780a052ede752e1361c612ac6d08e2bdada7d599476b",
-  "measured_utc": "2026-10-18T23:38:53.003583+00:00",
+  "measured_utc": "2026-10-18T23:46:14.652964+00:00",
   "scope": "document text only; actual agent request usage is recorded separately",
   "documents": [
     {
@@ -67,6 +67,13 @@
       "lines": 509,
       "characters": 30138,
       "text_tokens": 6913
+    },
+    {
+      "path": "evidence/growth-05/cumulative.md",
+      "sha256": "1c6ed66d13928c0f3fc31a71f46d651a30d90b6c890ed064bb7f484afe54b6f6",
+      "lines": 541,
+      "characters": 35652,
+      "text_tokens": 8069
     }
   ],
   "archived_api_calibration": "evidence/token-calibration/calibration.json"

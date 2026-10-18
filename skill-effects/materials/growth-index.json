@@ -1,0 +1,236 @@
+{
+  "created_utc": "2026-10-18T23:49:02.024307+00:00",
+  "scope": "Index archived append stages and their construction costs, never live files.\n\nThe cost scope is the development episodes that supplied these additions and\ntheir rule-writing calls, not every exploratory call made by the whole project.",
+  "price_source": "https://api-docs.deepseek.com/quick_start/pricing/",
+  "price_sha256": "9dec1c6496baab41ce0c3b7e7d897c8c9b0e45f028b3add073a69fa0efc85b12",
+  "cost_interpretation": "Published all-off-peak/all-peak bounds, not a bill. Reasoning is included in output and is not charged again.",
+  "stages": [
+    {
+      "stage": 1,
+      "directory": "evidence/growth-01",
+      "provenance_sha256": "b1d1b20a5e71cac8c01a61c4d221bb3fb8b8c0511f1f6f8f16d89f61f2e75471",
+      "lines": 411,
+      "source_bullets_added": 21,
+      "trial": "runs\\dev-axpby-original-01",
+      "task": "pinned upstream AXPBY example, unchanged model.py",
+      "trial_state": "step_budget",
+      "actor_requests": 24,
+      "actor_usage": {
+        "input_tokens": 550246,
+        "uncached_input_tokens": 20326,
+        "cached_input_tokens": 529920,
+        "output_tokens": 24368,
+        "reasoning_tokens": 12334,
+        "total_tokens": 574614
+      },
+      "maintenance_attempts": 2,
+      "maintenance_usage": {
+        "input_tokens": 21422,
+        "uncached_input_tokens": 10926,
+        "cached_input_tokens": 10496,
+        "output_tokens": 16869,
+        "reasoning_tokens": 15953,
+        "total_tokens": 38291
+      },
+      "final_evaluation": {
+        "compile": false,
+        "verify": false,
+        "benchmark": false
+      },
+      "construction_cost_bounds": {
+        "actor": {
+          "off_peak_usd": 0.01925946,
+          "peak_usd": 0.03851892
+        },
+        "maintenance": {
+          "off_peak_usd": 0.011791788,
+          "peak_usd": 0.023583576
+        }
+      }
+    },
+    {
+      "stage": 2,
+      "directory": "evidence/growth-02",
+      "provenance_sha256": "6ff346da23e7d40eaf118a085d6179eb3bb298427255814a0939123e7b89e878",
+      "lines": 444,
+      "source_bullets_added": 19,
+      "trial": "runs\\dev-rmsnorm-growth01-02",
+      "task": "dev_rmsnorm",
+      "trial_state": "step_budget",
+      "actor_requests": 32,
+      "actor_usage": {
+        "input_tokens": 1067090,
+        "uncached_input_tokens": 16594,
+        "cached_input_tokens": 1050496,
+        "output_tokens": 42045,
+        "reasoning_tokens": 21558,
+        "total_tokens": 1109135
+      },
+      "maintenance_attempts": 1,
+      "maintenance_usage": {
+        "input_tokens": 12788,
+        "uncached_input_tokens": 9460,
+        "cached_input_tokens": 3328,
+        "output_tokens": 8483,
+        "reasoning_tokens": 7625,
+        "total_tokens": 21271
+      },
+      "final_evaluation": {
+        "compile": true,
+        "verify": true,
+        "benchmark": true
+      },
+      "construction_cost_bounds": {
+        "actor": {
+          "off_peak_usd": 0.030867588,
+          "peak_usd": 0.061735176
+        },
+        "maintenance": {
+          "off_peak_usd": 0.0065187840000000006,
+          "peak_usd": 0.013037568000000001
+        }
+      }
+    },
+    {
+      "stage": 3,
+      "directory": "evidence/growth-03",
+      "provenance_sha256": "6dc9279dcc18549d10eb26aa22a912719d9ba597fd9a93bac3b61eee7efbe937",
+      "lines": 480,
+      "source_bullets_added": 20,
+      "trial": "runs\\growth-series-01-episode-01-dev_cumsum",
+      "task": "dev_cumsum",
+      "trial_state": "step_budget",
+      "actor_requests": 64,
+      "actor_usage": {
+        "input_tokens": 4343783,
+        "uncached_input_tokens": 31335,
+        "cached_input_tokens": 4312448,
+        "output_tokens": 95502,
+        "reasoning_tokens": 48673,
+        "total_tokens": 4439285
+      },
+      "maintenance_attempts": 1,
+      "maintenance_usage": {
+        "input_tokens": 13751,
+        "uncached_input_tokens": 9527,
+        "cached_input_tokens": 4224,
+        "output_tokens": 6438,
+        "reasoning_tokens": 5524,
+        "total_tokens": 20189
+      },
+      "final_evaluation": {
+        "compile": true,
+        "verify": true,
+        "benchmark": true
+      },
+      "construction_cost_bounds": {
+        "actor": {
+          "off_peak_usd": 0.07493879399999999,
+          "peak_usd": 0.14987758799999998
+        },
+        "maintenance": {
+          "off_peak_usd": 0.005304522,
+          "peak_usd": 0.010609044
+        }
+      }
+    },
+    {
+      "stage": 4,
+      "directory": "evidence/growth-04",
+      "provenance_sha256": "07f998c17d34395604710a41aa9f199a2197fa0c7f2ebb998318ed58a0836064",
+      "lines": 509,
+      "source_bullets_added": 15,
+      "trial": "runs\\growth-series-01-episode-02-dev_rmsnorm",
+      "task": "dev_rmsnorm",
+      "trial_state": "submitted",
+      "actor_requests": 54,
+      "actor_usage": {
+        "input_tokens": 3398804,
+        "uncached_input_tokens": 32020,
+        "cached_input_tokens": 3366784,
+        "output_tokens": 84245,
+        "reasoning_tokens": 47663,
+        "total_tokens": 3483049
+      },
+      "maintenance_attempts": 1,
+      "maintenance_usage": {
+        "input_tokens": 17177,
+        "uncached_input_tokens": 12057,
+        "cached_input_tokens": 5120,
+        "output_tokens": 5849,
+        "reasoning_tokens": 5012,
+        "total_tokens": 23026
+      },
+      "final_evaluation": {
+        "compile": true,
+        "verify": true,
+        "benchmark": true
+      },
+      "construction_cost_bounds": {
+        "actor": {
+          "off_peak_usd": 0.065450352,
+          "peak_usd": 0.130900704
+        },
+        "maintenance": {
+          "off_peak_usd": 0.005333310000000001,
+          "peak_usd": 0.010666620000000002
+        }
+      }
+    },
+    {
+      "stage": 5,
+      "directory": "evidence/growth-05",
+      "provenance_sha256": "cc393a0391473902c5e23a6c87819fa0bab470c51409d84dace7b19e46e3ca56",
+      "lines": 541,
+      "source_bullets_added": 18,
+      "trial": "runs\\growth-series-01-episode-03-axpby",
+      "task": "axpby",
+      "trial_state": "step_budget",
+      "actor_requests": 64,
+      "actor_usage": {
+        "input_tokens": 3103842,
+        "uncached_input_tokens": 30434,
+        "cached_input_tokens": 3073408,
+        "output_tokens": 64154,
+        "reasoning_tokens": 47460,
+        "total_tokens": 3167996
+      },
+      "maintenance_attempts": 1,
+      "maintenance_usage": {
+        "input_tokens": 18896,
+        "uncached_input_tokens": 12880,
+        "cached_input_tokens": 6016,
+        "output_tokens": 8783,
+        "reasoning_tokens": 7626,
+        "total_tokens": 27679
+      },
+      "final_evaluation": {
+        "compile": true,
+        "verify": true,
+        "benchmark": true
+      },
+      "construction_cost_bounds": {
+        "actor": {
+          "off_peak_usd": 0.052277724000000005,
+          "peak_usd": 0.10455544800000001
+        },
+        "maintenance": {
+          "off_peak_usd": 0.007219848,
+          "peak_usd": 0.014439696
+        }
+      }
+    }
+  ],
+  "construction_usage": {
+    "input_tokens": 12547799,
+    "cached_input_tokens": 12362240,
+    "uncached_input_tokens": 185559,
+    "output_tokens": 356736,
+    "reasoning_tokens": 219428,
+    "total_tokens": 12904535
+  },
+  "construction_cost_bounds": {
+    "off_peak_usd": 0.27896217,
+    "peak_usd": 0.55792434
+  }
+}

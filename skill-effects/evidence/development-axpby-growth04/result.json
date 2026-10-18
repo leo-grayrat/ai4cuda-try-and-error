@@ -1,0 +1,45 @@
+{
+  "state": "step_budget",
+  "seconds": 819.8009205999988,
+  "requests": 64,
+  "requests_attempted": 64,
+  "usage": {
+    "input_tokens": 3103842,
+    "uncached_input_tokens": 30434,
+    "cached_input_tokens": 3073408,
+    "output_tokens": 64154,
+    "reasoning_tokens": 47460,
+    "total_tokens": 3167996
+  },
+  "usage_error": null,
+  "source_findings": {},
+  "changed_infrastructure": [],
+  "final_evaluation": {
+    "compile": {
+      "ok": true,
+      "returncode": 0,
+      "seconds": 14.41930449999927,
+      "log": "tool-069-compile.log",
+      "output": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\nCompiling 3 files: binding.cpp, kernels\\axpby.cu, kernels\\axpby_binding.cpp\nCompile success: cuda_extension.pyd\n",
+      "changed_infrastructure": []
+    },
+    "verify": {
+      "ok": true,
+      "returncode": 0,
+      "seconds": 16.055078800000047,
+      "log": "tool-070-verify.log",
+      "output": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n[probe] enter call=0 pool=0 :\n[probe] enter call=1 pool=1 : (0:uc=2,suc=1)\n[probe] enter call=2 pool=2 : (0:uc=2,suc=1) (1:uc=2,suc=1)\n[PASS] case=0 seed=20261019: values, parameters, repeated calls, non-default stream\n[probe] enter call=3 pool=3 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1)\n[probe] enter call=4 pool=4 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1)\n[probe] enter call=5 pool=5 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1) (4:uc=2,suc=1)\n[PASS] case=0 seed=20261020: values, parameters, repeated calls, non-default stream\n[probe] enter call=6 pool=6 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1) (4:uc=2,suc=1) (5:uc=2,suc=1)\n[probe] enter call=7 pool=7 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1) (4:uc=2,suc=1) (5:uc=2,suc=1) (6:uc=2,suc=1)\n[probe] enter call=8 pool=8 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1) (4:uc=2,suc=1) (5:uc=2,suc=1) (6:uc=2,suc=1) (7:uc=2,suc=1)\n[PASS] case=1 seed=20261019: values, parameters, repeated calls, non-default stream\n[probe] enter call=9 pool=9 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1) (4:uc=2,suc=1) (5:uc=2,suc=1) (6:uc=2,suc=1) (7:uc=2,suc=1)\n[probe] enter call=10 pool=10 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1) (4:uc=2,suc=1) (5:uc=2,suc=1) (6:uc=2,suc=1) (7:uc=2,suc=1)\n[probe] enter call=11 pool=11 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1) (4:uc=2,suc=1) (5:uc=2,suc=1) (6:uc=2,suc=1) (7:uc=2,suc=1)\n[PASS] case=1 seed=20261020: values, parameters, repeated calls, non-default stream\n[PASS] case=2 seed=20261019: values, parameters, repeated calls, non-default stream\n[PASS] case=2 seed=20261020: values, parameters, repeated calls, non-default stream\n[PASS] independent verification complete\n",
+      "changed_infrastructure": [],
+      "gpu_wait_seconds": 0.00015310000162571669
+    },
+    "benchmark": {
+      "ok": true,
+      "returncode": 0,
+      "seconds": 14.51528419999886,
+      "log": "tool-071-benchmark.log",
+      "output": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n[probe] enter call=0 pool=0 :\n[probe] enter call=1 pool=1 : (0:uc=2,suc=1)\n[probe] enter call=2 pool=2 : (0:uc=2,suc=1) (1:uc=2,suc=1)\n[probe] enter call=3 pool=3 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1)\n[probe] enter call=4 pool=4 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1)\n[probe] enter call=5 pool=5 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1) (4:uc=2,suc=1)\n[probe] enter call=6 pool=6 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1) (4:uc=2,suc=1) (5:uc=2,suc=1)\n[probe] enter call=7 pool=7 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1) (4:uc=2,suc=1) (5:uc=2,suc=1) (6:uc=2,suc=1)\n[probe] enter call=8 pool=8 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1) (4:uc=2,suc=1) (5:uc=2,suc=1) (6:uc=2,suc=1) (7:uc=2,suc=1)\n[probe] enter call=9 pool=9 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1) (4:uc=2,suc=1) (5:uc=2,suc=1) (6:uc=2,suc=1) (7:uc=2,suc=1)\n[probe] enter call=10 pool=10 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1) (4:uc=2,suc=1) (5:uc=2,suc=1) (6:uc=2,suc=1) (7:uc=2,suc=1)\n[probe] enter call=11 pool=11 : (0:uc=2,suc=1) (1:uc=2,suc=1) (2:uc=2,suc=1) (3:uc=2,suc=1) (4:uc=2,suc=1) (5:uc=2,suc=1) (6:uc=2,suc=1) (7:uc=2,suc=1)\n{\n  \"method\": \"CUDA events around repeated complete model calls, including launch gaps; not summed kernel-only time\",\n  \"iterations_per_sample\": 100,\n  \"calibration_us\": 196.96000218391418,\n  \"matmul_precision\": \"highest, baseline TF32 disabled\",\n  \"samples_us\": {\n    \"eager\": [\n      91.30016326904297,\n      91.90719604492188,\n      85.20256042480469,\n      92.83807754516602,\n      98.99168014526367,\n      89.78943824768066,\n      93.06783676147461\n    ],\n    \"compiled\": [\n      90.91072082519531,\n      91.40768051147461,\n      91.63135528564453,\n      105.41536331176758,\n      93.25568199157715,\n      96.90143585205078,\n      92.46111869812012\n    ],\n    \"candidate\": [\n      45.20319938659668,\n      46.908159255981445,\n      45.56000232696533,\n      52.813758850097656,\n      51.9158411026001,\n      53.12511920928955,\n      53.04512023925781\n    ]\n  },\n  \"median_us\": {\n    \"eager\": 91.90719604492188,\n    \"compiled\": 92.46111869812012,\n    \"candidate\": 51.9158411026001\n  },\n  \"purpose\": \"paired candidate/reference timing for the current frozen task\"\n}\n",
+      "changed_infrastructure": [],
+      "gpu_wait_seconds": 0.00031989999843062833
+    }
+  }
+}
