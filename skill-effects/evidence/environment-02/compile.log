@@ -1,0 +1,3 @@
+Failed to find real location of C:\Users\34788\anaconda3\python.exe
+Compiling 3 files: binding.cpp, kernels\axpby.cu, kernels\axpby_binding.cpp
+Compile success: cuda_extension.pyd

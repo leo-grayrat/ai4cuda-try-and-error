@@ -1,0 +1,12 @@
+{
+  "platform": "win32",
+  "changes": [
+    ".so -> .pyd",
+    "C++ -O3/-std=c++17 -> /O2 /std:c++17",
+    "compiler output decoding OEM -> UTF-8 with replacement"
+  ],
+  "original_compile_sha256": "4bc806d8021fb430caebcffab3e32d5edc2b13abc8655544faa696fc7d699734",
+  "adapted_compile_sha256": "bf39a93b8b70a538d808c7c78f5628617f15657723b4babf3665e3e6a4bdd21e",
+  "python": "C:\\Users\\34788\\anaconda3\\python.exe",
+  "arch": "12.0"
+}

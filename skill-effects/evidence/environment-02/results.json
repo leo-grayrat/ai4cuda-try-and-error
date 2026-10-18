@@ -1,0 +1,48 @@
+[
+  {
+    "step": "environment",
+    "command": [
+      "C:\\Users\\34788\\anaconda3\\python.exe",
+      "-c",
+      "import torch; from torch.utils.cpp_extension import CUDA_HOME; print(torch.__version__, torch.cuda.is_available(), CUDA_HOME); print(torch.cuda.get_device_name(0))"
+    ],
+    "returncode": 0,
+    "state": "finished",
+    "seconds": 5.410715299996809
+  },
+  {
+    "step": "compile",
+    "command": [
+      "C:\\Users\\34788\\anaconda3\\python.exe",
+      "-m",
+      "utils.compile"
+    ],
+    "returncode": 0,
+    "state": "finished",
+    "seconds": 20.424763499999244
+  },
+  {
+    "step": "verification",
+    "command": [
+      "C:\\Users\\34788\\anaconda3\\python.exe",
+      "-m",
+      "utils.verification"
+    ],
+    "returncode": 0,
+    "state": "finished",
+    "seconds": 13.549346399999195
+  },
+  {
+    "step": "profiling",
+    "command": [
+      "C:\\Users\\34788\\anaconda3\\python.exe",
+      "-m",
+      "utils.profiling",
+      "--iters",
+      "30"
+    ],
+    "returncode": 0,
+    "state": "finished",
+    "seconds": 37.09946569999738
+  }
+]
