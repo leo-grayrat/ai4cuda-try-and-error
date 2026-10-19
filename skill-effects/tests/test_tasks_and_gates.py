@@ -53,6 +53,47 @@ def test_checker_reports_missing_code_without_crashing_the_tool(tmp_path):
     assert "missing_model_new" in result["source_findings"]
 
 
+@pytest.mark.parametrize("later_operation", ["compile", "verify", "benchmark"])
+def test_failed_later_gate_cannot_reuse_earlier_success(tmp_path, monkeypatch, later_operation):
+    from agent_trial import Executor
+    executor = Executor(tmp_path, permissions=False, checker=True)
+    executor.files.write("kernels/f.cu", "__global__ void f() {}")
+    executor.files.write("kernels/f_binding.cpp", "REGISTER_BINDING(f, register_f);")
+    build, artifact = executor.build_hash(), executor.artifact_hash()
+    executor.compiled_hash = build
+    executor.validated = {"compile": build, "verify": artifact, "benchmark": artifact}
+
+    class FailedProcess:
+        def wait(self, timeout=None):
+            return 1
+
+    monkeypatch.setattr("agent_trial.subprocess.Popen", lambda *args, **kwargs: FailedProcess())
+    assert not executor._process(later_operation)["ok"]
+    result = executor.execute({"operation": "finish", "report": "done"})
+    assert result["finish_rejected"]
+    assert later_operation in result["validation_missing_or_stale"]
+
+
+def test_verification_after_benchmark_requires_a_later_benchmark(tmp_path, monkeypatch):
+    from agent_trial import Executor
+    executor = Executor(tmp_path, permissions=False, checker=True)
+    executor.files.write("kernels/f.cu", "__global__ void f() {}")
+    executor.files.write("kernels/f_binding.cpp", "REGISTER_BINDING(f, register_f);")
+    build, artifact = executor.build_hash(), executor.artifact_hash()
+    executor.compiled_hash = build
+    executor.validated = {"compile": build, "benchmark": artifact}
+
+    class PassingProcess:
+        def wait(self, timeout=None):
+            return 0
+
+    monkeypatch.setattr("agent_trial.subprocess.Popen", lambda *args, **kwargs: PassingProcess())
+    assert executor._process("verify")["ok"]
+    result = executor.execute({"operation": "finish", "report": "done"})
+    assert result["finish_rejected"]
+    assert result["validation_missing_or_stale"] == ["benchmark"]
+
+
 def test_formal_task_cannot_be_used_to_write_development_rules():
     from agent_trial import check_task_split
     with pytest.raises(ValueError):

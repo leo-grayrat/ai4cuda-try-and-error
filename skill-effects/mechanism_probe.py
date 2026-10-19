@@ -81,6 +81,18 @@ def main():
     # A legal candidate can submit. A later write invalidates previous evidence.
     assert executor.execute({"operation": "finish", "report": "verified"})["submitted"]
     executor.submitted = False
+    # The same bytes do not make benchmark -> verify a valid final sequence.
+    repeated_verify = executor.execute({"operation": "verify", "label": "verify after earlier benchmark"})
+    assert repeated_verify["ok"]
+    out_of_order = executor.execute({"operation": "finish", "report": "benchmark predates verification"})
+    assert out_of_order["finish_rejected"]
+    assert out_of_order["validation_missing_or_stale"] == ["benchmark"]
+    records["verify_after_benchmark_rejected"] = out_of_order
+    fresh_benchmark = executor.execute({"operation": "benchmark", "label": "benchmark after repeated verification"})
+    assert fresh_benchmark["ok"]
+    records["ordered_rebenchmark"] = fresh_benchmark
+    assert executor.execute({"operation": "finish", "report": "ordered final gates"})["submitted"]
+    executor.submitted = False
     text = executor.files.read("model_new.py")
     executor.files.write("model_new.py", text + "\n# final source edit\n")
     after = executor.execute({"operation": "finish", "report": "stale verification"})

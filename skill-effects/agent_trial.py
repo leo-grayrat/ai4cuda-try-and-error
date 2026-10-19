@@ -149,6 +149,12 @@ class Executor:
         return {**result, "gpu_wait_seconds": waited}
 
     def _process(self, operation: str):
+        # A later failed attempt cannot inherit an earlier pass. Repeating an
+        # earlier gate also requires the subsequent gates to run again in order.
+        subsequent = {"compile": ("compile", "verify", "benchmark"),
+                      "verify": ("verify", "benchmark"), "benchmark": ("benchmark",)}
+        for name in subsequent[operation]:
+            self.validated.pop(name, None)
         if operation != "compile" and self.compiled_hash != self.build_hash():
             return {"ok": False, "error": "Compile the current candidate before verification or benchmarking."}
         if operation == "compile":

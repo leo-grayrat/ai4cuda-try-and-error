@@ -1,0 +1,82 @@
+{
+  "reference_write_rejected": true,
+  "unverified_finish_rejected": {
+    "ok": false,
+    "finish_rejected": true,
+    "source_findings": {},
+    "changed_infrastructure": [],
+    "validation_missing_or_stale": [
+      "compile",
+      "verify",
+      "benchmark"
+    ],
+    "checker_seconds": 0.014768799999728799
+  },
+  "compile": {
+    "ok": true,
+    "returncode": 0,
+    "seconds": 16.652127599998494,
+    "log": "tool-003-compile.log",
+    "output": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\nCompiling 4 files: binding.cpp, kernels\\axpby.cu, kernels\\axpby_binding.cpp, kernels\\probe_gemm_binding.cpp\nCompile success: cuda_extension.pyd\n",
+    "changed_infrastructure": [],
+    "label": "trusted upstream CUDA fixture"
+  },
+  "verify": {
+    "ok": true,
+    "returncode": 0,
+    "seconds": 16.836542900000495,
+    "log": "tool-004-verify.log",
+    "output": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n[PASS] case=0 seed=20261019: values, parameters, repeated calls, non-default stream\n[PASS] case=0 seed=20261020: values, parameters, repeated calls, non-default stream\n[PASS] case=1 seed=20261019: values, parameters, repeated calls, non-default stream\n[PASS] case=1 seed=20261020: values, parameters, repeated calls, non-default stream\n[PASS] case=2 seed=20261019: values, parameters, repeated calls, non-default stream\n[PASS] case=2 seed=20261020: values, parameters, repeated calls, non-default stream\n[PASS] independent verification complete\n",
+    "changed_infrastructure": [],
+    "gpu_wait_seconds": 0.00016529999993508682,
+    "label": "trusted upstream CUDA fixture"
+  },
+  "benchmark": {
+    "ok": true,
+    "returncode": 0,
+    "seconds": 16.513096300001052,
+    "log": "tool-005-benchmark.log",
+    "output": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\ndriver.c\n  正在创建库 E:\\Project\\Git\\Research\\ai4cuda-try-and-error\\skill-effects\\runs\\mechanisms-03\\temp\\tmpx_lnzeas\\cuda_utils.cp313-win_amd64.lib 和对象 E:\\Project\\Git\\Research\\ai4cuda-try-and-error\\skill-effects\\runs\\mechanisms-03\\temp\\tmpx_lnzeas\\cuda_utils.cp313-win_amd64.exp\n{\n  \"method\": \"CUDA events around repeated complete model calls, including launch gaps; not summed kernel-only time\",\n  \"iterations_per_sample\": 96,\n  \"calibration_us\": 209.60000157356262,\n  \"matmul_precision\": \"highest, baseline TF32 disabled\",\n  \"samples_us\": {\n    \"eager\": [\n      95.32933433850606,\n      92.63533353805542,\n      90.47433733940125,\n      92.57266918818156,\n      93.33800276120503,\n      92.35533078511556,\n      93.11933318773906\n    ],\n    \"compiled\": [\n      93.60000491142273,\n      92.28100379308064,\n      95.84466616312663,\n      95.92766563097636,\n      99.02433554331462,\n      93.11967094739278,\n      93.93399953842163\n    ],\n    \"candidate\": [\n      46.81733250617981,\n      47.342667977015175,\n      43.48866641521454,\n      46.17666701475779,\n      45.20500202973684,\n      47.6776659488678,\n      45.88766892751058\n    ]\n  },\n  \"median_us\": {\n    \"eager\": 92.63533353805542,\n    \"compiled\": 93.93399953842163,\n    \"candidate\": 46.17666701475779\n  },\n  \"purpose\": \"paired candidate/reference timing for the current frozen task\"\n}\n",
+    "changed_infrastructure": [],
+    "gpu_wait_seconds": 0.00015690000145696104,
+    "label": "trusted upstream CUDA fixture"
+  },
+  "cublas": {
+    "cuBLAS_GEMM_correct": true,
+    "output_shape": [
+      3,
+      5
+    ]
+  },
+  "verify_after_benchmark_rejected": {
+    "ok": false,
+    "finish_rejected": true,
+    "source_findings": {},
+    "changed_infrastructure": [],
+    "validation_missing_or_stale": [
+      "benchmark"
+    ],
+    "checker_seconds": 0.012037100001180079
+  },
+  "ordered_rebenchmark": {
+    "ok": true,
+    "returncode": 0,
+    "seconds": 14.804263999998511,
+    "log": "tool-009-benchmark.log",
+    "output": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n{\n  \"method\": \"CUDA events around repeated complete model calls, including launch gaps; not summed kernel-only time\",\n  \"iterations_per_sample\": 100,\n  \"calibration_us\": 187.02399730682373,\n  \"matmul_precision\": \"highest, baseline TF32 disabled\",\n  \"samples_us\": {\n    \"eager\": [\n      70.68992137908936,\n      80.15423774719238,\n      80.7049560546875,\n      75.6774377822876,\n      77.15744018554688,\n      75.05055904388428,\n      79.24255847930908\n    ],\n    \"compiled\": [\n      104.92735862731934,\n      91.46688461303711,\n      85.5072021484375,\n      85.9727954864502,\n      83.80576133728027,\n      83.6092758178711,\n      84.5900821685791\n    ],\n    \"candidate\": [\n      45.95871925354004,\n      39.21504020690918,\n      36.489601135253906,\n      36.27680063247681,\n      35.996479988098145,\n      35.2620792388916,\n      42.49567985534668\n    ]\n  },\n  \"median_us\": {\n    \"eager\": 77.15744018554688,\n    \"compiled\": 85.5072021484375,\n    \"candidate\": 36.489601135253906\n  },\n  \"purpose\": \"paired candidate/reference timing for the current frozen task\"\n}\n",
+    "changed_infrastructure": [],
+    "gpu_wait_seconds": 15.377414999999019,
+    "label": "benchmark after repeated verification"
+  },
+  "post_edit_finish_rejected": {
+    "ok": false,
+    "finish_rejected": true,
+    "source_findings": {},
+    "changed_infrastructure": [],
+    "validation_missing_or_stale": [
+      "verify",
+      "benchmark"
+    ],
+    "checker_seconds": 0.01316439999936847
+  }
+}
