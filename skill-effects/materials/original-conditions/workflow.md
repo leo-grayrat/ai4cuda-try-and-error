@@ -1,6 +1,6 @@
 # CUDA development guidance
 
-- [C01] Requirement: Produce correct CUDA C++ extension output and achieve candidate latency <= 0.95 times torch.compile, then seek the best attainable performance.
+- [C01] Requirement: Produce correct output; the minimum is at least 5% faster than torch.compile (candidate latency <= 0.95 times baseline), then seek the best attainable performance. The source illustrates a 1.0 ms baseline with a 0.95 ms minimum and a goal of 0.8 ms or better.
 
 - [C02] Requirement: Use raw CUDA computation rather than torch C++ compute operators; tensor types, binding metadata, and allocation such as torch::empty_like are allowed.
 
@@ -24,7 +24,7 @@
 
 - [C15] Requirement: Preserve parameter structure so the original state_dict loads into ModelNew.
 
-- [C16] Requirement: Compile for the actual GPU architecture, then execute verification and profiling using the supplied platform-equivalent commands.
+- [C16] Requirement: Compile with architecture-specific optimizations, then run the supplied verification and profiling utilities. The original Linux examples use sudo; this study supplies the same Windows platform-equivalent tools to every condition.
 
 - [C20] Requirement: Use parameter tuning as a last resort after algorithmic options are exhausted and performance is within 1.2 times the target.
 
@@ -32,13 +32,13 @@
 
 - [C22] Requirement: When correctness fails, debug the failing kernel, fix it, recompile and retest until it passes within the external experiment budget.
 
-- [C23] Requirement: Before implementing each optimization, document the expected effect and why it should help.
+- [C23] Requirement: For each iteration, before implementing, document the expected performance effect or gains.
 
 - [C24] Requirement: Debug the optimized version instead of reverting to a slower version merely to avoid fixing it.
 
-- [C25] Requirement: Measure the optimization and explain why performance changed.
+- [C25] Requirement: Measure and analyze the optimization to understand why performance changed.
 
-- [C26] Requirement: Continue exploring improvements after the minimum target is met until no further improvement or diminishing returns; the source suggests 1-2 initial and 3-5 further iterations.
+- [C26] Requirement: Continue exploring after the minimum target is met until no further improvement or diminishing returns, under the common external budget. The source proposes first 1-2 iterations to meet the minimum, then the next 3-5 iterations to push for maximum speedup.
 
 - [C27] Requirement: Before completion, retain only the final optimized kernels and bindings; remove intermediate versions, old/test attempts and backups.
 

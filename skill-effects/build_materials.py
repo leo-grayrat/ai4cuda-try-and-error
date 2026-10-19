@@ -31,7 +31,7 @@ def main():
             label = "Requirement" if rule["kind"] == "requirement" else "Conditional advice" if rule["kind"] == "recommendation" else "Example practice"
             text += f"- [{rule['id']}] {label}: {rule['text']}\n"
         (ROOT / f"materials/{condition}.md").write_text(text, encoding="utf-8")
-    summary = {"source": "CUDA-Agent.SKILL.md", "rules": len(rules), "by_kind": {kind: sum(r["kind"] == kind for r in rules) for kind in sorted({r["kind"] for r in rules})}, "conditions": {stage: sum(r["introduced_in"] in stages for r in rules) for stage, stages in [("core", {"core"}), ("workflow", {"core", "workflow"}), ("condensed", {"core", "workflow", "condensed"})]}, "status": "first manual source mapping; requires coverage audit before formal freeze"}
+    summary = {"source": "CUDA-Agent.SKILL.md", "rules": len(rules), "by_kind": {kind: sum(r["kind"] == kind for r in rules) for kind in sorted({r["kind"] for r in rules})}, "conditions": {stage: sum(r["introduced_in"] in stages for r in rules) for stage, stages in [("core", {"core"}), ("workflow", {"core", "workflow"}), ("condensed", {"core", "workflow", "condensed"})]}, "status": "source mapping reviewed against original; decisions in evidence/original-treatment-audit-01/decisions.zh.md"}
     (ROOT / "materials/inventory.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps(summary))
 

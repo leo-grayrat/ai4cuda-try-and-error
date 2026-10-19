@@ -1,6 +1,6 @@
 # CUDA development guidance
 
-- [C01] Requirement: Produce correct CUDA C++ extension output and achieve candidate latency <= 0.95 times torch.compile, then seek the best attainable performance.
+- [C01] Requirement: Produce correct output; the minimum is at least 5% faster than torch.compile (candidate latency <= 0.95 times baseline), then seek the best attainable performance. The source illustrates a 1.0 ms baseline with a 0.95 ms minimum and a goal of 0.8 ms or better.
 
 - [C02] Requirement: Use raw CUDA computation rather than torch C++ compute operators; tensor types, binding metadata, and allocation such as torch::empty_like are allowed.
 

@@ -3,13 +3,13 @@
   "rules": 45,
   "by_kind": {
     "example": 4,
-    "recommendation": 19,
-    "requirement": 22
+    "recommendation": 14,
+    "requirement": 27
   },
   "conditions": {
     "core": 9,
     "workflow": 23,
     "condensed": 45
   },
-  "status": "first manual source mapping; requires coverage audit before formal freeze"
+  "status": "source mapping reviewed against original; decisions in evidence/original-treatment-audit-01/decisions.zh.md"
 }

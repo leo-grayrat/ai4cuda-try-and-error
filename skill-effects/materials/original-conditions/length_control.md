@@ -1,6 +1,6 @@
 # CUDA development guidance
 
-- [C01] Requirement: Produce correct CUDA C++ extension output and achieve candidate latency <= 0.95 times torch.compile, then seek the best attainable performance.
+- [C01] Requirement: Produce correct output; the minimum is at least 5% faster than torch.compile (candidate latency <= 0.95 times baseline), then seek the best attainable performance. The source illustrates a 1.0 ms baseline with a 0.95 ms minimum and a goal of 0.8 ms or better.
 
 - [C02] Requirement: Use raw CUDA computation rather than torch C++ compute operators; tensor types, binding metadata, and allocation such as torch::empty_like are allowed.
 
@@ -20,7 +20,7 @@
 
 - [C10] Example practice: Prefer torch/types.h and torch/csrc/utils/pybind.h instead of torch/extension.h for faster binding compilation.
 
-- [C11] Example practice: Validate CUDA placement, contiguity and supported dtype in the binding.
+- [C11] Example practice: In the binding example, validate CUDA placement, contiguity and float32 dtype.
 
 - [C12] Example practice: Launch on the current PyTorch CUDA stream.
 
@@ -30,13 +30,13 @@
 
 - [C15] Requirement: Preserve parameter structure so the original state_dict loads into ModelNew.
 
-- [C16] Requirement: Compile for the actual GPU architecture, then execute verification and profiling using the supplied platform-equivalent commands.
+- [C16] Requirement: Compile with architecture-specific optimizations, then run the supplied verification and profiling utilities. The original Linux examples use sudo; this study supplies the same Windows platform-equivalent tools to every condition.
 
-- [C17] Conditional advice: Prioritize algorithmic changes such as fusion, shared-memory reuse and coalesced memory access when applicable.
+- [C17] Conditional advice: Prioritize algorithmic changes such as fusion, shared-memory reuse and coalesced access when applicable. The source labels this first priority as having >50% impact.
 
-- [C18] Conditional advice: Next consider vectorized loads, warp primitives and occupancy tuning when useful.
+- [C18] Conditional advice: Next consider vectorized loads, warp primitives and occupancy tuning when useful. The source labels this second priority as having 20-50% impact.
 
-- [C19] Conditional advice: Consider instruction-level parallelism, appropriate mixed precision, prefetching and double buffering as finer optimizations.
+- [C19] Conditional advice: Consider instruction-level parallelism, appropriate mixed precision, prefetching and double buffering as finer optimizations. The source labels this third priority as having <20% impact.
 
 - [C20] Requirement: Use parameter tuning as a last resort after algorithmic options are exhausted and performance is within 1.2 times the target.
 
@@ -44,25 +44,25 @@
 
 - [C22] Requirement: When correctness fails, debug the failing kernel, fix it, recompile and retest until it passes within the external experiment budget.
 
-- [C23] Requirement: Before implementing each optimization, document the expected effect and why it should help.
+- [C23] Requirement: For each iteration, before implementing, document the expected performance effect or gains.
 
 - [C24] Requirement: Debug the optimized version instead of reverting to a slower version merely to avoid fixing it.
 
-- [C25] Requirement: Measure the optimization and explain why performance changed.
+- [C25] Requirement: Measure and analyze the optimization to understand why performance changed.
 
-- [C26] Requirement: Continue exploring improvements after the minimum target is met until no further improvement or diminishing returns; the source suggests 1-2 initial and 3-5 further iterations.
+- [C26] Requirement: Continue exploring after the minimum target is met until no further improvement or diminishing returns, under the common external budget. The source proposes first 1-2 iterations to meet the minimum, then the next 3-5 iterations to push for maximum speedup.
 
 - [C27] Requirement: Before completion, retain only the final optimized kernels and bindings; remove intermediate versions, old/test attempts and backups.
 
-- [C28] Conditional advice: Check thread bounds and handle non-divisible input sizes.
+- [C28] Requirement: Verify thread bounds before array access and validate all array accesses, for example with tid < size or tid < N.
 
-- [C29] Conditional advice: Place synchronization correctly before shared-memory reuse.
+- [C29] Requirement: Place synchronization correctly before shared-memory reuse.
 
-- [C30] Conditional advice: Use correct data types and conversions.
+- [C30] Requirement: Use correct data types and conversions.
 
-- [C31] Conditional advice: Respect memory alignment and avoid out-of-bounds access.
+- [C31] Requirement: Respect memory alignment and avoid out-of-bounds access.
 
-- [C32] Conditional advice: Use numerically stable algorithms and investigate NaN/Inf, division by zero and missing bounds checks.
+- [C32] Requirement: Handle NaN/Inf with numerically stable algorithms. For NaN/Inf failures, check division by zero, verify numerical stability and add bounds checking.
 
 - [C33] Conditional advice: Consider grid-stride loops for data larger than one grid.
 
@@ -84,7 +84,7 @@
 
 - [C42] Conditional advice: For shape mismatches, inspect tensor shapes, dimension calculations and reduction logic.
 
-- [C43] Conditional advice: For poor performance, investigate missing fusion, occupancy, coalescing and excessive kernel count as relevant to the observed symptom.
+- [C43] Conditional advice: For poor performance, use the source symptom/remedy pairs when applicable: combine kernels for missing fusion or excessive kernel count; tune block size for low SM efficiency/occupancy; restructure the memory access pattern for low throughput/coalescing.
 
 - [C44] Requirement: Pass numerical comparison with atol=1e-2 and rtol=1e-2.
 
@@ -306,8 +306,4 @@ The experimental platform is Windows with an RTX 5060 Laptop GPU. The CUDA archi
 
 The experimental platform is Windows with an RTX 5060 Laptop GPU. The CUDA architecture is sm_120. The CUDA Toolkit version is 12.9 and the compiler is MSVC. PyTorch is 2.11.0+cu128. The extension is named cuda_extension. The workspace contains model.py, model_new.py, kernels and fixed binding infrastructure.
 
-The experimental platform is Windows with an RTX 5060 Laptop GPU. The CUDA architecture is sm_120. The CUDA Toolkit version is 12.9 and the compiler is MSVC. PyTorch is 2.11.0+cu128. The extension is named cuda_extension. The workspace contains model.py, model_new.py, kernels and fixed binding infrastructure.
-
-The experimental platform is Windows with an RTX 5060 Laptop GPU. The CUDA architecture is sm_120. The CUDA Toolkit version is 12.9 and the compiler is MSVC. PyTorch is 2.11.0+cu128. The extension is named cuda_extension. The workspace contains model.py, model_new.py, kernels and fixed binding infrastructure.
-
-The experimental platform is Windows with an RTX 5060 Laptop GPU. The CUDA architecture is sm_120. The CUDA Toolkit version is 12.9 and the compiler is MSVC. PyTorch is 2.11.0
+The experimental platform is Windows with an RTX 5060 Laptop GPU. The CUDA architecture is sm_120. The CUDA Toolkit version is 12.9 and the compiler is MSVC. PyTorch is 2.11.0+

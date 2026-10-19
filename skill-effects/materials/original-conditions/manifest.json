@@ -1,7 +1,7 @@
 {
   "source": "sources/CUDA-Agent.SKILL.md",
   "source_sha256": "3161860fb45dea51a688f3fe217ace664df6bd16808d8865824684a58a786d63",
-  "rule_map_sha256": "b90feda2fb611bb59868ae97901fcef567a37fc4b62830b0c366e61da5c0d807",
+  "rule_map_sha256": "5305cf7976f51f2b9f5e9a57252bc2dcffd99f0d7edb5c8880964d19d44416ed",
   "source_text_tokens": 3392,
   "fenced_example_count": 9,
   "normalized_example_sha256": [
@@ -81,9 +81,9 @@
     },
     "optimized": {
       "path": "materials/original-conditions/optimized.md",
-      "sha256": "f3683aa194f425010574ef3a3cc4b4e7508bfff459c21ff2b26798d9f9c6030a",
+      "sha256": "7486bfd252ef60bbfcb5c5e9303d5110e50ed5254ce8141bae5a12f53ebdb34f",
       "lines": 291,
-      "text_tokens": 2607,
+      "text_tokens": 2768,
       "explicit_rule_ids": [
         "C01",
         "C02",
@@ -134,9 +134,9 @@
     },
     "core": {
       "path": "materials/original-conditions/core.md",
-      "sha256": "315e1dfcc20dbf2c1069ca38223a7da67cbfcb853b973fabbe273a0783ce7640",
+      "sha256": "51905219e8a3382e6f6f814093873866ab17c5e2c0648540c6c013d80ea5e29a",
       "lines": 219,
-      "text_tokens": 1755,
+      "text_tokens": 1792,
       "explicit_rule_ids": [
         "C01",
         "C02",
@@ -151,9 +151,9 @@
     },
     "workflow": {
       "path": "materials/original-conditions/workflow.md",
-      "sha256": "1d32ff0bdc0075065cff88d6ae37e407dbe78a8ceb39840785242fdc0e522ed8",
+      "sha256": "9f68aa15bc5044ce5ca4ebbfc3eae978a85f7bcd430c2033750e3640e2641c17",
       "lines": 247,
-      "text_tokens": 2128,
+      "text_tokens": 2202,
       "explicit_rule_ids": [
         "C01",
         "C02",
@@ -182,9 +182,9 @@
     },
     "optimized_residual": {
       "path": "materials/original-conditions/optimized_residual.md",
-      "sha256": "30fd15ce75b7ef1d473f965a67e5a6950198b25c9f0c41419bb9fe3a83a292c1",
+      "sha256": "7967103352a2f2fdf20ec554aef87c0a4fcff75ba34f4771a842e96e4664a22d",
       "lines": 285,
-      "text_tokens": 2560,
+      "text_tokens": 2721,
       "explicit_rule_ids": [
         "C01",
         "C02",
@@ -232,8 +232,8 @@
     },
     "length_control": {
       "path": "materials/original-conditions/length_control.md",
-      "sha256": "12ff18b1a6f3ed5536aa5abc8250707addfbc9a3deb1307a9d653782074718a0",
-      "lines": 313,
+      "sha256": "527c5df4862bd445992b2b9e28754ef142189a62434c9b63acb5fd73bc5517c9",
+      "lines": 309,
       "text_tokens": 3392,
       "explicit_rule_ids": [
         "C01",

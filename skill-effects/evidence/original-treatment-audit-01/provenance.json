@@ -1,0 +1,15 @@
+{
+  "completed_utc": "2026-10-19T04:06:47.486811+00:00",
+  "purpose": "fresh-context original-source equivalence audit, not a task-effect trial",
+  "finish_reason": "stop",
+  "usage": {
+    "prompt_tokens": 8250,
+    "completion_tokens": 2134,
+    "total_tokens": 10384,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 8250
+  }
+}

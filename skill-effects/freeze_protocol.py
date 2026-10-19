@@ -63,6 +63,7 @@ def main():
     assert len({(r["task"], r["repeat"], r["condition"]) for r in schedule}) == 88
     frozen = [ROOT / name for name in ["agent_trial.py", "runtime.py", "environment_probe.py", "event_timing_probe.py",
         "verify_candidate.py", "gpu_lock.py", "prepare_tasks.py", "task_catalog.json", "formal_campaign.py", "freeze_protocol.py",
+        "prepare_original_conditions.py", "build_materials.py", "materials/cuda_rules.tsv", "materials/cuda_rules.json",
         "materials/report_contract.md", "sources/deepseek-pricing-2026-10-19.json", "FORMAL_PROTOCOL.zh.md"]]
     frozen += [path for path in (ROOT / "sources/CUDA-Agent").rglob("*") if path.is_file() and "__pycache__" not in path.parts]
     frozen += [ROOT / "tasks" / task / name for task in tasks for name in ["model.py", "contract.md"]]

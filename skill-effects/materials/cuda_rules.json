@@ -5,7 +5,7 @@
     "kind": "requirement",
     "source_lines": "1;249;352;359",
     "introduced_in": "core",
-    "text": "Produce correct CUDA C++ extension output and achieve candidate latency <= 0.95 times torch.compile, then seek the best attainable performance.",
+    "text": "Produce correct output; the minimum is at least 5% faster than torch.compile (candidate latency <= 0.95 times baseline), then seek the best attainable performance. The source illustrates a 1.0 ms baseline with a 0.95 ms minimum and a goal of 0.8 ms or better.",
     "observation": "Independent correctness and paired timing.",
     "source_evidence": [
       {
@@ -240,7 +240,7 @@
     "kind": "example",
     "source_lines": "112-115",
     "introduced_in": "condensed",
-    "text": "Validate CUDA placement, contiguity and supported dtype in the binding.",
+    "text": "In the binding example, validate CUDA placement, contiguity and float32 dtype.",
     "observation": "Inspect guards and invalid-input tests.",
     "source_evidence": [
       {
@@ -320,7 +320,7 @@
     "kind": "requirement",
     "source_lines": "166-173;285-292",
     "introduced_in": "workflow",
-    "text": "Compile for the actual GPU architecture, then execute verification and profiling using the supplied platform-equivalent commands.",
+    "text": "Compile with architecture-specific optimizations, then run the supplied verification and profiling utilities. The original Linux examples use sudo; this study supplies the same Windows platform-equivalent tools to every condition.",
     "observation": "Tool events, exit codes and raw outputs; successful process exit alone is insufficient.",
     "source_evidence": [
       {
@@ -341,7 +341,7 @@
     "kind": "recommendation",
     "source_lines": "180-183;299-301",
     "introduced_in": "condensed",
-    "text": "Prioritize algorithmic changes such as fusion, shared-memory reuse and coalesced memory access when applicable.",
+    "text": "Prioritize algorithmic changes such as fusion, shared-memory reuse and coalesced access when applicable. The source labels this first priority as having >50% impact.",
     "observation": "Review the optimization hypothesis against the task; not all techniques suit all tasks.",
     "source_evidence": [
       {
@@ -362,7 +362,7 @@
     "kind": "recommendation",
     "source_lines": "185-188;306-308",
     "introduced_in": "condensed",
-    "text": "Next consider vectorized loads, warp primitives and occupancy tuning when useful.",
+    "text": "Next consider vectorized loads, warp primitives and occupancy tuning when useful. The source labels this second priority as having 20-50% impact.",
     "observation": "Inspect implementation and measurements; no unconditional requirement to use all techniques.",
     "source_evidence": [
       {
@@ -383,7 +383,7 @@
     "kind": "recommendation",
     "source_lines": "190-193;314;317",
     "introduced_in": "condensed",
-    "text": "Consider instruction-level parallelism, appropriate mixed precision, prefetching and double buffering as finer optimizations.",
+    "text": "Consider instruction-level parallelism, appropriate mixed precision, prefetching and double buffering as finer optimizations. The source labels this third priority as having <20% impact.",
     "observation": "Check accuracy and measured benefit when applied.",
     "source_evidence": [
       {
@@ -462,7 +462,7 @@
     "kind": "requirement",
     "source_lines": "251-252;370",
     "introduced_in": "workflow",
-    "text": "Before implementing each optimization, document the expected effect and why it should help.",
+    "text": "For each iteration, before implementing, document the expected performance effect or gains.",
     "observation": "Visible pre-change explanation, not private reasoning or a retrospective claim.",
     "source_evidence": [
       {
@@ -504,8 +504,8 @@
     "kind": "requirement",
     "source_lines": "255",
     "introduced_in": "workflow",
-    "text": "Measure the optimization and explain why performance changed.",
-    "observation": "Explanation checked against the measured comparison, including regressions.",
+    "text": "Measure and analyze the optimization to understand why performance changed.",
+    "observation": "Recorded measurements and analysis; the common report contract separately requires an explicit explanation. Absence of an explanation alone does not prove lack of internal understanding.",
     "source_evidence": [
       {
         "start": 255,
@@ -520,7 +520,7 @@
     "kind": "requirement",
     "source_lines": "256;258-263;362",
     "introduced_in": "workflow",
-    "text": "Continue exploring improvements after the minimum target is met until no further improvement or diminishing returns; the source suggests 1-2 initial and 3-5 further iterations.",
+    "text": "Continue exploring after the minimum target is met until no further improvement or diminishing returns, under the common external budget. The source proposes first 1-2 iterations to meet the minimum, then the next 3-5 iterations to push for maximum speedup.",
     "observation": "Iteration history under the common external budget; suggested counts are recorded separately from performance quality.",
     "source_evidence": [
       {
@@ -569,10 +569,10 @@
   {
     "id": "C28",
     "category": "correctness",
-    "kind": "recommendation",
+    "kind": "requirement",
     "source_lines": "240;303;320",
     "introduced_in": "condensed",
-    "text": "Check thread bounds and handle non-divisible input sizes.",
+    "text": "Verify thread bounds before array access and validate all array accesses, for example with tid < size or tid < N.",
     "observation": "Frozen boundary-size tests and memory-access review.",
     "source_evidence": [
       {
@@ -595,7 +595,7 @@
   {
     "id": "C29",
     "category": "correctness",
-    "kind": "recommendation",
+    "kind": "requirement",
     "source_lines": "241;321",
     "introduced_in": "condensed",
     "text": "Place synchronization correctly before shared-memory reuse.",
@@ -616,7 +616,7 @@
   {
     "id": "C30",
     "category": "correctness",
-    "kind": "recommendation",
+    "kind": "requirement",
     "source_lines": "242;322",
     "introduced_in": "condensed",
     "text": "Use correct data types and conversions.",
@@ -637,7 +637,7 @@
   {
     "id": "C31",
     "category": "correctness",
-    "kind": "recommendation",
+    "kind": "requirement",
     "source_lines": "243;323",
     "introduced_in": "condensed",
     "text": "Respect memory alignment and avoid out-of-bounds access.",
@@ -658,10 +658,10 @@
   {
     "id": "C32",
     "category": "correctness",
-    "kind": "recommendation",
+    "kind": "requirement",
     "source_lines": "324;338",
     "introduced_in": "condensed",
-    "text": "Use numerically stable algorithms and investigate NaN/Inf, division by zero and missing bounds checks.",
+    "text": "Handle NaN/Inf with numerically stable algorithms. For NaN/Inf failures, check division by zero, verify numerical stability and add bounds checking.",
     "observation": "Numerical edge inputs under the original task's supported domain.",
     "source_evidence": [
       {
@@ -842,7 +842,7 @@
     "kind": "recommendation",
     "source_lines": "344-347",
     "introduced_in": "condensed",
-    "text": "For poor performance, investigate missing fusion, occupancy, coalescing and excessive kernel count as relevant to the observed symptom.",
+    "text": "For poor performance, use the source symptom/remedy pairs when applicable: combine kernels for missing fusion or excessive kernel count; tune block size for low SM efficiency/occupancy; restructure the memory access pattern for low throughput/coalescing.",
     "observation": "Hypothesis and actual measurements, not mandatory use of every optimization.",
     "source_evidence": [
       {
