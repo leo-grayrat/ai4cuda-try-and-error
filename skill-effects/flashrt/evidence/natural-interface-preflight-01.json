@@ -1,0 +1,43 @@
+{
+  "scope": "Static interface review with captured subprocess arguments; no API or GPU execution",
+  "conditions": [
+    {
+      "condition": "task_only",
+      "documents": 0,
+      "root_supplied": false,
+      "argument_wiring_passed": true
+    },
+    {
+      "condition": "original",
+      "documents": 4,
+      "root_supplied": true,
+      "argument_wiring_passed": true
+    },
+    {
+      "condition": "source_core",
+      "documents": 4,
+      "root_supplied": true,
+      "argument_wiring_passed": true
+    },
+    {
+      "condition": "formatted",
+      "documents": 4,
+      "root_supplied": true,
+      "argument_wiring_passed": true
+    },
+    {
+      "condition": "phase4",
+      "documents": 4,
+      "root_supplied": true,
+      "argument_wiring_passed": true
+    }
+  ],
+  "checker_preserves_rejected_text": true,
+  "common_requests_no_budget_terms": true,
+  "synthetic_gap_separation": {
+    "within_ms": 10,
+    "boundary_ms": 40,
+    "passed": true
+  },
+  "runner_sha256": "641791ebcb5e51a7e522d7380d8b7608c35c6fcecd9697b9104249728a0460c5"
+}
