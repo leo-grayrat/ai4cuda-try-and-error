@@ -1,0 +1,22 @@
+{
+  "packet_sha256": "c90e118fde05e89852dd773ec97583d041850dbc682802958f094ab230d305af",
+  "rules_sha256": "5305cf7976f51f2b9f5e9a57252bc2dcffd99f0d7edb5c8880964d19d44416ed",
+  "reviewer_sha256": "a3eb95cc471ab3b40ef3ee3da3448b60080b8574a993402519506981fc0d71d1",
+  "review_id": "R-2a2e2f8cdcd31c52",
+  "purpose": "Fresh-context masked model review; provisional judgments require evidence adjudication",
+  "started_utc": "2026-10-19T04:50:33.634177+00:00",
+  "status": "review_failed_validation_or_request",
+  "usage": {
+    "input_tokens": 60729,
+    "uncached_input_tokens": 60473,
+    "cached_input_tokens": 256,
+    "output_tokens": 5404,
+    "reasoning_tokens": null,
+    "total_tokens": 66133
+  },
+  "model": "deepseek-flash",
+  "finish_reason": "stop",
+  "error": "Unverifiable quotations: C27 from source:kernels/fused_ops.cu",
+  "seconds": 19.15141539999604,
+  "completed_utc": "2026-10-19T04:50:52.786305+00:00"
+}

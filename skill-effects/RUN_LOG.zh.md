@@ -133,3 +133,7 @@ RMSNorm 第一轮在单次 8,192 生成 token 上限内只完成推理，没有�
 ## 正式运行之后的处理队列
 
 第三轮已以 generation_truncated 结束，序列继续第四轮 original_permissions_checker。现有三个终态都保留，未重做。新增 postprocess_when_ready.py，在同一正式序列完整结束后顺序启动汇总、schema 2 审阅材料、Nsight kernel 活动核查和配对分析。各阶段保留实际 PID、日志、代码哈希及终态；正式序列基础设施错误则停止，不按效果重跑。暂时读不到控制器状态文件时重新观察，不当作正式进程退出。队列不执行审阅结论、图表和报告，也不自行宣布研究完成。
+
+后处理队列已实际启动，PID 24900，独立状态位于 runs/formal-series-01/postprocessing-01/state.json，当前 waiting_for_formal_completion；原始正式控制器仍运行，未重启。启动时间为 2026-10-19T04:54:17.655611+00:00。
+
+补全后的首份同例审阅仍有一段 C27 连续引文不符，被来源检查拒绝；同时对代码残留与完成时点的判断得到改进。保留新旧请求、响应及复核，不为取得预期标签重复请求。其 C23/C45 仍按可见原文保留混合情况，详见 evidence/review-calibration-01/schema2-decisions.zh.md。
