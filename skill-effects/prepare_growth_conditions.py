@@ -25,7 +25,7 @@ def build():
     clauses = spec["clauses"]
     assert len({c["id"] for c in clauses}) == len(clauses)
     inventory = []
-    for stage in range(1, 5):
+    for stage in range(1, spec["stages"] + 1):
         path = ROOT / f"evidence/growth-{stage:02}/addition.md"
         number = 0
         for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
@@ -48,7 +48,7 @@ def build():
     manifest = {"status": spec["status"], "spec_sha256": sha(spec_path.read_bytes()),
                 "base_sha256": sha(base), "source_bullet_count": len(inventory),
                 "coverage_is_not_equivalence": True, "stages": []}
-    for stage in range(1, 5):
+    for stage in range(1, spec["stages"] + 1):
         active = [clause for clause in clauses if clause["stage"] <= stage]
         addition = "\n\n## Consolidated additional development instructions\n\n" + spec["scope"] + "\n\n"
         addition += "\n\n".join(clause["text"] for clause in active) + "\n"

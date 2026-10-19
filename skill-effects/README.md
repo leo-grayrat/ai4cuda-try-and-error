@@ -11,6 +11,8 @@
 - [第四次追加中的解释传播](materials/GROWTH_CASE_04.zh.md)
 - [第五次追加与未清理的探针](materials/GROWTH_CASE_05.zh.md)
 - [累积文档的压缩对照](materials/COMPRESSION.zh.md)
+- [重复告诫的规模条件](materials/REPETITION.zh.md)
+- [执行机制覆盖范围](materials/MECHANISMS.zh.md)
 - [相关文献全文核对](LITERATURE.zh.md)
 - [执行记录与实验选择](RUN_LOG.zh.md)
 - [保留题、原始困难维度与独立验证](TASKS.zh.md)

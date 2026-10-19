@@ -60,7 +60,9 @@
         "G02-18",
         "G04-12",
         "G04-13",
-        "G04-14"
+        "G04-14",
+        "G05-16",
+        "G05-17"
       ],
       "text": "For workspace writes, supply operation: write, path and content as separate fields; do not omit operation or put Markdown/content in it. Unknown/missing operation, malformed payload, transport or encoding errors call for a clean tool retry; do not change CUDA kernel or binding logic solely in response to the tool failure. After any failed or ambiguous write, read the target before compiling: failure proves neither its contents nor that it stayed unchanged. Missing utility files or unreadable paths call for documented utilities or directory discovery, not conclusions about kernel correctness."
     },
@@ -141,7 +143,8 @@
       "stage": 3,
       "sources": [
         "G03-20",
-        "G04-15"
+        "G04-15",
+        "G05-18"
       ],
       "text": "The same environment-warning rule applies to explicit verification and benchmark success: failure-to-locate-python warnings do not override the returned tool status."
     },
@@ -151,7 +154,9 @@
       "sources": [
         "G03-13",
         "G03-15",
-        "G03-16"
+        "G03-16",
+        "G05-10",
+        "G05-11"
       ],
       "text": "Temporary probes, alternate bindings, patch/debug files and launchers must not remain in the final module path; remove them from kernels/ or binding references. Keep temporary notes and patch files out of kernels/. After deleting a probe or reverting a binding, recompile to remove stale symbols, then verify and benchmark the cleaned files."
     },
@@ -160,7 +165,8 @@
       "stage": 3,
       "sources": [
         "G03-17",
-        "G03-18"
+        "G03-18",
+        "G05-18"
       ],
       "text": "For FileNotFoundError or an unreadable compile, verification or profiling log, use returned tool output/status or rerun the relevant tool. A missing log establishes neither pass nor fail and does not justify changing kernel math, binding allocation or model_new.py based on the failed read alone."
     },
@@ -217,6 +223,54 @@
         "G04-10"
       ],
       "text": "Absolute candidate latency in this environment can change roughly twofold between runs as GPU clock state changes. Do not rank variants by absolute microseconds from separate runs: compare with torch.compile in the same benchmark invocation, or repeat/interleave measurements and report the candidate/baseline ratio; stability across clock states increases trust."
+    },
+    {
+      "id": "P21",
+      "stage": 5,
+      "sources": [
+        "G05-01",
+        "G05-02",
+        "G05-04",
+        "G05-07",
+        "G05-15"
+      ],
+      "text": "Previously returned outputs must remain unchanged after later calls, including when retained by the harness. Never overwrite or recycle storage still referenced by an earlier result or alias inputs a/b to save allocation. For AXPBY-like new-output elementwise ops, default to per-call torch::empty_like and PyTorch allocator caching; custom cross-call pooling requires proof with public APIs that no live tensor references the buffer. Validate dtype, device, contiguity and shape before typed-pointer use; pooling must match all relevant tensor properties, not only shape. If refcount APIs fail to compile, remove pooling or use per-call allocation, not guessed headers/private ATen or TensorImpl APIs/unrelated kernel changes. If a late pool/binding experiment fails compilation or verification or degrades performance, restore the known-good per-call version and rerun the required gates."
+    },
+    {
+      "id": "P22",
+      "stage": 5,
+      "sources": [
+        "G05-03",
+        "G05-05"
+      ],
+      "text": "Do not use TensorImpl::use_count, Tensor::use_count, storage().use_count, intrusive-pointer counts or other refcount internals to decide output recyclability: these APIs are unstable/version-dependent, and a build failed because c10::TensorImpl had no use_count. One refcount is not contract-safe proof against live Python/harness references. A monotonically growing pool or degrading repeated-call latency is a failure signal that buffers are not safely recyclable: remove the pool and return to per-call allocation. Do not report a faster pool benchmark without proof that all earlier outputs are preserved."
+    },
+    {
+      "id": "P23",
+      "stage": 5,
+      "sources": [
+        "G05-06"
+      ],
+      "text": "For pre-reserved chunks or suballocation, keep size/offset metadata on the host; never write device metadata through a host pointer. That is a host/device memory bug, not an allocation-tuning detail. Each live output needs distinct usable storage or an ownership scheme preventing overwrite of a live result."
+    },
+    {
+      "id": "P24",
+      "stage": 5,
+      "sources": [
+        "G05-08",
+        "G05-09"
+      ],
+      "text": "Verification PASS does not establish binding cleanliness. Before finalizing, inspect kernels/*.cu, kernels/*_binding.cpp and model_new.py for diagnostic printf/std::printf, counters, timing probes, pool-inspection logs and PROBE ONLY comments. Remove embedded diagnostics as well as separate probe files; no global probe state, pool-size printing or debug-only branch may remain reachable from model_new.py."
+    },
+    {
+      "id": "P25",
+      "stage": 5,
+      "sources": [
+        "G05-12",
+        "G05-13",
+        "G05-14"
+      ],
+      "text": "Reserve budget to finish edits/cleanup, compile if needed, verify, benchmark the exact same files, then submit the final report. Do not end after verification alone if final performance is unmeasured. Near the budget limit stop optional pooling/refcount experiments and retain or restore the last compiled, verified and benchmarked candidate; do not start a speculative change that may leave it unvalidated. Report only measurements actually obtained from final validated files; if these were not benchmarked, say so and treat the performance goal as unconfirmed."
     }
   ],
   "review_notes": [
@@ -224,5 +278,6 @@
     "P03/P11 retain the known-good fallback guidance despite its tension with the initial skill's debug-the-optimized-version requirement.",
     "P16 deliberately preserves the unverified clock-state causal claim. Removing it would change evidence quality as well as compression; it requires a separate correction condition.",
     "Sources from future stages are coverage links only. A clause's stage is its earliest introduction; each generated stage must be reviewed for premature information before use."
-  ]
+  ],
+  "stages": 5
 }

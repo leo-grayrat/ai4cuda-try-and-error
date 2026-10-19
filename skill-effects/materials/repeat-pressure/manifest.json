@@ -1,0 +1,30 @@
+{
+  "status": "prespecified synthetic repetition dose; draft pending formal condition freeze",
+  "generator_sha256": "ccd9ffeb477a00931d6977c01db7a587d72ee6a9d15495b01ce0408a9984e8c4",
+  "source": "evidence/growth-05/cumulative.md",
+  "source_sha256": "1c6ed66d13928c0f3fc31a71f46d651a30d90b6c890ed064bb7f484afe54b6f6",
+  "original_source_bullet_entries": 93,
+  "new_source_bullets": 0,
+  "distinct_requirements": "unchanged from source; not inferred from bullet count",
+  "provenance": "Exact repetition of actual additions; not additional observed development episodes",
+  "conditions": [
+    {
+      "target_lines": 1000,
+      "actual_lines": 1045,
+      "appendix_copies": 4,
+      "source_bullet_occurrences": 372,
+      "text_tokens": 22124,
+      "path": "materials/repeat-pressure/stage-05-at-least-1000-lines.md",
+      "sha256": "ad534f694288e35598815d8cf1d45a7bd29af765368b64068429a273c639997d"
+    },
+    {
+      "target_lines": 3000,
+      "actual_lines": 3061,
+      "appendix_copies": 16,
+      "source_bullet_occurrences": 1488,
+      "text_tokens": 78344,
+      "path": "materials/repeat-pressure/stage-05-at-least-3000-lines.md",
+      "sha256": "6c93cf469a62530ed698e3c4601380b9abac4614a73dc503ace06abf55472dbe"
+    }
+  ]
+}

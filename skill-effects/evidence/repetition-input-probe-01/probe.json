@@ -1,0 +1,42 @@
+{
+  "completed_utc": "2026-10-18T23:55:40.386903+00:00",
+  "purpose": "long-input acceptance and token probe only, not a task-effect trial",
+  "published_context_length": 1000000,
+  "documentation": "https://api-docs.deepseek.com/quick_start/pricing/",
+  "conditions": [
+    {
+      "path": "materials/repeat-pressure/stage-05-at-least-1000-lines.md",
+      "source_sha256": "ad534f694288e35598815d8cf1d45a7bd29af765368b64068429a273c639997d",
+      "text_tokens": 22124,
+      "actual_prompt_tokens": 22152,
+      "finish_reason": "length",
+      "usage": {
+        "prompt_tokens": 22152,
+        "completion_tokens": 1,
+        "total_tokens": 22153,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 22152
+      }
+    },
+    {
+      "path": "materials/repeat-pressure/stage-05-at-least-3000-lines.md",
+      "source_sha256": "6c93cf469a62530ed698e3c4601380b9abac4614a73dc503ace06abf55472dbe",
+      "text_tokens": 78344,
+      "actual_prompt_tokens": 78372,
+      "finish_reason": "length",
+      "usage": {
+        "prompt_tokens": 78372,
+        "completion_tokens": 1,
+        "total_tokens": 78373,
+        "prompt_tokens_details": {
+          "cached_tokens": 22144
+        },
+        "prompt_cache_hit_tokens": 22144,
+        "prompt_cache_miss_tokens": 56228
+      }
+    }
+  ]
+}
