@@ -28,6 +28,9 @@ def main():
     result_path = args.run / 'result.json'
     evidence = json.loads(result_path.read_text(encoding='utf-8'))
     assert evidence['status'] == 'reference_run_passed', 'Need an independently completed reference run'
+    for name, expected_hash in evidence['source_sha256'].items():
+        if name.replace('\\', '/').startswith('workloads/'):
+            assert sha(base / name) == expected_hash, 'Task computation changed after the reference run'
     for name in ['fixtures.npz', 'outputs.npz', 'config.json']:
         assert sha(args.run / name) == evidence['artifacts'][name], f'Changed app evidence: {name}'
     config = evidence['config']
@@ -58,13 +61,16 @@ def main():
         graph.chunk_ops.append(f'conv_{index}')
         if index:
             graph.add_edge(IREdge(f'conv_{index-1}', 'features', f'conv_{index}', 'features'))
+    if config.get('task') == 'branch_features':
+        from branch_ir import build_graph
+        graph = build_graph(repository, config)
     executor = SequentialExecutor(graph)
     rows = []
     with np.load(args.run / 'fixtures.npz') as fixtures, np.load(args.run / 'outputs.npz') as outputs, torch.inference_mode():
         for row in evidence['requests']:
             index = row['index']
             if index == 0 or row['reset_before']:
-                executor.init_state({f'history_{i}': None for i in range(len(layers))})
+                executor.init_state({name: None for name in graph.state_objects})
             inputs = fixtures[f'input_{index}']
             pieces = []
             for position in range(0, config['length'], config['chunk']):
@@ -81,6 +87,9 @@ def main():
               'scope': 'Original CPU IR executor versus reference backend outputs captured through original IPC',
               'requests': rows, 'analysis': summarize_graph(graph),
               'analysis_validation_label': 'Structural only; numerical comparisons are recorded separately above'}
+    if config.get('task') == 'branch_features':
+        result['branch_ir_sha256'] = sha(base / 'branch_ir.py')
+        result['branch_model_sha256'] = sha(base / 'workloads/branch_features/model.py')
     (args.run / 'ir-validation.json').write_bytes((json.dumps(result, indent=2) + '\n').encode('utf-8'))
     print(json.dumps({'status': result['status'], 'requests_compared': len(rows)}))
     return 0 if result['status'] == 'ir_reference_comparison_passed' else 1

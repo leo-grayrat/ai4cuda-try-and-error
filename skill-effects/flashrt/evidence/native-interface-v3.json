@@ -1,0 +1,171 @@
+{
+  "scope": "Native integration probe; no new model-treatment observation",
+  "namespace_import_and_verification": {
+    "ok": true,
+    "execution": {
+      "exitcode": 0,
+      "seconds": 20.01802069999394,
+      "stdout": "{\"status\": \"candidate_run_passed\", \"requests_completed\": 6, \"cleanup_verified\": true, \"output\": \"E:\\\\Project\\\\Git\\\\Research\\\\ai4cuda-try-and-error\\\\.cache\\\\flashrt-native-interface-v3\\\\control\\\\verify-001\\\\evaluation\"}\n",
+      "stderr": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n",
+      "evidence_directory": "verify-001"
+    },
+    "status": "candidate_run_passed",
+    "request_checks": [
+      {
+        "index": 0,
+        "numerical_match": true,
+        "max_abs_difference": 5.21540641784668e-08
+      },
+      {
+        "index": 1,
+        "numerical_match": true,
+        "max_abs_difference": 7.450580596923828e-08
+      },
+      {
+        "index": 2,
+        "numerical_match": true,
+        "max_abs_difference": 5.21540641784668e-08
+      },
+      {
+        "index": 3,
+        "numerical_match": true,
+        "max_abs_difference": 6.705522537231445e-08
+      },
+      {
+        "index": 4,
+        "numerical_match": true,
+        "max_abs_difference": 5.960464477539063e-08
+      },
+      {
+        "index": 5,
+        "numerical_match": true,
+        "max_abs_difference": 8.195638656616211e-08
+      }
+    ],
+    "cleanup_verified": true
+  },
+  "benchmark": {
+    "ok": true,
+    "paired_measurements": {
+      "reference": {
+        "execution": {
+          "exitcode": 0,
+          "seconds": 20.793582600002992,
+          "stdout": "{\"offered_requests_per_second\": 50.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"offered_requests_per_second\": 100.0, \"peak_external_queue_requests\": 1, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"offered_requests_per_second\": 200.0, \"peak_external_queue_requests\": 42, \"rate_gate_passed\": false, \"smoothness_gate_passed\": true}\n{\"status\": \"load_sweep_completed\", \"highest_tested_passing_rate\": 100.0}\n",
+          "stderr": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n",
+          "evidence_directory": "benchmark-002/reference-controller"
+        },
+        "status": "load_sweep_completed",
+        "highest_tested_passing_rate": 100.0,
+        "loads": [
+          {
+            "offered_requests_per_second": 50.0,
+            "first_output_ms": {
+              "median": 1.5700500000000002,
+              "p95": 1.6715
+            },
+            "output_gap_ms": {
+              "median": 0.5598,
+              "p95": 15.26986,
+              "over_budget_fraction": 0.0
+            },
+            "rate_gate_passed": true,
+            "smoothness_gate_passed": true
+          },
+          {
+            "offered_requests_per_second": 100.0,
+            "first_output_ms": {
+              "median": 1.5721500000000002,
+              "p95": 2.2129049999999997
+            },
+            "output_gap_ms": {
+              "median": 0.5667,
+              "p95": 5.01072,
+              "over_budget_fraction": 0.0
+            },
+            "rate_gate_passed": true,
+            "smoothness_gate_passed": true
+          },
+          {
+            "offered_requests_per_second": 200.0,
+            "first_output_ms": {
+              "median": 1.5047,
+              "p95": 1.6126449999999999
+            },
+            "output_gap_ms": {
+              "median": 0.5587,
+              "p95": 1.57681,
+              "over_budget_fraction": 0.0
+            },
+            "rate_gate_passed": false,
+            "smoothness_gate_passed": true
+          }
+        ]
+      },
+      "candidate": {
+        "execution": {
+          "exitcode": 0,
+          "seconds": 23.22409950000292,
+          "stdout": "{\"offered_requests_per_second\": 50.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": false}\n{\"offered_requests_per_second\": 100.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"offered_requests_per_second\": 200.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"status\": \"load_sweep_completed\", \"highest_tested_passing_rate\": 200.0}\n",
+          "stderr": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n",
+          "evidence_directory": "benchmark-002/candidate-controller"
+        },
+        "status": "load_sweep_completed",
+        "highest_tested_passing_rate": 200.0,
+        "loads": [
+          {
+            "offered_requests_per_second": 50.0,
+            "first_output_ms": {
+              "median": 1.562,
+              "p95": 2.418709999999999
+            },
+            "output_gap_ms": {
+              "median": 0.007,
+              "p95": 19.98402,
+              "over_budget_fraction": 0.04899777282850779
+            },
+            "rate_gate_passed": true,
+            "smoothness_gate_passed": false
+          },
+          {
+            "offered_requests_per_second": 100.0,
+            "first_output_ms": {
+              "median": 1.5526,
+              "p95": 4.154215
+            },
+            "output_gap_ms": {
+              "median": 0.0059,
+              "p95": 9.85474,
+              "over_budget_fraction": 0.0
+            },
+            "rate_gate_passed": true,
+            "smoothness_gate_passed": true
+          },
+          {
+            "offered_requests_per_second": 200.0,
+            "first_output_ms": {
+              "median": 1.5567,
+              "p95": 3.008504999999992
+            },
+            "output_gap_ms": {
+              "median": 0.0061,
+              "p95": 5.07627,
+              "over_budget_fraction": 0.0
+            },
+            "rate_gate_passed": true,
+            "smoothness_gate_passed": true
+          }
+        ]
+      }
+    },
+    "scope": "Pilot finite windows, fixed reference-then-candidate order; no aggregate effect claim"
+  },
+  "submission": {
+    "ok": true,
+    "submitted": true
+  },
+  "backend_code_sha256": {
+    "impl.py": "f38b292a081f7e1570816f119f5eb0e628849451fa0d7dbbd579f42686c82daa",
+    "worker.py": "384fba3235b9935ea83aac5a35e6dae52e5f60dd522067dd3a473a4ba924813e"
+  }
+}

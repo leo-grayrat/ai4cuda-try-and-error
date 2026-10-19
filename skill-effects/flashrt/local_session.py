@@ -15,10 +15,11 @@ def file_hash(path):
 
 
 class LocalSession:
-    def __init__(self, repository, config, output, backend_file=None):
+    def __init__(self, repository, config, output, backend_file=None, backend_repository=None):
         self.repository = Path(repository).resolve()
         self.config, self.output = config, Path(output).resolve()
         self.backend_file = Path(backend_file).resolve() if backend_file else None
+        self.backend_repository = Path(backend_repository).resolve() if backend_repository else self.repository
         self.process = self.adapter = None
         self.files = []
         self.evidence = {}
@@ -30,11 +31,14 @@ class LocalSession:
         config_path.write_bytes((json.dumps(self.config, indent=2) + '\n').encode())
         base = Path(__file__).resolve().parent
         environment = os.environ.copy()
-        environment.update(CUDA_VISIBLE_DEVICES='0', PYTHONPATH=str(base / 'workloads'), PYTHONDONTWRITEBYTECODE='1')
+        environment.update(CUDA_VISIBLE_DEVICES='0', PYTHONPATH=str(base / 'workloads') + os.pathsep + str(self.backend_repository),
+                           PYTHONDONTWRITEBYTECODE='1')
         command = [sys.executable, '-u']
-        command += [str(self.backend_file)] if self.backend_file else ['-m', 'causal_features.reference']
-        command += ['--repository', str(self.repository), '--config', str(config_path)]
-        sources = [Path(__file__), *sorted((base / 'workloads/causal_features').glob('*.py'))]
+        task = self.config.get('task', 'causal_features')
+        command += [str(self.backend_file)] if self.backend_file else ['-m', task + '.reference']
+        command += ['--repository', str(self.backend_repository if self.backend_file else self.repository), '--config', str(config_path)]
+        sources = sorted({Path(__file__), *(base / 'workloads/causal_features').glob('*.py'),
+                          *(base / 'workloads' / task).glob('*.py')})
         if self.backend_file:
             sources.append(self.backend_file)
         self.source_hashes = {str(path): file_hash(path) for path in sources}

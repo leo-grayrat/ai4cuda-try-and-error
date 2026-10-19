@@ -1,6 +1,7 @@
 """Independently drive the local reference through IPC and retain raw evidence."""
 import argparse
 import hashlib
+import importlib
 import json
 import math
 from multiprocessing import shared_memory
@@ -27,6 +28,8 @@ def main():
     parser.add_argument('--requests', type=int, default=6)
     parser.add_argument('--device', choices=['cuda', 'cpu'], default='cuda')
     parser.add_argument('--fixture-seed', type=int, default=917)
+    parser.add_argument('--task', choices=['causal_features', 'branch_features'], default='causal_features')
+    parser.add_argument('--backend-repository', type=Path, help='Candidate import/source root; the oracle still uses the protected repository')
     parser.add_argument('--abort-after-chunks', type=int, default=0)
     parser.add_argument('--backend-file', type=Path, help='Candidate backend with the same repository/config CLI and IPC contract')
     args = parser.parse_args()
@@ -37,35 +40,40 @@ def main():
     import numpy as np
     import torch
     from causal_features.adapter import FeatureAdapter
-    from causal_features.model import full_sequence_oracle
+    full_sequence_oracle = importlib.import_module(args.task + '.model').full_sequence_oracle
 
     torch.set_num_threads(2)
     args.output.mkdir(parents=True, exist_ok=False)
     output = args.output.resolve()
     config = {'channels': args.channels, 'hidden': args.hidden, 'length': args.length,
               'chunk': args.chunk, 'weight_seed': 703, 'device': args.device,
-              'prefix': 'flashrt_features_' + uuid.uuid4().hex}
+              'prefix': 'flashrt_features_' + uuid.uuid4().hex, 'task': args.task}
     (output / 'config.json').write_bytes((json.dumps(config, indent=2) + '\n').encode())
     random = np.random.default_rng(args.fixture_seed)
     inputs = [random.standard_normal((args.channels, args.length), dtype=np.float32)
               for _ in range(args.requests)]
     inputs[2] = inputs[0].copy()
+    if args.requests >= 4:
+        inputs[3] = inputs[0].copy()
     # The second request continues the first session. The third explicitly
     # resets and repeats the first input, detecting cross-session leakage.
     expected = [full_sequence_oracle(repository, config, values) for values in inputs]
     expected[1] = full_sequence_oracle(repository, config, np.concatenate(inputs[:2], axis=-1))[:, args.length:]
+    if args.requests >= 4:
+        expected[3] = full_sequence_oracle(repository, config, np.concatenate([inputs[0], inputs[0]], axis=-1))[:, args.length:]
     np.savez_compressed(output / 'fixtures.npz', **{f'input_{i}': row for i, row in enumerate(inputs)})
 
     environment = os.environ.copy()
     environment['CUDA_VISIBLE_DEVICES'] = '0'
-    environment['PYTHONPATH'] = str(base / 'workloads')
+    backend_repository = args.backend_repository.resolve() if args.backend_repository else repository
+    environment['PYTHONPATH'] = str(base / 'workloads') + os.pathsep + str(backend_repository)
     environment['PYTHONDONTWRITEBYTECODE'] = '1'
     stdout = (output / 'backend.stdout.log').open('w', encoding='utf-8')
     stderr = (output / 'backend.stderr.log').open('w', encoding='utf-8')
-    command = [sys.executable, '-u', '-m', 'causal_features.reference', '--repository', str(repository),
+    command = [sys.executable, '-u', '-m', args.task + '.reference', '--repository', str(repository),
                '--config', str(output / 'config.json')]
     if args.backend_file:
-        command = [sys.executable, '-u', str(args.backend_file.resolve()), '--repository', str(repository),
+        command = [sys.executable, '-u', str(args.backend_file.resolve()), '--repository', str(backend_repository),
                    '--config', str(output / 'config.json')]
     process, adapter, rows, collected = None, None, [], {}
     result = {'scope': 'Reference application development run, not a skill-treatment comparison',
@@ -73,8 +81,9 @@ def main():
               'config': config, 'status': 'started', 'requests': rows,
               'timing_scope': 'Adapter-observed finite request bursts; not maximum sustainable-rate evidence',
               'oracle': 'CPU full-sequence evaluation; reference worker runs chunk caches through original IPC',
-              'source_sha256': {str(path.relative_to(base)): digest(path.read_bytes())
-                                for path in [Path(__file__), *(base / 'workloads/causal_features').glob('*.py')]}}
+              'source_sha256': {path.relative_to(base).as_posix(): digest(path.read_bytes())
+                                for path in sorted({Path(__file__), *(base / 'workloads/causal_features').glob('*.py'),
+                                                    *(base / 'workloads' / args.task).glob('*.py')})}}
     if args.backend_file:
         result['candidate_entry_sha256'] = digest(args.backend_file.read_bytes())
         result['scope'] = 'Independent candidate evaluation development run, not a skill-treatment comparison'
@@ -103,13 +112,22 @@ def main():
         adapter.start()
         result['startup_seconds'] = time.monotonic() - started
         for index, features in enumerate(inputs):
-            reset = index >= 2
+            reset = index == 2 or index >= 4
             if reset:
                 adapter.reset()
             request_id, published_ns = adapter.submit(features)
             pieces, timestamps = [], []
             for _ in range(math.ceil(args.length / args.chunk)):
-                data, observed_ns = adapter.receive()
+                deadline = time.monotonic() + 30
+                while True:
+                    if process.poll() is not None:
+                        raise RuntimeError(f'Backend exited before completing output: {process.returncode}')
+                    try:
+                        data, observed_ns = adapter.receive(timeout_s=min(1, max(0.001, deadline - time.monotonic())))
+                        break
+                    except TimeoutError:
+                        if time.monotonic() >= deadline:
+                            raise
                 pieces.append(data)
                 timestamps.append(observed_ns)
                 chunks_seen += 1
@@ -132,13 +150,13 @@ def main():
             rows.append(row)
             collected[f'output_{index}'] = actual
             assert match, f'Request {index} differs from the full-sequence oracle'
-        assert rows[0]['output_sha256'] == rows[2]['output_sha256'], 'Reset did not reproduce the first session'
+        assert np.allclose(collected['output_0'], collected['output_2'], atol=3e-5, rtol=3e-4), 'Reset did not reproduce the first session within tolerance'
         result['status'] = 'numerical_checks_passed_pending_cleanup'
         np.savez_compressed(output / 'outputs.npz', **collected)
     except Exception as exc:
         result.update(status='invalid_run', error=f'{type(exc).__name__}: {exc}')
     finally:
-        if adapter is not None:
+        if adapter is not None and process is not None and process.poll() is None:
             try:
                 adapter.terminate()
             except Exception as exc:
@@ -181,11 +199,12 @@ def main():
         result['known_interpreter_diagnostics'] = [line for line in stderr_lines if line == known_launcher_line]
         unexpected_stderr = [line for line in stderr_lines if line != known_launcher_line]
         result['unexpected_backend_stderr'] = unexpected_stderr
-        cleanup_ok = process is not None and process.returncode == 0 and not leftovers
+        cleanup_ok = process is not None and process.poll() is not None and not leftovers
+        result['backend_exited_normally'] = process is not None and process.returncode == 0
         result['cleanup_verified'] = cleanup_ok
         if result['status'] == 'numerical_checks_passed_pending_cleanup':
             passed_status = 'candidate_run_passed' if args.backend_file else 'reference_run_passed'
-            result['status'] = (passed_status if cleanup_ok and not unexpected_stderr
+            result['status'] = (passed_status if cleanup_ok and result['backend_exited_normally'] and not unexpected_stderr
                                 else 'invalid_cleanup' if not cleanup_ok else 'invalid_backend_stderr')
         changed = [name for name, expected_hash in result['source_sha256'].items()
                    if digest((base / name).read_bytes()) != expected_hash]

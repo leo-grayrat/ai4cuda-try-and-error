@@ -1,0 +1,10 @@
+{
+  "channels": 16,
+  "hidden": 32,
+  "length": 1043,
+  "chunk": 127,
+  "weight_seed": 703,
+  "device": "cuda",
+  "prefix": "flashrt_load_a6a2867843ec4dcb92aed3c8738d807e",
+  "task": "branch_features"
+}

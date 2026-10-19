@@ -1,0 +1,125 @@
+{
+  "scope": "Second-task numerical and original-IR development validation; no model-treatment effect claim",
+  "status": "branch_workload_checks_passed",
+  "device": "cuda",
+  "cases": [
+    {
+      "config": {
+        "channels": 16,
+        "hidden": 32,
+        "length": 1043,
+        "chunk": 127,
+        "weight_seed": 703,
+        "device": "cuda"
+      },
+      "requests": [
+        {
+          "request": 0,
+          "reset_before": false,
+          "streamed_matches_cpu_full": true,
+          "original_ir_matches_cpu_full": true,
+          "streamed_max_abs_difference": 2.384185791015625e-07
+        },
+        {
+          "request": 1,
+          "reset_before": false,
+          "streamed_matches_cpu_full": true,
+          "original_ir_matches_cpu_full": true,
+          "streamed_max_abs_difference": 2.384185791015625e-07
+        },
+        {
+          "request": 2,
+          "reset_before": true,
+          "streamed_matches_cpu_full": true,
+          "original_ir_matches_cpu_full": true,
+          "streamed_max_abs_difference": 2.384185791015625e-07
+        }
+      ],
+      "missing_history_detected": true,
+      "missing_branch_detected": true
+    },
+    {
+      "config": {
+        "channels": 16,
+        "hidden": 32,
+        "length": 33,
+        "chunk": 1,
+        "weight_seed": 703,
+        "device": "cuda"
+      },
+      "requests": [
+        {
+          "request": 0,
+          "reset_before": false,
+          "streamed_matches_cpu_full": true,
+          "original_ir_matches_cpu_full": true,
+          "streamed_max_abs_difference": 5.960464477539063e-08
+        },
+        {
+          "request": 1,
+          "reset_before": false,
+          "streamed_matches_cpu_full": true,
+          "original_ir_matches_cpu_full": true,
+          "streamed_max_abs_difference": 5.960464477539063e-08
+        },
+        {
+          "request": 2,
+          "reset_before": true,
+          "streamed_matches_cpu_full": true,
+          "original_ir_matches_cpu_full": true,
+          "streamed_max_abs_difference": 5.960464477539063e-08
+        }
+      ],
+      "missing_history_detected": true,
+      "missing_branch_detected": true
+    },
+    {
+      "config": {
+        "channels": 16,
+        "hidden": 32,
+        "length": 3,
+        "chunk": 2,
+        "weight_seed": 703,
+        "device": "cuda"
+      },
+      "requests": [
+        {
+          "request": 0,
+          "reset_before": false,
+          "streamed_matches_cpu_full": true,
+          "original_ir_matches_cpu_full": true,
+          "streamed_max_abs_difference": 1.7881393432617188e-07
+        },
+        {
+          "request": 1,
+          "reset_before": false,
+          "streamed_matches_cpu_full": true,
+          "original_ir_matches_cpu_full": true,
+          "streamed_max_abs_difference": 1.043081283569336e-07
+        },
+        {
+          "request": 2,
+          "reset_before": true,
+          "streamed_matches_cpu_full": true,
+          "original_ir_matches_cpu_full": true,
+          "streamed_max_abs_difference": 1.7881393432617188e-07
+        }
+      ],
+      "missing_history_detected": true,
+      "missing_branch_detected": true
+    }
+  ],
+  "analysis": [
+    "=== IR Graph Summary: branch_features ===\n\n## Operators (6 total)\n  Preamble: 0  |  Chunk: 6\n\n  a0 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_a0\n    state writes: history_a0\n\n  a1 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_a1\n    state writes: history_a1\n\n  b0 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_b0\n    state writes: history_b0\n\n  b1 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_b1\n    state writes: history_b1\n\n  gate (exposed, batch, chunk)\n    inputs:  features\n    outputs: gate\n    state reads:  (none)\n    state writes: (none)\n\n  merge (exposed, batch, chunk)\n    inputs:  features, a, b, gate\n    outputs: features\n    state reads:  (none)\n    state writes: (none)\n\n## State Objects (4 total)\n  history_a0 (scope=chunk_persistent): \n  history_a1 (scope=chunk_persistent): \n  history_b0 (scope=chunk_persistent): \n  history_b1 (scope=chunk_persistent): \n\n## Edges (5 total: 5 data, 0 ordering, 0 streaming)\n  a0.features -> a1.features\n  b0.features -> b1.features\n  a1.features -> merge.a\n  b1.features -> merge.b\n  gate.gate -> merge.gate\n\n## Cross-Chunk Dependencies\n  a0 <-(history_a0)-> a0\n  a1 <-(history_a1)-> a1\n  b0 <-(history_b0)-> b0\n  b1 <-(history_b1)-> b1\n\n## Cross-Chunk Independent Pairs\n  a0 || a1  (can overlap across chunks)\n  a0 || b0  (can overlap across chunks)\n  a0 || b1  (can overlap across chunks)\n  a0 || gate  (can overlap across chunks)\n  a0 || merge  (can overlap across chunks)\n  a1 || b0  (can overlap across chunks)\n  a1 || b1  (can overlap across chunks)\n  a1 || gate  (can overlap across chunks)\n  a1 || merge  (can overlap across chunks)\n  b0 || b1  (can overlap across chunks)\n  b0 || gate  (can overlap across chunks)\n  b0 || merge  (can overlap across chunks)\n  b1 || gate  (can overlap across chunks)\n  b1 || merge  (can overlap across chunks)\n  gate || merge  (can overlap across chunks)\n\n## Pipeline Stages (6 stages = 6 GPUs for pipeline parallelism)\n  Stage 0: [a0]\n    Persistent state: history_a0\n  Stage 1: [b0]\n    Persistent state: history_b0\n  Stage 2: [gate]\n    Persistent state: (no persistent state)\n  Stage 3: [a1]\n    Persistent state: history_a1\n  Stage 4: [b1]\n    Persistent state: history_b1\n  Stage 5: [merge]\n    Persistent state: (no persistent state)\n\n## Streaming Overlaps (0 opportunities)\n  (none)\n\n## Validation: PASS\n",
+    "=== IR Graph Summary: branch_features ===\n\n## Operators (6 total)\n  Preamble: 0  |  Chunk: 6\n\n  a0 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_a0\n    state writes: history_a0\n\n  a1 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_a1\n    state writes: history_a1\n\n  b0 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_b0\n    state writes: history_b0\n\n  b1 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_b1\n    state writes: history_b1\n\n  gate (exposed, batch, chunk)\n    inputs:  features\n    outputs: gate\n    state reads:  (none)\n    state writes: (none)\n\n  merge (exposed, batch, chunk)\n    inputs:  features, a, b, gate\n    outputs: features\n    state reads:  (none)\n    state writes: (none)\n\n## State Objects (4 total)\n  history_a0 (scope=chunk_persistent): \n  history_a1 (scope=chunk_persistent): \n  history_b0 (scope=chunk_persistent): \n  history_b1 (scope=chunk_persistent): \n\n## Edges (5 total: 5 data, 0 ordering, 0 streaming)\n  a0.features -> a1.features\n  b0.features -> b1.features\n  a1.features -> merge.a\n  b1.features -> merge.b\n  gate.gate -> merge.gate\n\n## Cross-Chunk Dependencies\n  a0 <-(history_a0)-> a0\n  a1 <-(history_a1)-> a1\n  b0 <-(history_b0)-> b0\n  b1 <-(history_b1)-> b1\n\n## Cross-Chunk Independent Pairs\n  a0 || a1  (can overlap across chunks)\n  a0 || b0  (can overlap across chunks)\n  a0 || b1  (can overlap across chunks)\n  a0 || gate  (can overlap across chunks)\n  a0 || merge  (can overlap across chunks)\n  a1 || b0  (can overlap across chunks)\n  a1 || b1  (can overlap across chunks)\n  a1 || gate  (can overlap across chunks)\n  a1 || merge  (can overlap across chunks)\n  b0 || b1  (can overlap across chunks)\n  b0 || gate  (can overlap across chunks)\n  b0 || merge  (can overlap across chunks)\n  b1 || gate  (can overlap across chunks)\n  b1 || merge  (can overlap across chunks)\n  gate || merge  (can overlap across chunks)\n\n## Pipeline Stages (6 stages = 6 GPUs for pipeline parallelism)\n  Stage 0: [a0]\n    Persistent state: history_a0\n  Stage 1: [b0]\n    Persistent state: history_b0\n  Stage 2: [gate]\n    Persistent state: (no persistent state)\n  Stage 3: [a1]\n    Persistent state: history_a1\n  Stage 4: [b1]\n    Persistent state: history_b1\n  Stage 5: [merge]\n    Persistent state: (no persistent state)\n\n## Streaming Overlaps (0 opportunities)\n  (none)\n\n## Validation: PASS\n",
+    "=== IR Graph Summary: branch_features ===\n\n## Operators (6 total)\n  Preamble: 0  |  Chunk: 6\n\n  a0 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_a0\n    state writes: history_a0\n\n  a1 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_a1\n    state writes: history_a1\n\n  b0 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_b0\n    state writes: history_b0\n\n  b1 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_b1\n    state writes: history_b1\n\n  gate (exposed, batch, chunk)\n    inputs:  features\n    outputs: gate\n    state reads:  (none)\n    state writes: (none)\n\n  merge (exposed, batch, chunk)\n    inputs:  features, a, b, gate\n    outputs: features\n    state reads:  (none)\n    state writes: (none)\n\n## State Objects (4 total)\n  history_a0 (scope=chunk_persistent): \n  history_a1 (scope=chunk_persistent): \n  history_b0 (scope=chunk_persistent): \n  history_b1 (scope=chunk_persistent): \n\n## Edges (5 total: 5 data, 0 ordering, 0 streaming)\n  a0.features -> a1.features\n  b0.features -> b1.features\n  a1.features -> merge.a\n  b1.features -> merge.b\n  gate.gate -> merge.gate\n\n## Cross-Chunk Dependencies\n  a0 <-(history_a0)-> a0\n  a1 <-(history_a1)-> a1\n  b0 <-(history_b0)-> b0\n  b1 <-(history_b1)-> b1\n\n## Cross-Chunk Independent Pairs\n  a0 || a1  (can overlap across chunks)\n  a0 || b0  (can overlap across chunks)\n  a0 || b1  (can overlap across chunks)\n  a0 || gate  (can overlap across chunks)\n  a0 || merge  (can overlap across chunks)\n  a1 || b0  (can overlap across chunks)\n  a1 || b1  (can overlap across chunks)\n  a1 || gate  (can overlap across chunks)\n  a1 || merge  (can overlap across chunks)\n  b0 || b1  (can overlap across chunks)\n  b0 || gate  (can overlap across chunks)\n  b0 || merge  (can overlap across chunks)\n  b1 || gate  (can overlap across chunks)\n  b1 || merge  (can overlap across chunks)\n  gate || merge  (can overlap across chunks)\n\n## Pipeline Stages (6 stages = 6 GPUs for pipeline parallelism)\n  Stage 0: [a0]\n    Persistent state: history_a0\n  Stage 1: [b0]\n    Persistent state: history_b0\n  Stage 2: [gate]\n    Persistent state: (no persistent state)\n  Stage 3: [a1]\n    Persistent state: history_a1\n  Stage 4: [b1]\n    Persistent state: history_b1\n  Stage 5: [merge]\n    Persistent state: (no persistent state)\n\n## Streaming Overlaps (0 opportunities)\n  (none)\n\n## Validation: PASS\n"
+  ],
+  "source_sha256": {
+    "probe_branch_workload.py": "b745f4269c1acf4d7e8d77b989cce8ebaefa537504975585106de9d42cfaa402",
+    "workloads\\branch_features\\__init__.py": "31c9db562f005f593731be332301850b55bf796527a0030fe00636cdc2e48881",
+    "workloads\\branch_features\\adapter.py": "cf49777e032f401ea3def8b6b04224a92a718eae86a614d7c7d7ea16c34787f4",
+    "workloads\\branch_features\\model.py": "64347a68235099f3b1d7b3be4533079108f6ebace072b67e4500ff52d6fca7a5",
+    "workloads\\branch_features\\reference.py": "200c8ac3c2913f8cfd7e01481f2ea658982d9e391838f7c33882f79aee56095a"
+  },
+  "upstream_audio_sha256": "1023dbaf30014a558466697ab739df228939bf601881323d05f208e6d6d0c2bf"
+}
