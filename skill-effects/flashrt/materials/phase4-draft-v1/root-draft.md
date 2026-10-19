@@ -562,17 +562,19 @@ Every queued variant needs its own independent implementation, correctness check
 
 #### Work scope and persistence
 
-Write code only under `flashrt/apps/<app>/backend/`. Keep each benchmarked variant in its own subpackage/config rather than mutating a previously good variant in place. When behavior in a read-only file must change, vendor the necessary file or subset into the variant directory, modify and import the copy, and add a one-line source-path/divergence comment. Validate numerical parity of unchanged paths against the original, which remains the oracle. This applies to shared adapters, models, runtime, `flashrt_kernels/`, and other read-only code.
+Write code only under `flashrt/apps/<app>/backend/`. Keep each benchmarked variant in its own subpackage/config rather than mutating a previously good variant in place.
 
-Audit reusable runtime support before dismissing a direction: grep `flashrt/*` for the relevant abstraction and read at least the most promising file. If manual implementation is needed, proceed. The experiment log may not use implementation complexity, missing runtime coverage, “audited ... and it does not cover this case,” or “no relevant support found ...” to defer a direction.
+**Read-only areas are not a blocker — vendor the file into your workspace.** When behavior in a read-only file must change, vendor the necessary file or subset into the variant directory, modify and import the copy, and add a one-line source-path/divergence comment. Validate numerical parity of unchanged paths against the original, which remains the oracle. This applies to shared adapters, models, runtime, `flashrt_kernels/`, and other read-only code.
 
-There is no session deadline or self-imposed wall-clock/per-variant limit. Implementation cost, debugging difficulty, integration, new infrastructure, distributed/async composition, missing read-only edit permission, existing wins, anticipated user permission to stop, or reaching ten variants never justify skipping, downgrading, proxying, substituting, deferring, or rotating away from a queued variant. Work on the current variant until it reaches a terminal status. If no progress is possible after a serious attempt, apply the strict environmental-blocker criteria below.
+Audit reusable runtime support before dismissing a direction: grep `flashrt/*` for the relevant abstraction and read at least the most promising file. If manual implementation is needed, proceed. Do not defer a direction because of implementation complexity or missing runtime coverage. The experiment log must never say “audited `flashrt/<path>` and it does not cover this case because …,” “no relevant support found in the shared runtime after grepping for …,” or “too complex.”
 
-The log, README, and final status describe this session's actual state. They must not contain future-session handoff language or technical paraphrases, including “next/future/follow-on session,” “pick this up later,” “come back to it,” “out of scope for this session,” “left for follow-up,” “a future agent can,” or “deferred to a later session.” Every queued variant remains this session's responsibility until terminal.
+**Implementation and debugging cost are never valid rationale for skipping, deferring, downgrading, substituting, or rotating off of a queued variant.** There is no session deadline or self-imposed wall-clock/per-variant limit. Implementation cost, debugging difficulty, integration, new infrastructure, distributed/async composition, missing read-only edit permission, existing wins, anticipated user permission to stop, or reaching ten variants never justify skipping, downgrading, proxying, substituting, deferring, or rotating away from a queued variant. Work on the current variant until it reaches a terminal status. If no progress is possible after a serious attempt, apply the strict environmental-blocker criteria below.
+
+**Forbidden session-handoff language.** The log, README, and final status describe this session's actual state. They must not contain these phrases or technical paraphrases: “next session,” “future session,” “follow-on session,” “pick this up later,” “I'll come back to this,” “come back to it,” “the next session's first target,” “beyond this session's scope,” “deferred to a later session,” “a future agent can,” “out of scope for this session,” or “left for follow-up.” Every queued variant remains this session's responsibility until terminal.
 
 #### Terminal statuses and removal evidence
 
-`planned` and `in_progress` are non-terminal. The terminal statuses are:
+**Terminal statuses.** `planned` and `in_progress` are non-terminal. The terminal statuses are:
 
 - `measured`: launched end-to-end, with an executed correctness verdict (PASS or FAIL), its persisted harness log, and benchmark JSON from a real end-to-end run.
 - `discarded`: the IR analysis incorrectly declared a transformation legal; supply the dependency it missed, a minimal on-disk reproduction showing that even a correctly implemented transformation corrupts output, and the erroneous IR file/operator declaration. Correct the IR and re-run validation in the same edit. Include a failing transformation-legality test under `flashrt/apps/<app>/backend/tests/` and the self-framing paragraph below.
@@ -580,7 +582,7 @@ The log, README, and final status describe this session's actual state. They mus
 
 The IR-legality error is the single acceptable reason for dropping a planned variant without measuring it. Do not silently drop rows. Suspected domination, prediction, implementation cost, presumed user wishes, or another variant's measurement are not removal grounds. If the evidence does not establish the chosen exception, restore `in_progress` and continue.
 
-All three `blocked` criteria must hold:
+**What `blocked` means (strict).** All three `blocked` criteria must hold:
 
 1. Preserve actual variant code, including vendored files, under the backend directory. Launch it end-to-end, or as close as the failure allows, and preserve a specific reproducible failure. Deleted drafts and mental arguments do not count.
 2. The failure is environmental and cannot be resolved by any code you could write under the backend directory. Exactly three categories qualify: (a) required hardware failure, such as unavailable GPU/NVLink or OOM persisting after the most aggressive supported sharding, evidenced by `nvidia-smi`, `dmesg`, or CUDA errors; (b) missing unavailable weights or an external service with no substitute, evidenced by filesystem/HTTP errors; (c) a third-party library bug in the preconfigured environment, evidenced by an isolated pytest-style reproduction checked into backend `tests/` that exercises the library alone and establishes correct API use.
@@ -588,7 +590,7 @@ All three `blocked` criteria must hold:
 
 Agent-written bugs, including wrappers, workers, harness helpers, vendored code, and distributed protocols, require fixing. An apparent shared-runtime failure requires an isolated reproduction without the wrapper; if that works, the wrapper remains the agent's problem. An unexplained wait is an unknown to investigate, not a blocker. No complexity, integration effort, session time, tokens, or patience can satisfy the environmental criterion.
 
-Every `blocked`/`discarded` row, and every log block for an unmeasured removed variant, requires a dedicated experiment-log paragraph in this form:
+**Adversarial self-framing (required).** Every `blocked`/`discarded` row, and every log block for an unmeasured removed variant, requires a dedicated experiment-log paragraph in this form:
 
 > A skeptic reading this could argue it is implementation-cost skipping re-dressed. The concrete evidence it is not is <specific on-disk pointer>.
 

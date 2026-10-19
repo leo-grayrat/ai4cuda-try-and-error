@@ -17,7 +17,9 @@
 
 [逐字材料清单](materials/verbatim-v1/manifest.json)保留四份原文及其目录优先级，按原有标题划出 90 个片段。每份文档的片段连接后与原文件逐字节一致。这一步用于追溯来源，尚未形成压缩版或按需加载方案。
 
-已另行制作 [Phase 4 整理草稿](materials/phase4-draft-v1/replacement.md)与[来源对照](materials/phase4-draft-v1/AUDIT.zh.md)：该段由 8,128 token 改为 2,577，整份根说明由 21,800 改为 16,249。区间外字节与另外三份说明保留原样，见[构建核验](materials/phase4-draft-v1/build.json)。该稿把重复限制集中到队列、工作范围、退出证据、诊断和迭代流程中；其语义和实际效果仍待复核及比较。
+已另行制作 [Phase 4 整理草稿](materials/phase4-draft-v1/replacement.md)与[来源对照](materials/phase4-draft-v1/AUDIT.zh.md)：经第二轮核对，该段由 8,128 token 改为 2,704，整份根说明由 21,800 改为 16,376。区间外字节与另外三份说明保留原样，见[构建核验](materials/phase4-draft-v1/build.json)。该稿把重复限制集中到队列、工作范围、退出证据、诊断和迭代流程中，恢复了完成检查引用的六个标题；实际效果仍待比较。
+
+[原文核对单](REQUIREMENTS.zh.md)覆盖四份说明，共 69 个研究核对单元；[索引](materials/requirements-v1.json)固定每项来源范围和校验值。这些单元区分字段、执行与语义要求，并非原文原子规则计数。[来源张力记录](SOURCE_TENSIONS.zh.md)保留路径、基线、失败判决等原有歧义。[比较草案](COMPARISON_DRAFT.zh.md)据此安排四问的证据与条件。
 
 ## 原项目已有检查
 
@@ -39,6 +41,7 @@
 python skill-effects/flashrt/prepare_documents.py --repository .cache/flashrt/dd9dae0072a72964a2bdc3ca3f06f68afa122a7f/repository --tokenizer .cache/skill-effects-tokenizer/tokenizer.json --output .cache/flashrt-verbatim-check
 python skill-effects/flashrt/probe_ir.py --repository .cache/flashrt/dd9dae0072a72964a2bdc3ca3f06f68afa122a7f/repository --output .cache/flashrt-ir-probe-check.json
 python skill-effects/flashrt/build_phase4_draft.py --tokenizer .cache/skill-effects-tokenizer/tokenizer.json
+python skill-effects/flashrt/index_requirements.py
 ```
 
 第一条命令要求输出目录尚不存在，以免覆盖既有材料。分词器校验值记录在材料清单中。

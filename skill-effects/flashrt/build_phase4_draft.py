@@ -29,6 +29,14 @@ def main():
     replacement = (target / 'replacement.md').read_bytes()
     newline = b'\r\n' if b'\r\n' in root else b'\n'
     replacement = replacement.replace(b'\r\n', b'\n').rstrip(b'\n').replace(b'\n', newline) + newline * 2
+    gate_titles = [
+        'Implementation and debugging cost are never valid rationale',
+        'Read-only areas are not a blocker — vendor the file into your workspace.',
+        'Terminal statuses.', 'What `blocked` means (strict).',
+        'Forbidden session-handoff language.', 'Adversarial self-framing (required).',
+    ]
+    replacement_text = replacement.decode('utf-8')
+    assert all(title in replacement_text for title in gate_titles), 'Original completion gate lost a referenced title'
     combined = prefix + replacement + suffix
     assert combined[:len(prefix)] == prefix
     assert combined[len(prefix) + len(replacement):] == suffix
@@ -43,6 +51,7 @@ def main():
               'source_root_sha256': sha(root), 'source_lines_replaced': [547, 1181],
               'untouched_prefix_sha256': sha(prefix), 'untouched_suffix_sha256': sha(suffix),
               'outside_replacement_identical': True, 'source_ranges_contiguous': True,
+              'completion_gate_titles_preserved': gate_titles,
               'tokenizer_sha256': sha(args.tokenizer.read_bytes()),
               'tokens': {'root_original': count(root), 'section_original': count(replaced),
                          'section_draft': count(replacement), 'root_draft': count(combined)},

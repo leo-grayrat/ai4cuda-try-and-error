@@ -9,14 +9,22 @@
   "untouched_suffix_sha256": "aeac13e356223c5c5406b56ba24890d6f932b4e8518edc316adff05f5dc963db",
   "outside_replacement_identical": true,
   "source_ranges_contiguous": true,
+  "completion_gate_titles_preserved": [
+    "Implementation and debugging cost are never valid rationale",
+    "Read-only areas are not a blocker — vendor the file into your workspace.",
+    "Terminal statuses.",
+    "What `blocked` means (strict).",
+    "Forbidden session-handoff language.",
+    "Adversarial self-framing (required)."
+  ],
   "tokenizer_sha256": "c90dfa01249db1be4245780a052ede752e1361c612ac6d08e2bdada7d599476b",
   "tokens": {
     "root_original": 21800,
     "section_original": 8128,
-    "section_draft": 2577,
-    "root_draft": 16249
+    "section_draft": 2704,
+    "root_draft": 16376
   },
-  "root_draft_sha256": "33cb33e2dec839193bd32889e4383b62d67cad944f7a36ae5579fab3cc6c4598",
+  "root_draft_sha256": "7437ebe2f41379cc009216f0720ef6e1c8c94b141bf9785773dbd5351462322e",
   "unchanged_documents": [
     {
       "logical_path": "flashrt/apps/AGENTS.md",
