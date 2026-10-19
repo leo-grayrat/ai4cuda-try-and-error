@@ -29,3 +29,5 @@ python skill-effects/analyze_formal.py --collection skill-effects/runs/formal-se
 `analyze_formal.py` 仅在全部槽位结束后输出条件汇总和逐题、逐次配对表。成本包含失败运行；没有数值交付时，每次交付成本留空。有一侧未通过独立正确性或没有有效计时时，配对表保留双方结果，但不编造性能差值。文风与适用要求的审阅结果另行合并。
 
 `review_packet.py` 可对单份隐藏条件的材料进行新上下文 API 审阅，逐字核对引用、报告是否存在和条目完整性，保存单独用量。其输出仍需证据复核。[首份审阅校准](evidence/review-calibration-01/decisions.zh.md)保留了引用来源错误、清理判断过宽及测试命名归因错误；未把这些初步意见当作最终合规率。JSON 输出参数依据 [DeepSeek 官方文档](https://api-docs.deepseek.com/guides/json_mode/)。
+
+当前审阅材料为 schema 2，附完整工作区文件清单、候选源码哈希和可见回复轮次，明确区分模型操作与研究方最终测量。早期 schema 1 材料及校准意见留档；新审阅器要求 schema 2，旧证据包的内容不会被覆盖。

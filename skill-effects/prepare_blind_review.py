@@ -54,6 +54,7 @@ def packet(run, row, review_id, rubric):
             # request bodies, usage, model identity or original condition labels.
             if message.get("content"):
                 timeline.append({"id": f"v{len(timeline):04d}", "type": "visible_assistant",
+                                 "response_index": event.get("index"),
                                  "text": message["content"]})
         elif event["type"] == "tool":
             call = event["call"].get("function", {})
@@ -63,6 +64,7 @@ def packet(run, row, review_id, rubric):
             except (TypeError, ValueError):
                 pass
             timeline.append({"id": f"v{len(timeline):04d}", "type": "tool",
+                             "response_index": event.get("index"),
                              "name": call.get("name"), "arguments": arguments,
                              "result": event["result"]})
     report_path = run / "submitted-report.json"
@@ -71,12 +73,16 @@ def packet(run, row, review_id, rubric):
                for path in sorted((run / "work").rglob("*"))
                if path.is_file() and path.suffix in SOURCE_SUFFIXES
                and (path.name == "model_new.py" or path.relative_to(run / "work").parts[0] == "kernels")}
-    data = {"review_id": review_id, "task": row["task"], "state": row["state"],
+    inventory = [{"path": path.relative_to(run / "work").as_posix(), "bytes": path.stat().st_size}
+                 for path in sorted((run / "work").rglob("*")) if path.is_file()]
+    source_hashes = {name: digest(run / "work" / name) for name in sources}
+    data = {"packet_version": 2, "review_id": review_id, "task": row["task"], "state": row["state"],
             "submitted_report": submitted_report,
             "report_available": bool(submitted_report and submitted_report.strip()),
             "reference_model": (run / "control/model.py").read_text(encoding="utf-8"),
             "task_contract": (ROOT / "tasks" / row["task"] / "contract.md").read_text(encoding="utf-8"),
-            "final_sources": sources, "visible_timeline": timeline,
+            "final_sources": sources, "final_source_sha256": source_hashes,
+            "final_inventory": inventory, "visible_timeline": timeline,
             "independent_final_evaluation": result["final_evaluation"],
             "final_timing": read(run / "cuda_event_timing.json") if row.get("median_us") else None,
             "source_findings": result["source_findings"],
@@ -87,6 +93,8 @@ def packet(run, row, review_id, rubric):
                 "If no submitted report exists, leave prose scores null and record report absence.",
                 "For each score cite exact report quotations and evidence IDs; retain uncertainties.",
                 "Assess visible pre-change expectations and test naming separately from final prose.",
+                "Timeline entries are actor behavior; independent_final_evaluation is researcher evaluation. Do not attribute researcher test labels to the actor.",
+                "The complete file inventory includes noncompiled files; filenames alone do not establish that embedded diagnostic code was removed.",
                 "Check source rules for applicability; advice and examples are not universal obligations.",
                 "Record any inferred treatment identity as suspected unmasking before scoring.",
                 "Tool mechanisms may be apparent in behavior; condition labels and input prompts are withheld."]}

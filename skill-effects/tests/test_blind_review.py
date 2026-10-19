@@ -17,6 +17,7 @@ def test_packet_hides_reasoning_labels_and_paths_without_inventing_a_report(tmp_
     (run / "control/model.py").write_text("reference", encoding="utf-8")
     (tmp_path / "tasks/fixture/contract.md").write_text("frozen contract", encoding="utf-8")
     (run / "work/model_new.py").write_text("candidate", encoding="utf-8")
+    (run / "work/kernels/attempt.cu.bak").write_text("uncompiled backup", encoding="utf-8")
     (run / "response-000.json").write_text(json.dumps({"choices": [{"message": {
         "content": "interim visible comment", "reasoning_content": "PRIVATE_REASONING"}}]}), encoding="utf-8")
     result = {"state": "generation_truncated", "final_evaluation": {}, "source_findings": {},
@@ -38,3 +39,6 @@ def test_packet_hides_reasoning_labels_and_paths_without_inventing_a_report(tmp_
     assert not data["report_available"]
     assert data["visible_timeline"][0]["text"] == "interim visible comment"
     assert data["task_contract"] == "frozen contract"
+    assert data["visible_timeline"][0]["response_index"] == 0
+    assert "kernels/attempt.cu.bak" in {item["path"] for item in data["final_inventory"]}
+    assert data["final_source_sha256"]["model_new.py"] == digest(run / "work/model_new.py")
