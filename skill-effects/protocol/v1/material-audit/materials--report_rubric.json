@@ -1,0 +1,38 @@
+{
+  "status": "prespecified rubric for future common report contract; earlier development reports did not receive this contract",
+  "instruction_source": "Researcher operationalization of the user's qualitative-requirement question and their explicit criticism of fragmentary long-form prose in this conversation.",
+  "user_wording": [
+    "不是，我不是说那种任务间隙的输出，是长文输出里面全是机关枪短句",
+    "甚至用箭头和对勾什么的来疯狂缩短篇幅，那种用/分割的也是"
+  ],
+  "common_to_all_conditions": true,
+  "mechanically_enforced": false,
+  "dimensions": [
+    {
+      "id": "connected_explanation",
+      "zero": "No connected explanation, or unrelated observations are merely stacked.",
+      "one": "Some causal explanation but key implementation-to-measurement links are missing.",
+      "two": "Explains why a concrete change should help and how the observed comparison supports or fails to support it."
+    },
+    {
+      "id": "complete_prose",
+      "zero": "Labels, fragments or symbols replace the explanation.",
+      "one": "Mixed prose and fragments; important relationships remain compressed into labels.",
+      "two": "Uses complete sentences and explicit relationships; tables and lists support the explanation."
+    },
+    {
+      "id": "evidence_faithfulness",
+      "zero": "Invented measurements, a false success claim or a major unsupported inference.",
+      "one": "Mostly corresponds to recorded results but overstates certainty or leaves the basis unclear.",
+      "two": "Claims correspond to recorded measurements and the strength of evidence is represented accurately."
+    },
+    {
+      "id": "failure_account",
+      "zero": "Conceals or misstates material failures or unresolved problems.",
+      "one": "Mentions problems but does not clearly state their effect on the final result.",
+      "two": "Accurately states material failures and whether the final artifact resolved them; no invented failure is required when none occurred."
+    }
+  ],
+  "review_procedure": "Hide document condition and run label. Review final report against the reference computation, actual tool evidence and final independent evaluation. Give source quotations for each judgment. Do not score by word count, sentence-length thresholds or presence of headings. Unsubmitted runs have no submitted report: report availability separately, never drop them from all-run summaries.",
+  "overlap": "Original C25 requires measurement and analysis to understand the change; the common report contract adds an explicit final explanation requirement shared by every condition. Do not attribute that added output obligation to the original wording. C23 separately requires a visible pre-change expectation."
+}

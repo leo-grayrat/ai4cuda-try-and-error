@@ -1,0 +1,696 @@
+{
+  "status": "frozen",
+  "version": "v1",
+  "run_prefix": "f01",
+  "frozen_utc": "2026-10-19T04:14:47.843848+00:00",
+  "repository_commit_before_freeze": "b5108cd6bf392154e2e0cf9daf15d72644d87242",
+  "seed": 20261019,
+  "tasks": [
+    "sigmoid",
+    "softmax",
+    "layernorm",
+    "gemm_chain"
+  ],
+  "repeats": 2,
+  "conditions": {
+    "original": {
+      "document": "protocol/v1/documents/original.md",
+      "source": "sources/CUDA-Agent.SKILL.md",
+      "document_sha256": "3161860fb45dea51a688f3fe217ace664df6bd16808d8865824684a58a786d63",
+      "permissions": false,
+      "checker": false
+    },
+    "formatted": {
+      "document": "protocol/v1/documents/formatted.md",
+      "source": "materials/original-conditions/formatted.md",
+      "document_sha256": "7dc53b4e2aae0b29165d4a283c3fdb7f56adb8b5d9e129d5e446c35b3610b0d2",
+      "permissions": false,
+      "checker": false
+    },
+    "optimized": {
+      "document": "protocol/v1/documents/optimized.md",
+      "source": "materials/original-conditions/optimized.md",
+      "document_sha256": "7486bfd252ef60bbfcb5c5e9303d5110e50ed5254ce8141bae5a12f53ebdb34f",
+      "permissions": false,
+      "checker": false
+    },
+    "core": {
+      "document": "protocol/v1/documents/core.md",
+      "source": "materials/original-conditions/core.md",
+      "document_sha256": "51905219e8a3382e6f6f814093873866ab17c5e2c0648540c6c013d80ea5e29a",
+      "permissions": false,
+      "checker": false
+    },
+    "workflow": {
+      "document": "protocol/v1/documents/workflow.md",
+      "source": "materials/original-conditions/workflow.md",
+      "document_sha256": "9f68aa15bc5044ce5ca4ebbfc3eae978a85f7bcd430c2033750e3640e2641c17",
+      "permissions": false,
+      "checker": false
+    },
+    "length_control": {
+      "document": "protocol/v1/documents/length_control.md",
+      "source": "materials/original-conditions/length_control.md",
+      "document_sha256": "527c5df4862bd445992b2b9e28754ef142189a62434c9b63acb5fd73bc5517c9",
+      "permissions": false,
+      "checker": false
+    },
+    "original_permissions": {
+      "document": "protocol/v1/documents/original_permissions.md",
+      "source": "sources/CUDA-Agent.SKILL.md",
+      "document_sha256": "3161860fb45dea51a688f3fe217ace664df6bd16808d8865824684a58a786d63",
+      "permissions": true,
+      "checker": false
+    },
+    "original_permissions_checker": {
+      "document": "protocol/v1/documents/original_permissions_checker.md",
+      "source": "sources/CUDA-Agent.SKILL.md",
+      "document_sha256": "3161860fb45dea51a688f3fe217ace664df6bd16808d8865824684a58a786d63",
+      "permissions": true,
+      "checker": true
+    },
+    "optimized_permissions": {
+      "document": "protocol/v1/documents/optimized_permissions.md",
+      "source": "materials/original-conditions/optimized.md",
+      "document_sha256": "7486bfd252ef60bbfcb5c5e9303d5110e50ed5254ce8141bae5a12f53ebdb34f",
+      "permissions": true,
+      "checker": false
+    },
+    "optimized_permissions_checker": {
+      "document": "protocol/v1/documents/optimized_permissions_checker.md",
+      "source": "materials/original-conditions/optimized.md",
+      "document_sha256": "7486bfd252ef60bbfcb5c5e9303d5110e50ed5254ce8141bae5a12f53ebdb34f",
+      "permissions": true,
+      "checker": true
+    },
+    "residual_permissions_checker": {
+      "document": "protocol/v1/documents/residual_permissions_checker.md",
+      "source": "materials/original-conditions/optimized_residual.md",
+      "document_sha256": "7967103352a2f2fdf20ec554aef87c0a4fcff75ba34f4771a842e96e4664a22d",
+      "permissions": true,
+      "checker": true
+    }
+  },
+  "schedule": [
+    {
+      "index": 0,
+      "task": "gemm_chain",
+      "repeat": 1,
+      "condition": "original_permissions"
+    },
+    {
+      "index": 1,
+      "task": "gemm_chain",
+      "repeat": 1,
+      "condition": "core"
+    },
+    {
+      "index": 2,
+      "task": "gemm_chain",
+      "repeat": 1,
+      "condition": "formatted"
+    },
+    {
+      "index": 3,
+      "task": "gemm_chain",
+      "repeat": 1,
+      "condition": "original_permissions_checker"
+    },
+    {
+      "index": 4,
+      "task": "gemm_chain",
+      "repeat": 1,
+      "condition": "residual_permissions_checker"
+    },
+    {
+      "index": 5,
+      "task": "gemm_chain",
+      "repeat": 1,
+      "condition": "optimized_permissions"
+    },
+    {
+      "index": 6,
+      "task": "gemm_chain",
+      "repeat": 1,
+      "condition": "optimized_permissions_checker"
+    },
+    {
+      "index": 7,
+      "task": "gemm_chain",
+      "repeat": 1,
+      "condition": "optimized"
+    },
+    {
+      "index": 8,
+      "task": "gemm_chain",
+      "repeat": 1,
+      "condition": "length_control"
+    },
+    {
+      "index": 9,
+      "task": "gemm_chain",
+      "repeat": 1,
+      "condition": "original"
+    },
+    {
+      "index": 10,
+      "task": "gemm_chain",
+      "repeat": 1,
+      "condition": "workflow"
+    },
+    {
+      "index": 11,
+      "task": "layernorm",
+      "repeat": 1,
+      "condition": "workflow"
+    },
+    {
+      "index": 12,
+      "task": "layernorm",
+      "repeat": 1,
+      "condition": "original"
+    },
+    {
+      "index": 13,
+      "task": "layernorm",
+      "repeat": 1,
+      "condition": "original_permissions"
+    },
+    {
+      "index": 14,
+      "task": "layernorm",
+      "repeat": 1,
+      "condition": "original_permissions_checker"
+    },
+    {
+      "index": 15,
+      "task": "layernorm",
+      "repeat": 1,
+      "condition": "optimized"
+    },
+    {
+      "index": 16,
+      "task": "layernorm",
+      "repeat": 1,
+      "condition": "optimized_permissions_checker"
+    },
+    {
+      "index": 17,
+      "task": "layernorm",
+      "repeat": 1,
+      "condition": "core"
+    },
+    {
+      "index": 18,
+      "task": "layernorm",
+      "repeat": 1,
+      "condition": "residual_permissions_checker"
+    },
+    {
+      "index": 19,
+      "task": "layernorm",
+      "repeat": 1,
+      "condition": "formatted"
+    },
+    {
+      "index": 20,
+      "task": "layernorm",
+      "repeat": 1,
+      "condition": "length_control"
+    },
+    {
+      "index": 21,
+      "task": "layernorm",
+      "repeat": 1,
+      "condition": "optimized_permissions"
+    },
+    {
+      "index": 22,
+      "task": "softmax",
+      "repeat": 1,
+      "condition": "formatted"
+    },
+    {
+      "index": 23,
+      "task": "softmax",
+      "repeat": 1,
+      "condition": "core"
+    },
+    {
+      "index": 24,
+      "task": "softmax",
+      "repeat": 1,
+      "condition": "original_permissions_checker"
+    },
+    {
+      "index": 25,
+      "task": "softmax",
+      "repeat": 1,
+      "condition": "optimized_permissions"
+    },
+    {
+      "index": 26,
+      "task": "softmax",
+      "repeat": 1,
+      "condition": "residual_permissions_checker"
+    },
+    {
+      "index": 27,
+      "task": "softmax",
+      "repeat": 1,
+      "condition": "workflow"
+    },
+    {
+      "index": 28,
+      "task": "softmax",
+      "repeat": 1,
+      "condition": "optimized_permissions_checker"
+    },
+    {
+      "index": 29,
+      "task": "softmax",
+      "repeat": 1,
+      "condition": "original"
+    },
+    {
+      "index": 30,
+      "task": "softmax",
+      "repeat": 1,
+      "condition": "length_control"
+    },
+    {
+      "index": 31,
+      "task": "softmax",
+      "repeat": 1,
+      "condition": "original_permissions"
+    },
+    {
+      "index": 32,
+      "task": "softmax",
+      "repeat": 1,
+      "condition": "optimized"
+    },
+    {
+      "index": 33,
+      "task": "softmax",
+      "repeat": 2,
+      "condition": "original_permissions_checker"
+    },
+    {
+      "index": 34,
+      "task": "softmax",
+      "repeat": 2,
+      "condition": "core"
+    },
+    {
+      "index": 35,
+      "task": "softmax",
+      "repeat": 2,
+      "condition": "formatted"
+    },
+    {
+      "index": 36,
+      "task": "softmax",
+      "repeat": 2,
+      "condition": "workflow"
+    },
+    {
+      "index": 37,
+      "task": "softmax",
+      "repeat": 2,
+      "condition": "optimized"
+    },
+    {
+      "index": 38,
+      "task": "softmax",
+      "repeat": 2,
+      "condition": "residual_permissions_checker"
+    },
+    {
+      "index": 39,
+      "task": "softmax",
+      "repeat": 2,
+      "condition": "optimized_permissions"
+    },
+    {
+      "index": 40,
+      "task": "softmax",
+      "repeat": 2,
+      "condition": "original_permissions"
+    },
+    {
+      "index": 41,
+      "task": "softmax",
+      "repeat": 2,
+      "condition": "original"
+    },
+    {
+      "index": 42,
+      "task": "softmax",
+      "repeat": 2,
+      "condition": "optimized_permissions_checker"
+    },
+    {
+      "index": 43,
+      "task": "softmax",
+      "repeat": 2,
+      "condition": "length_control"
+    },
+    {
+      "index": 44,
+      "task": "sigmoid",
+      "repeat": 2,
+      "condition": "optimized"
+    },
+    {
+      "index": 45,
+      "task": "sigmoid",
+      "repeat": 2,
+      "condition": "residual_permissions_checker"
+    },
+    {
+      "index": 46,
+      "task": "sigmoid",
+      "repeat": 2,
+      "condition": "original_permissions"
+    },
+    {
+      "index": 47,
+      "task": "sigmoid",
+      "repeat": 2,
+      "condition": "core"
+    },
+    {
+      "index": 48,
+      "task": "sigmoid",
+      "repeat": 2,
+      "condition": "formatted"
+    },
+    {
+      "index": 49,
+      "task": "sigmoid",
+      "repeat": 2,
+      "condition": "original"
+    },
+    {
+      "index": 50,
+      "task": "sigmoid",
+      "repeat": 2,
+      "condition": "original_permissions_checker"
+    },
+    {
+      "index": 51,
+      "task": "sigmoid",
+      "repeat": 2,
+      "condition": "optimized_permissions_checker"
+    },
+    {
+      "index": 52,
+      "task": "sigmoid",
+      "repeat": 2,
+      "condition": "length_control"
+    },
+    {
+      "index": 53,
+      "task": "sigmoid",
+      "repeat": 2,
+      "condition": "workflow"
+    },
+    {
+      "index": 54,
+      "task": "sigmoid",
+      "repeat": 2,
+      "condition": "optimized_permissions"
+    },
+    {
+      "index": 55,
+      "task": "sigmoid",
+      "repeat": 1,
+      "condition": "optimized_permissions_checker"
+    },
+    {
+      "index": 56,
+      "task": "sigmoid",
+      "repeat": 1,
+      "condition": "workflow"
+    },
+    {
+      "index": 57,
+      "task": "sigmoid",
+      "repeat": 1,
+      "condition": "original_permissions_checker"
+    },
+    {
+      "index": 58,
+      "task": "sigmoid",
+      "repeat": 1,
+      "condition": "formatted"
+    },
+    {
+      "index": 59,
+      "task": "sigmoid",
+      "repeat": 1,
+      "condition": "length_control"
+    },
+    {
+      "index": 60,
+      "task": "sigmoid",
+      "repeat": 1,
+      "condition": "optimized"
+    },
+    {
+      "index": 61,
+      "task": "sigmoid",
+      "repeat": 1,
+      "condition": "optimized_permissions"
+    },
+    {
+      "index": 62,
+      "task": "sigmoid",
+      "repeat": 1,
+      "condition": "original"
+    },
+    {
+      "index": 63,
+      "task": "sigmoid",
+      "repeat": 1,
+      "condition": "original_permissions"
+    },
+    {
+      "index": 64,
+      "task": "sigmoid",
+      "repeat": 1,
+      "condition": "residual_permissions_checker"
+    },
+    {
+      "index": 65,
+      "task": "sigmoid",
+      "repeat": 1,
+      "condition": "core"
+    },
+    {
+      "index": 66,
+      "task": "gemm_chain",
+      "repeat": 2,
+      "condition": "residual_permissions_checker"
+    },
+    {
+      "index": 67,
+      "task": "gemm_chain",
+      "repeat": 2,
+      "condition": "original_permissions_checker"
+    },
+    {
+      "index": 68,
+      "task": "gemm_chain",
+      "repeat": 2,
+      "condition": "optimized"
+    },
+    {
+      "index": 69,
+      "task": "gemm_chain",
+      "repeat": 2,
+      "condition": "optimized_permissions"
+    },
+    {
+      "index": 70,
+      "task": "gemm_chain",
+      "repeat": 2,
+      "condition": "core"
+    },
+    {
+      "index": 71,
+      "task": "gemm_chain",
+      "repeat": 2,
+      "condition": "optimized_permissions_checker"
+    },
+    {
+      "index": 72,
+      "task": "gemm_chain",
+      "repeat": 2,
+      "condition": "original"
+    },
+    {
+      "index": 73,
+      "task": "gemm_chain",
+      "repeat": 2,
+      "condition": "length_control"
+    },
+    {
+      "index": 74,
+      "task": "gemm_chain",
+      "repeat": 2,
+      "condition": "formatted"
+    },
+    {
+      "index": 75,
+      "task": "gemm_chain",
+      "repeat": 2,
+      "condition": "workflow"
+    },
+    {
+      "index": 76,
+      "task": "gemm_chain",
+      "repeat": 2,
+      "condition": "original_permissions"
+    },
+    {
+      "index": 77,
+      "task": "layernorm",
+      "repeat": 2,
+      "condition": "length_control"
+    },
+    {
+      "index": 78,
+      "task": "layernorm",
+      "repeat": 2,
+      "condition": "original_permissions_checker"
+    },
+    {
+      "index": 79,
+      "task": "layernorm",
+      "repeat": 2,
+      "condition": "original_permissions"
+    },
+    {
+      "index": 80,
+      "task": "layernorm",
+      "repeat": 2,
+      "condition": "original"
+    },
+    {
+      "index": 81,
+      "task": "layernorm",
+      "repeat": 2,
+      "condition": "core"
+    },
+    {
+      "index": 82,
+      "task": "layernorm",
+      "repeat": 2,
+      "condition": "optimized"
+    },
+    {
+      "index": 83,
+      "task": "layernorm",
+      "repeat": 2,
+      "condition": "optimized_permissions_checker"
+    },
+    {
+      "index": 84,
+      "task": "layernorm",
+      "repeat": 2,
+      "condition": "workflow"
+    },
+    {
+      "index": 85,
+      "task": "layernorm",
+      "repeat": 2,
+      "condition": "residual_permissions_checker"
+    },
+    {
+      "index": 86,
+      "task": "layernorm",
+      "repeat": 2,
+      "condition": "formatted"
+    },
+    {
+      "index": 87,
+      "task": "layernorm",
+      "repeat": 2,
+      "condition": "optimized_permissions"
+    }
+  ],
+  "budget": {
+    "requests": 64,
+    "generated_tokens": 96000,
+    "per_response_tokens": 32768,
+    "tool_timeout_seconds": 180,
+    "input_tokens": "measured, not capped independently"
+  },
+  "model": {
+    "alias": "deepseek-flash",
+    "temperature": 1.0,
+    "thinking": "enabled",
+    "reasoning_effort": "high",
+    "api_sampling_seed": "not requested; no deterministic repeat guarantee"
+  },
+  "ordering": "Random task/repeat blocks; condition order randomized within each block; GPU and formal trials serial",
+  "construction_cutoff": "All conditions derive from the pinned original CUDA Agent skill. Constructed failure-driven appendices and synthetic repetition-pressure documents are excluded from v1.",
+  "failures": "Retain every scheduled trial. No outcome-based retries. Report unsubmitted, budget, truncation, API/trace and infrastructure failures separately; all-run delivery denominator remains 88. Sensitivity analysis for measurement failures is additional, not a replacement.",
+  "analysis_protocol": "FORMAL_PROTOCOL.zh.md",
+  "frozen_files": {
+    "agent_trial.py": "9ca7d6b0f21e1007b88cc7e61f70fe228e0476ae3e6476e6096eb1c451374a3b",
+    "build_materials.py": "af304848e5baae5c86afd2a13e4fda60c690b6ac332492ecdd1bfd7d2bcb1e10",
+    "environment_probe.py": "c3f674fc73014281634c5b02fc1e938cdc528444bb63e45ecab439e9e8e98618",
+    "event_timing_probe.py": "01208822cca96d8959da2fd3b9c6d20d623e358fcce3c19d248c4561c5bbb99e",
+    "formal_campaign.py": "8a623a49c42da6f6fd90c2cf753fe8ece27b0ee9954838973b96660caeb4de92",
+    "FORMAL_PROTOCOL.zh.md": "6f3da8a097a16bac8abdeaae1ed17335e73ab9a3d58980d6597a7e1db189c5b0",
+    "freeze_protocol.py": "5ceed1f01739f05fbac9175a4ce67a4ea05a0666226e822d406f0818f594b391",
+    "gpu_lock.py": "5cebea1f6c1220b294866b3f3f80be9c31ba51a90eb4cd9d518f892922ee1b51",
+    "materials/cuda_rules.json": "5305cf7976f51f2b9f5e9a57252bc2dcffd99f0d7edb5c8880964d19d44416ed",
+    "materials/cuda_rules.tsv": "5a9fe8d8629351e8788e5d4e6402d8b29863cc14f275d2765cd7a31125f669c9",
+    "materials/report_contract.md": "75dde63a3e4a71860f57fffb17b8b80fb182fe6b4e371c9a83b3d09b71e3cad2",
+    "prepare_original_conditions.py": "b3231e91f789ea00eef3dfc5fe5f9aefe08861ccd29323c2c85c3113820334a0",
+    "prepare_tasks.py": "034aac98322f23750b0e0802ba71c41da2348dedb9d3efb53b5038f967e49cf4",
+    "protocol/v1/documents/core.md": "51905219e8a3382e6f6f814093873866ab17c5e2c0648540c6c013d80ea5e29a",
+    "protocol/v1/documents/formatted.md": "7dc53b4e2aae0b29165d4a283c3fdb7f56adb8b5d9e129d5e446c35b3610b0d2",
+    "protocol/v1/documents/length_control.md": "527c5df4862bd445992b2b9e28754ef142189a62434c9b63acb5fd73bc5517c9",
+    "protocol/v1/documents/optimized.md": "7486bfd252ef60bbfcb5c5e9303d5110e50ed5254ce8141bae5a12f53ebdb34f",
+    "protocol/v1/documents/optimized_permissions.md": "7486bfd252ef60bbfcb5c5e9303d5110e50ed5254ce8141bae5a12f53ebdb34f",
+    "protocol/v1/documents/optimized_permissions_checker.md": "7486bfd252ef60bbfcb5c5e9303d5110e50ed5254ce8141bae5a12f53ebdb34f",
+    "protocol/v1/documents/original.md": "3161860fb45dea51a688f3fe217ace664df6bd16808d8865824684a58a786d63",
+    "protocol/v1/documents/original_permissions.md": "3161860fb45dea51a688f3fe217ace664df6bd16808d8865824684a58a786d63",
+    "protocol/v1/documents/original_permissions_checker.md": "3161860fb45dea51a688f3fe217ace664df6bd16808d8865824684a58a786d63",
+    "protocol/v1/documents/residual_permissions_checker.md": "7967103352a2f2fdf20ec554aef87c0a4fcff75ba34f4771a842e96e4664a22d",
+    "protocol/v1/documents/workflow.md": "9f68aa15bc5044ce5ca4ebbfc3eae978a85f7bcd430c2033750e3640e2641c17",
+    "protocol/v1/material-audit/materials--cuda_rules.json": "5305cf7976f51f2b9f5e9a57252bc2dcffd99f0d7edb5c8880964d19d44416ed",
+    "protocol/v1/material-audit/materials--cuda_rules.tsv": "5a9fe8d8629351e8788e5d4e6402d8b29863cc14f275d2765cd7a31125f669c9",
+    "protocol/v1/material-audit/materials--original-conditions--manifest.json": "900bc266a2f7c0ad1edb78d3c1d4821c7036beaf0b5c5b256d469dc19b2cf00c",
+    "protocol/v1/material-audit/materials--report_rubric.json": "0b1a5cbd3740f031b699b3e1d521507c5f8ca4f7ca9fb5c47a136dbec809c746",
+    "protocol/v1/material-audit/materials--SOURCE_AUDIT.zh.md": "e204792cf573b7fe573c8f0c72f736a5d4fd4f6ea32ce9d309636b0a5030ee6f",
+    "runtime.py": "a157e9781f8b7b38eb827ac6546df16d93e7dcbec9862817a54165338deb3ed2",
+    "sources/CUDA-Agent/binding.cpp": "43da662b9aedb537a4cb2f04c57d92aeddbe018a9b5f7374ae28ec9bba0b3b62",
+    "sources/CUDA-Agent/binding_registry.h": "a829ca7d5de03049c439f30aa01f7f631c06418c31855cf19a67f23d69349e0f",
+    "sources/CUDA-Agent/kernels/axpby.cu": "44a6b0ac7d98319e3d3aafc1fa3cb65e57375a4e2b0aac2c6d1028de292380f8",
+    "sources/CUDA-Agent/kernels/axpby_binding.cpp": "90b24e3495c73a5884fb1d61384dab6a5ddd97ee74510692e3792822d3f0a3c9",
+    "sources/CUDA-Agent/model.py": "f92e69573f45f2043b0d2c63032b554653a8b935dddf71f5d7fb6c3190926ecf",
+    "sources/CUDA-Agent/model_new.py": "2318132d3b21c6701aea6b84a6b64bab2fbf2756474153583454f8574449e3eb",
+    "sources/CUDA-Agent/utils/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sources/CUDA-Agent/utils/compile.py": "4bc806d8021fb430caebcffab3e32d5edc2b13abc8655544faa696fc7d699734",
+    "sources/CUDA-Agent/utils/compile.sh": "0707712752799cacc79930d3e5256994c13f511ea355e5346490d67e164af3d0",
+    "sources/CUDA-Agent/utils/profiling.py": "5e6fdd564262a296bb51a6e5fe86e16c216717a43d453c4cc6104e55000a577b",
+    "sources/CUDA-Agent/utils/verification.py": "c47e6b0810766c49e2c68e10374aed2a54224f31fc8a399158c079f4b9e8312f",
+    "sources/deepseek-pricing-2026-10-19.json": "9dec1c6496baab41ce0c3b7e7d897c8c9b0e45f028b3add073a69fa0efc85b12",
+    "task_catalog.json": "d878d0bcd4a9db2c60b5b7fa5b0563bf8cfc9db5699948fcb823aa584f306afd",
+    "tasks/gemm_chain/contract.md": "81eba477668201b7cd82bf097cdbbc7a5070b1476727fc1d55241f8c10d8460f",
+    "tasks/gemm_chain/model.py": "89e6ea28f0d6078b0fe926d9c1b4900689e69720bf8c8fcbe8aa112c7faca5c4",
+    "tasks/layernorm/contract.md": "a51a64c31f667496bc8f60a566fddaeb23407c82023377a3fe0b2a08fb719fec",
+    "tasks/layernorm/model.py": "a6bacd9bb9dbf1cfd60714bdaa32d97c97fa5f58b831d9014b7eb720e933d4a0",
+    "tasks/sigmoid/contract.md": "9f25447a0b7cc655185a513d0ea9bf872168c2672bb5f39213db5e44e1898504",
+    "tasks/sigmoid/model.py": "fe2dd4b584e9b62c6cdb66bf5e2d8804260f4b831774c87934335d4eb05c8430",
+    "tasks/softmax/contract.md": "c04e292200a93b3254b96af85df7c91d77b448409d083b2da4ddb16fd6f70c72",
+    "tasks/softmax/model.py": "7ea33cfc364bf6e5956fa335964f885d0047e5ec1db9096bd87b6ec71785e8c9",
+    "verify_candidate.py": "8c66f795cec82daabaed769809f096231eeac3124da37d263a02ca039499ae43"
+  }
+}
