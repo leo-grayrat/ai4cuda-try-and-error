@@ -31,3 +31,5 @@ python skill-effects/analyze_formal.py --collection skill-effects/runs/formal-se
 `review_packet.py` 可对单份隐藏条件的材料进行新上下文 API 审阅，逐字核对引用、报告是否存在和条目完整性，保存单独用量。其输出仍需证据复核。[首份审阅校准](evidence/review-calibration-01/decisions.zh.md)保留了引用来源错误、清理判断过宽及测试命名归因错误；未把这些初步意见当作最终合规率。JSON 输出参数依据 [DeepSeek 官方文档](https://api-docs.deepseek.com/guides/json_mode/)。
 
 当前审阅材料为 schema 2，附完整工作区文件清单、候选源码哈希和可见回复轮次，明确区分模型操作与研究方最终测量。早期 schema 1 材料及校准意见留档；新审阅器要求 schema 2，旧证据包的内容不会被覆盖。
+
+`postprocess_when_ready.py` 可在同一正式序列结束后顺序运行汇总、审阅材料生成、实际 kernel 核查及配对分析，保存各阶段日志与子进程信息。它不重跑候选，遇到正式控制器基础设施错误或后处理失败会留档停止；完成后仍需审阅意见的证据复核、图表和研究报告。
