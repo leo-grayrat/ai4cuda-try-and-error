@@ -1,0 +1,55 @@
+{
+  "scope": "Captured command wiring before any natural-work trial; no API or GPU execution",
+  "fixed_natural_rates": [
+    50,
+    100,
+    200,
+    500,
+    1000,
+    2000
+  ],
+  "parent_timeout_seconds": 2100,
+  "original_command_not_mutated": true,
+  "old_batch_fingerprints_unchanged": true,
+  "natural_trials_not_started": true,
+  "api_calls": 0,
+  "gpu_runs": 0,
+  "official_api_contract": {
+    "url": "https://api-docs.deepseek.com/api/create-chat-completion/",
+    "checked_utc_date": "2026-10-19",
+    "documented_max_tokens_upper_bound": 393216,
+    "requested_external_ceiling": 320000,
+    "requested_value_within_documented_range": true
+  },
+  "motivation_snapshot": {
+    "completed_candidate_measurements": 21,
+    "at_old_200_ceiling": 19,
+    "trial_ids": [
+      "t005",
+      "t006",
+      "t007",
+      "t008",
+      "t010",
+      "t012",
+      "t013",
+      "t014",
+      "t015",
+      "t016",
+      "t017",
+      "t018",
+      "t019",
+      "t020",
+      "t021",
+      "t022",
+      "t023",
+      "t024",
+      "t025"
+    ],
+    "workflow_snapshot_sha256": "832de507c557f26a6aab1c40611f24bf7d25e09865b0b5acbc65ff83b18aaff5"
+  },
+  "source_sha256": {
+    "natural_trial.py": "5d88c1bc8015d807c046a95c2fee9fc7fd8143d0de41f2a414d22741f04cb987",
+    "natural_batch.py": "04aba5371b418a04f3153d16864059542c64346537759929c33432e16a13d171",
+    "materials/natural-batch-v1.json": "59204eff9b496467f71879c5505a3faedef7ec46e50f192fd61ec7bd85e5b129"
+  }
+}

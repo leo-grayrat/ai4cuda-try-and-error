@@ -10,6 +10,7 @@ import sys
 from threading import Event
 
 from repeat_batch import BASE, ROOT, save, sha
+from natural_trial import NATURAL_RATES
 
 MANIFEST = BASE / 'materials/natural-batch-v1.json'
 
@@ -36,6 +37,7 @@ def plan():
             'purpose': 'natural_work', 'run_root': 'skill-effects/runs/flashrt-natural-v1',
             'external_output_ceiling': 320000, 'external_request_ceiling': 128,
             'external_limits_shown_to_actor': False, 'concurrency': 3,
+            'measurement_rates': NATURAL_RATES,
             'source_sha256': {p.relative_to(ROOT).as_posix(): sha(p) for p in sorted(set(files))},
             'trials': trials}
 

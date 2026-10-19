@@ -16,6 +16,8 @@ import requests
 from pilot_trial import BASE, TOOL, Workspace, save, sha
 from runtime import summarize_usage
 
+NATURAL_RATES = [50, 100, 200, 500, 1000, 2000]
+
 
 class NaturalWorkspace(Workspace):
     def process(self, command, folder, timeout=180, lock=False):
@@ -23,6 +25,8 @@ class NaturalWorkspace(Workspace):
         # measurement deadline. Candidate scripts retain a separate run cap.
         if str(BASE / 'benchmark_local.py') in command:
             timeout = 2100
+            command = list(command)
+            command[command.index('--rates') + 1] = ','.join(map(str, NATURAL_RATES))
         return super().process(command, folder, timeout=timeout, lock=lock)
 
     def execute(self, arguments):

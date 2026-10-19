@@ -1,5 +1,5 @@
 {
-  "created_utc": "2026-10-19T18:15:11.302410+00:00",
+  "created_utc": "2026-10-19T18:33:14.746114+00:00",
   "seed": 20261020,
   "purpose": "natural_work",
   "run_root": "skill-effects/runs/flashrt-natural-v1",
@@ -7,6 +7,14 @@
   "external_request_ceiling": 128,
   "external_limits_shown_to_actor": false,
   "concurrency": 3,
+  "measurement_rates": [
+    50,
+    100,
+    200,
+    500,
+    1000,
+    2000
+  ],
   "source_sha256": {
     "skill-effects/flashrt/benchmark_local.py": "08ea46e28e7eb714b429fe9271fe953bc257992b847e096d669676b52b6b22d1",
     "skill-effects/flashrt/local_session.py": "5382c694b4ddc704d4713addc1dd5f16f378e51f4d1f204cb20086a3abe8a23b",
@@ -114,8 +122,8 @@
     "skill-effects/flashrt/materials/verbatim-v1/original/d01.md": "ec8f03cc24ec9082da9aa23ccc93984fa02f7787ca84b4f0993f83325863e84d",
     "skill-effects/flashrt/materials/verbatim-v1/original/d02.md": "f79381e87720bfce87f036fbbbe276d5546b14c04ff91e76e1b0508e5d7386c2",
     "skill-effects/flashrt/materials/verbatim-v1/original/d03.md": "4466341a7d71142e07be3659660a8446b32aee5fbb0aeed0425b1ebba8af4004",
-    "skill-effects/flashrt/natural_batch.py": "2c9a62c5d7ed9e0afd29fe7713987e375ba3ebd9d1ccbac86591610ede9af515",
-    "skill-effects/flashrt/natural_trial.py": "641791ebcb5e51a7e522d7380d8b7608c35c6fcecd9697b9104249728a0460c5",
+    "skill-effects/flashrt/natural_batch.py": "04aba5371b418a04f3153d16864059542c64346537759929c33432e16a13d171",
+    "skill-effects/flashrt/natural_trial.py": "5d88c1bc8015d807c046a95c2fee9fc7fd8143d0de41f2a414d22741f04cb987",
     "skill-effects/flashrt/pilot_trial.py": "108a8b7d1d8e617a38c36c217445264e37cb6fea109d8ff850ffdaacf6f31751",
     "skill-effects/flashrt/run_local_reference.py": "b760d84c6068865d81977746958f93a7ef7f11b1e88a2f618fdb233e2c4a1655",
     "skill-effects/flashrt/workloads/branch_features/__init__.py": "31c9db562f005f593731be332301850b55bf796527a0030fe00636cdc2e48881",
