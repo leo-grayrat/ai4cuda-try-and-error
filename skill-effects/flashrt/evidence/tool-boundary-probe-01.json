@@ -1,0 +1,17 @@
+{
+  "checks": {
+    "backend_write": true,
+    "protected_write_rejected": true,
+    "traversal_rejected": true,
+    "backend_script_executed": true,
+    "unverified_finish_rejected": true
+  },
+  "execute_evidence": {
+    "exitcode": 0,
+    "seconds": 0.09949739999137819,
+    "stdout": "backend execution works\n",
+    "stderr": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n",
+    "evidence_directory": "execute-001"
+  },
+  "scope": "Tool-level file and submission enforcement, not OS isolation"
+}

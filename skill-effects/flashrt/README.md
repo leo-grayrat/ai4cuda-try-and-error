@@ -37,6 +37,14 @@
 
 详见[源码审视](SOURCE_AUDIT.zh.md)和[当前执行计划](../PLAN.zh.md)。旧 CUDAAgent 条件及其试验保持停止，不纳入本研究的正式比较。
 
+## 已执行的模型试跑
+
+[首轮校准](evidence/pilot-calibration-01/FINDINGS.zh.md)保存三次真实 DeepSeek API 运行。可比的两轮使用同一任务、工具及24,000生成token预算：原文轮未写出候选，Phase 4整理稿轮写出一个后端并通过独立六请求验证；两轮均未提交报告。完整请求、响应、思考用量、工具事件、候选代码和独立测量归档于该目录，逐文件校验通过。
+
+[负载校准](evidence/reference-load-01/result.json)按10、25、50、100、200请求/秒施加有限窗口负载，分别记录积压和输出间隔，验证过载可被检出。当前是开发校准，不将一秒窗口表述为无限稳定性结论。
+
+工具边界[第一轮](evidence/tool-boundary-probe-01.json)实测可写区、只读拒绝、路径逃逸和未验证交付拒绝；[第二轮](evidence/tool-boundary-probe-02.json)补验证据目录及后端入口绑定。工具文件权限不等同于原生Python的操作系统隔离，来源变更和独立数值检查另行记录。
+
 复现本阶段材料：
 
 ```powershell

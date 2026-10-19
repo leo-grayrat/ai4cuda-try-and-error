@@ -1,0 +1,12 @@
+{
+  "scope": "Policy-state probe; cached records are deliberate fixtures, not real numerical/performance evidence",
+  "runner_sha256": "df0f7b94cbf542937e783cfc5e5e24a914a0a1cf72dd3adb55ef236e0db2edc9",
+  "checks": {
+    "evidence_listed": true,
+    "evidence_read": true,
+    "list_evidence_escape_rejected": true,
+    "read_evidence_escape_rejected": true,
+    "different_entry_measurement_rejected": true,
+    "matching_entry_and_version_accepted": true
+  }
+}
