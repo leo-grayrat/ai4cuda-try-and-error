@@ -1,0 +1,22 @@
+{
+  "run": "skill-effects/runs/flashrt-repeat-v1/t009",
+  "reviewed_thought_response_indices": [
+    32,
+    37,
+    41
+  ],
+  "sha256": {
+    "config.json": "4768699ef65fc7fe831a6b735a0e8b7d52348b6e361962080e8a55b24ba5ce0b",
+    "events.jsonl": "6aa01df1a3a7e2fe521d7b74982f881e6c571bf80678331ab5400ddcef9c6183",
+    "result.json": "9f1f720e22fbec6d8f8e387e1f6966361e6681fd9f8c052029a3faddc201b03b",
+    "report.md": "870a047083145f75d782bcd5de8071727e714fe2286775e274576e04f880d633",
+    "response-032.json": "f467c4e2a451f13f0ccc89071a76ed707035dc1c136ac0d9186cfe76917c673e",
+    "response-037.json": "d8d51ff730b080aabd88241564d5206bbf10eca3d4550a5a26601a937ceb5ea0",
+    "response-041.json": "c619d6f4112852d3b53e36af7d8ef191b1753d7e2a7f9da1b5bfa7ac9f406dbd",
+    "work/flashrt/apps/branch_features/backend/worker.py": "d94315a1f4d5ebc72f866c3088ccbdf31b013cc253405fe20372c8bd05265f35",
+    "control/execute-018/stdout.log": "87a714b7b2d6c55ca2f22ff29ce6f56fe36a74773db4d32dd7a2d004fc66fbce",
+    "control/benchmark-020/candidate/result.json": "920adb2f5ed11ed78a366a60795fc5d0cdfc8bcfc7006a3fd0680b8da6b9b223",
+    "control/benchmark-022/candidate/result.json": "6c2390ca5e23ec0b628cffa5965257c5418e4389bdb33a22a03f5e6eda95d71d",
+    "control/benchmark-024/candidate/result.json": "1f59b368212c0a69e9f4156bcd79e720f55fc22ebbc8ad162fa86ce2640a7d6b"
+  }
+}

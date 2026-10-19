@@ -1,0 +1,22 @@
+{
+  "run": "skill-effects/runs/flashrt-repeat-v1/t012",
+  "reviewed_thought_response_indices": [
+    8,
+    12,
+    35,
+    41
+  ],
+  "sha256": {
+    "events.jsonl": "631be7526af1037c47bc0f759c3522f26fc3a7e7a350115759adc7aed468460d",
+    "result.json": "be70dbbdc6db4a33c9b343e1a144aa165e0773cedd9a0452e9d5995ee024e3b3",
+    "report.md": "42fd8d308c1963d12f1c34bde65652b88e7ee289b89b5df23321c5245dac0f29",
+    "response-008.json": "e243003e9fb6ea8f37b81f5932aac3fb0a01f28e3f4e95fb9d8e2fbb0d5501c8",
+    "response-012.json": "3481aa1e14b180196297b16ddc63a3b9c43042c2938e8b5ea946e830e04153bc",
+    "response-035.json": "d999cdcbb64542837ad81dd5c9a21277b819984785330c37a62020cd19cfaac5",
+    "response-041.json": "ef98a7853a7de108ac816d446b72f40fdd1bb5285a9e95a89907a77001c71e7f",
+    "control/execute-006/stdout.log": "01500d5eb5252c622c43cd1b4d0a0050bab41f2530ff4bfe7b4efde7154ed140",
+    "control/execute-011/stdout.log": "6de1cfb5bc6b274e01bb6bcd639e486b616260b7c0c338431d36f108a7b6eecb",
+    "control/benchmark-015/candidate/result.json": "3954c83455cfcb97d8a79b1d954a6a182b610df8ac6bb966bc8960efaca9f22c",
+    "work/flashrt/apps/branch_features/backend/ir/graph_builder.py": "5c478e0333a446cfe28c21b27349233fba981509c9a8c0680d77d010717441c8"
+  }
+}
