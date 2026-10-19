@@ -1,0 +1,58 @@
+{
+  "treatment": "Prose line reflow only; original wording, order, scopes and examples retained",
+  "tokenizer_sha256": "c90dfa01249db1be4245780a052ede752e1361c612ac6d08e2bdada7d599476b",
+  "documents": [
+    {
+      "logical_path": "AGENTS.md",
+      "path": "d00.md",
+      "source_sha256": "8ee46af445c5b33292e523de303cd6ed60df63fd085a4e0be5fdfbc64b622019",
+      "formatted_sha256": "c83edce77f41f409ab865d6239b445dc92e0b9d9acbf9576fb8293c10d7bdda6",
+      "source_tokens": 21800,
+      "formatted_tokens": 21327,
+      "reflowed_prose_groups": 109,
+      "code_blocks": 4,
+      "identical_nonwhitespace_sequence": true,
+      "identical_code_blocks": true,
+      "same_commonmark_rendering_except_noncode_whitespace": true
+    },
+    {
+      "logical_path": "flashrt/apps/AGENTS.md",
+      "path": "d01.md",
+      "source_sha256": "ec8f03cc24ec9082da9aa23ccc93984fa02f7787ca84b4f0993f83325863e84d",
+      "formatted_sha256": "7cf816d3c02da418ff153cb990d2c13a1c0cd657f02c716784ca4cb96a377663",
+      "source_tokens": 7071,
+      "formatted_tokens": 6997,
+      "reflowed_prose_groups": 33,
+      "code_blocks": 9,
+      "identical_nonwhitespace_sequence": true,
+      "identical_code_blocks": true,
+      "same_commonmark_rendering_except_noncode_whitespace": true
+    },
+    {
+      "logical_path": "flashrt/ir/AGENTS.md",
+      "path": "d02.md",
+      "source_sha256": "f79381e87720bfce87f036fbbbe276d5546b14c04ff91e76e1b0508e5d7386c2",
+      "formatted_sha256": "bdad7c4cd1af02278272f22906ad2feae23d4a4fa909e4a75c77913f8c01a395",
+      "source_tokens": 2481,
+      "formatted_tokens": 2465,
+      "reflowed_prose_groups": 7,
+      "code_blocks": 2,
+      "identical_nonwhitespace_sequence": true,
+      "identical_code_blocks": true,
+      "same_commonmark_rendering_except_noncode_whitespace": true
+    },
+    {
+      "logical_path": "assets/AGENTS.md",
+      "path": "d03.md",
+      "source_sha256": "4466341a7d71142e07be3659660a8446b32aee5fbb0aeed0425b1ebba8af4004",
+      "formatted_sha256": "d1e32ad80c03d4e088eba45fe091ffdbab31d2218ba2cd86cfe2b2705daee77f",
+      "source_tokens": 191,
+      "formatted_tokens": 184,
+      "reflowed_prose_groups": 2,
+      "code_blocks": 0,
+      "identical_nonwhitespace_sequence": true,
+      "identical_code_blocks": true,
+      "same_commonmark_rendering_except_noncode_whitespace": true
+    }
+  ]
+}
