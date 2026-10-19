@@ -1,0 +1,104 @@
+{
+  "scope": "CPU probe of original IR executor; not end-to-end application validation or performance evidence",
+  "repository": "E:\\Project\\Git\\Research\\ai4cuda-try-and-error\\.cache\\flashrt\\dd9dae0072a72964a2bdc3ca3f06f68afa122a7f\\repository",
+  "source_sha256": {
+    "AGENTS.md": "8ee46af445c5b33292e523de303cd6ed60df63fd085a4e0be5fdfbc64b622019",
+    "flashrt/ir/graph.py": "2f4037527da321c3d241a70a3e8f543b2b68d21fdf59765f237d5125b57af012",
+    "flashrt/ir/executor.py": "7dc0542628b478415e941e5d6ffb6a596fae355ae4547ba8d34be1bcdb551c5a",
+    "flashrt/ir/analysis.py": "41eaea5137b5dc256ff4742894b2420b88cbf1cee1a3e668bee36bc79344d772"
+  },
+  "python": "C:\\Users\\34788\\anaconda3\\python.exe",
+  "cases": [
+    {
+      "case": "undeclared_get",
+      "declared_reads": [],
+      "declared_writes": [],
+      "graph_validation_errors": [],
+      "cross_chunk_analysis": {
+        "dependencies": [],
+        "independent_pairs": [],
+        "state_groups": {}
+      },
+      "outcome": "rejected",
+      "error": "Operator 'probe' attempted to get state 'counter', but 'counter' is not declared in its state_reads or state_writes. Declared reads: [], declared writes: [].",
+      "counter_after": []
+    },
+    {
+      "case": "undeclared_set",
+      "declared_reads": [
+        "counter"
+      ],
+      "declared_writes": [],
+      "graph_validation_errors": [],
+      "cross_chunk_analysis": {
+        "dependencies": [
+          {
+            "op_a": "probe",
+            "op_b": "probe",
+            "state_name": "counter",
+            "description": "probe and probe share persistent state 'counter' -> cross-chunk dependency"
+          }
+        ],
+        "independent_pairs": [],
+        "state_groups": {
+          "counter": "{'probe'}"
+        }
+      },
+      "outcome": "rejected",
+      "error": "Operator 'probe' attempted to set state 'counter', but 'counter' is not declared in its state_writes. Declared writes: [].",
+      "counter_after": []
+    },
+    {
+      "case": "declared_set",
+      "declared_reads": [],
+      "declared_writes": [
+        "counter"
+      ],
+      "graph_validation_errors": [],
+      "cross_chunk_analysis": {
+        "dependencies": [
+          {
+            "op_a": "probe",
+            "op_b": "probe",
+            "state_name": "counter",
+            "description": "probe and probe share persistent state 'counter' -> cross-chunk dependency"
+          }
+        ],
+        "independent_pairs": [],
+        "state_groups": {
+          "counter": "{'probe'}"
+        }
+      },
+      "outcome": "executed",
+      "counter_after": [
+        1
+      ]
+    },
+    {
+      "case": "read_declared_inplace_mutation",
+      "declared_reads": [
+        "counter"
+      ],
+      "declared_writes": [],
+      "graph_validation_errors": [],
+      "cross_chunk_analysis": {
+        "dependencies": [
+          {
+            "op_a": "probe",
+            "op_b": "probe",
+            "state_name": "counter",
+            "description": "probe and probe share persistent state 'counter' -> cross-chunk dependency"
+          }
+        ],
+        "independent_pairs": [],
+        "state_groups": {
+          "counter": "{'probe'}"
+        }
+      },
+      "outcome": "executed",
+      "counter_after": [
+        1
+      ]
+    }
+  ]
+}

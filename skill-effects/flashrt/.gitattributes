@@ -1,0 +1,3 @@
+materials/** -text -whitespace
+evidence/** -text whitespace=cr-at-eol
+*.py -text whitespace=cr-at-eol

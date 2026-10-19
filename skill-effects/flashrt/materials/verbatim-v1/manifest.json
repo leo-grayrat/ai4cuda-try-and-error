@@ -1,0 +1,858 @@
+{
+  "basis": "Pinned original FlashRT instructions; no new rules, no synthetic growth",
+  "treatment": "Verbatim modules. Concatenating each document's modules reconstructs its original bytes. This does not yet define a selective-loading policy.",
+  "precedence": "Nearest logical AGENTS.md applies, per the original root document; scopes must remain the same in every condition.",
+  "tokenizer_sha256": "c90dfa01249db1be4245780a052ede752e1361c612ac6d08e2bdada7d599476b",
+  "documents": [
+    {
+      "logical_path": "AGENTS.md",
+      "original": "original/d00.md",
+      "source_sha256": "8ee46af445c5b33292e523de303cd6ed60df63fd085a4e0be5fdfbc64b622019",
+      "bytes": 93991,
+      "lines": 1749,
+      "text_tokens": 21800,
+      "modules": [
+        {
+          "path": "modules/d00-000.md",
+          "source_start": 1,
+          "source_end": 11,
+          "title": "entry",
+          "sha256": "f938ba0fa715da0ada12e91f971a49931cc0b262c49c832f79c5d74b0f82e86b",
+          "bytes": 486,
+          "text_tokens": 125
+        },
+        {
+          "path": "modules/d00-001.md",
+          "source_start": 12,
+          "source_end": 80,
+          "title": "## What this repo is",
+          "sha256": "41b1558a90de6888dd20e593c75fe403eff90ef8dc19c58486cb9bc2fc384150",
+          "bytes": 4015,
+          "text_tokens": 993
+        },
+        {
+          "path": "modules/d00-002.md",
+          "source_start": 81,
+          "source_end": 88,
+          "title": "## Your mission",
+          "sha256": "34fb4e616a394226f44773b84b6b7762671a824be5758b923698907e1b5ecc49",
+          "bytes": 342,
+          "text_tokens": 79
+        },
+        {
+          "path": "modules/d00-003.md",
+          "source_start": 89,
+          "source_end": 138,
+          "title": "### Default optimization targets",
+          "sha256": "7aa7680f0df78a36e6a5856f7a9ab6be0331620fac20d05a9a653dd05434bcfe",
+          "bytes": 2678,
+          "text_tokens": 585
+        },
+        {
+          "path": "modules/d00-004.md",
+          "source_start": 139,
+          "source_end": 182,
+          "title": "### Per-app overrides",
+          "sha256": "6e473018545469f71f54596ea1babb84850744de41d6d2c3b5bcc63146df6c20",
+          "bytes": 2410,
+          "text_tokens": 513
+        },
+        {
+          "path": "modules/d00-005.md",
+          "source_start": 183,
+          "source_end": 229,
+          "title": "### Two distinct optimization layers",
+          "sha256": "f6c5a1bd3052f240430abc786ebad30c0d1dd239d058a1ecd46913cb21d4caf4",
+          "bytes": 2533,
+          "text_tokens": 526
+        },
+        {
+          "path": "modules/d00-006.md",
+          "source_start": 230,
+          "source_end": 237,
+          "title": "**You must explore both layers.** An implementation that only",
+          "sha256": "04de0b6cec1ff71a3b6963b28591f14fe72f63ee11ccb6e226c3110ffc0f5e88",
+          "bytes": 428,
+          "text_tokens": 84
+        },
+        {
+          "path": "modules/d00-007.md",
+          "source_start": 238,
+          "source_end": 248,
+          "title": "### Device placement is yours to decide",
+          "sha256": "f03bab8bf37ac1ea0415ff5d9190c54ffd3cad6d2a3f7f137be3b6db4a184d53",
+          "bytes": 568,
+          "text_tokens": 113
+        },
+        {
+          "path": "modules/d00-008.md",
+          "source_start": 249,
+          "source_end": 299,
+          "title": "## Environment",
+          "sha256": "54d00cdffbf5f870003714d9fd1f68dd0487bffbc89ffdeb664e48d52a93c262",
+          "bytes": 2586,
+          "text_tokens": 660
+        },
+        {
+          "path": "modules/d00-009.md",
+          "source_start": 300,
+          "source_end": 301,
+          "title": "## What you may and may not modify",
+          "sha256": "d034905d58a4931594bde10c9be7bc7497d2ed3722611ac9ad6fa5b83ce905aa",
+          "bytes": 36,
+          "text_tokens": 9
+        },
+        {
+          "path": "modules/d00-010.md",
+          "source_start": 302,
+          "source_end": 357,
+          "title": "### Read-only (treat as a hard contract)",
+          "sha256": "bf3055a93405fff6b5f30101022860c8580a0f6ca200ed792d083b6d56c6a553",
+          "bytes": 3575,
+          "text_tokens": 912
+        },
+        {
+          "path": "modules/d00-011.md",
+          "source_start": 358,
+          "source_end": 375,
+          "title": "### Writable (your workspace)",
+          "sha256": "d8395acafa1e9cfb455845be86383bad958bc8096ac5649238ef81d8c5a27696",
+          "bytes": 750,
+          "text_tokens": 194
+        },
+        {
+          "path": "modules/d00-012.md",
+          "source_start": 376,
+          "source_end": 395,
+          "title": "## Frontend compatibility contract",
+          "sha256": "9b8fd4feab4f7f47e0ec96026187a65ee504fcd84f037b3b5b421bbf7a481564",
+          "bytes": 967,
+          "text_tokens": 219
+        },
+        {
+          "path": "modules/d00-013.md",
+          "source_start": 396,
+          "source_end": 402,
+          "title": "## The IR workflow",
+          "sha256": "da7f2aeece1c08426c08786917d4ac04ad678df4c0368488ba9e05cbcd9f85da",
+          "bytes": 287,
+          "text_tokens": 63
+        },
+        {
+          "path": "modules/d00-014.md",
+          "source_start": 403,
+          "source_end": 469,
+          "title": "### Phase 1: IR conversion",
+          "sha256": "a8d147f1745dd701dfa0da4257c4ea57424f20c948177579ccf4399c3839faf9",
+          "bytes": 3561,
+          "text_tokens": 878
+        },
+        {
+          "path": "modules/d00-015.md",
+          "source_start": 470,
+          "source_end": 519,
+          "title": "### Phase 2: IR validation",
+          "sha256": "583e442af6349e4f0c0ca20d728dd029ccf9ea2b097343d6df501da81476c177",
+          "bytes": 2407,
+          "text_tokens": 528
+        },
+        {
+          "path": "modules/d00-016.md",
+          "source_start": 520,
+          "source_end": 546,
+          "title": "### Phase 3: Deployment",
+          "sha256": "d45f2910f6d22560605d51572cb7edb5b7255444ac37d48edf7b0d82672625df",
+          "bytes": 1131,
+          "text_tokens": 247
+        },
+        {
+          "path": "modules/d00-017.md",
+          "source_start": 547,
+          "source_end": 559,
+          "title": "### Phase 4: Validation and iteration",
+          "sha256": "bf16f1ebdddc0c01307aa94e8d6bda1a7ff604aa5b62ec137ecc2219645b8511",
+          "bytes": 694,
+          "text_tokens": 139
+        },
+        {
+          "path": "modules/d00-018.md",
+          "source_start": 560,
+          "source_end": 585,
+          "title": "**There is no session deadline.** Take the time the full queue",
+          "sha256": "59b24991ecfa62cbd8ccc7faeb407081fa4ddd41e25043987690842bf44c43c0",
+          "bytes": 1532,
+          "text_tokens": 339
+        },
+        {
+          "path": "modules/d00-019.md",
+          "source_start": 586,
+          "source_end": 593,
+          "title": "**10 is a floor, not a target.** Do not stop at 10 just because you",
+          "sha256": "1bd0264e2d86778e09e161cf4bf61ac96371eb7ee1622f82842ffc8b9226b1d1",
+          "bytes": 402,
+          "text_tokens": 92
+        },
+        {
+          "path": "modules/d00-020.md",
+          "source_start": 594,
+          "source_end": 618,
+          "title": "**Implementation and debugging cost are never valid rationale for",
+          "sha256": "acef2081b646185d8447ab5e9077a57c798c9028cebe2da0db2b2209084f8134",
+          "bytes": 1370,
+          "text_tokens": 314
+        },
+        {
+          "path": "modules/d00-021.md",
+          "source_start": 619,
+          "source_end": 623,
+          "title": "**Read-only areas are not a blocker — vendor the file into your",
+          "sha256": "9c7d4d38db51ac8f90b89284ddafb297f4f54bdae14cad1d2bd46f6e43ed6aec",
+          "bytes": 333,
+          "text_tokens": 84
+        },
+        {
+          "path": "modules/d00-022.md",
+          "source_start": 624,
+          "source_end": 638,
+          "title": "**copy the file (or the subset you need) into",
+          "sha256": "d903f9e13ef26bbf6da682176e592380d8cb676c5088c6fdd626734de3039a14",
+          "bytes": 856,
+          "text_tokens": 199
+        },
+        {
+          "path": "modules/d00-023.md",
+          "source_start": 639,
+          "source_end": 665,
+          "title": "**Terminal statuses.** A queue entry reaches a terminal status only",
+          "sha256": "2730ac272b15536a70f40e03ea49f701b1366440e9c3aab21ef9d68c819e8629",
+          "bytes": 1321,
+          "text_tokens": 318
+        },
+        {
+          "path": "modules/d00-024.md",
+          "source_start": 666,
+          "source_end": 768,
+          "title": "**What `blocked` means (strict).** `blocked` is reserved for",
+          "sha256": "b887672dd56965a15161c488cb860ac3046361433518018752830cba772a10f3",
+          "bytes": 5426,
+          "text_tokens": 1281
+        },
+        {
+          "path": "modules/d00-025.md",
+          "source_start": 769,
+          "source_end": 851,
+          "title": "**Hangs vs. slow operations: investigate, do not assume.** A backend",
+          "sha256": "0a69f2a240a36a95de70732149f7bedf165d0322aec0e7ea7b2553490119bdc3",
+          "bytes": 4836,
+          "text_tokens": 1193
+        },
+        {
+          "path": "modules/d00-026.md",
+          "source_start": 852,
+          "source_end": 868,
+          "title": "**Forbidden session-handoff language.** The experiment log, the",
+          "sha256": "022c543bd70ff7a05b34066ffa219af7b9647a0531312f3b2dfd3eb00c88e1e6",
+          "bytes": 760,
+          "text_tokens": 188
+        },
+        {
+          "path": "modules/d00-027.md",
+          "source_start": 869,
+          "source_end": 902,
+          "title": "**Adversarial self-framing (required).** Every `blocked` or",
+          "sha256": "aa3996259fc74c79241463b4232eb17789b328aa9fd85ee13d326081af9fe284",
+          "bytes": 1713,
+          "text_tokens": 406
+        },
+        {
+          "path": "modules/d00-028.md",
+          "source_start": 903,
+          "source_end": 972,
+          "title": "**Maintain a visible, evolving variant queue.** Before you implement",
+          "sha256": "92510c2da236043fd9764be435e7b9757ff0da401ff015a6b45c59896a80b2d7",
+          "bytes": 3921,
+          "text_tokens": 880
+        },
+        {
+          "path": "modules/d00-029.md",
+          "source_start": 973,
+          "source_end": 990,
+          "title": "**No variant may stand in for another.** Every queued variant must",
+          "sha256": "50f6d11c111d67c58c29428abe38692329f61243b4fe01d6e33cfb3ac3b774d6",
+          "bytes": 1075,
+          "text_tokens": 223
+        },
+        {
+          "path": "modules/d00-030.md",
+          "source_start": 991,
+          "source_end": 1006,
+          "title": "**Follow-ups must be enqueued, not narrated.** Every variant you",
+          "sha256": "74ed667d86aa2c2b1f944a504af25809859aeaaaad299569037c73d8ba6c5caa",
+          "bytes": 946,
+          "text_tokens": 218
+        },
+        {
+          "path": "modules/d00-031.md",
+          "source_start": 1007,
+          "source_end": 1021,
+          "title": "**Prioritize the queue by IR-analysis-ranked expected impact, not",
+          "sha256": "3d7f0f9caa7b31941bb6baab9e93c1b96b0b01ab80e1512fb1b9f2625b88373a",
+          "bytes": 882,
+          "text_tokens": 191
+        },
+        {
+          "path": "modules/d00-032.md",
+          "source_start": 1022,
+          "source_end": 1030,
+          "title": "**Watch for early-win anchoring.** If one variant delivers an",
+          "sha256": "45879ff17ad1cc8aa8e960ddfe89690725c8cf8168c56609f0e1e2b1aac8fe78",
+          "bytes": 511,
+          "text_tokens": 114
+        },
+        {
+          "path": "modules/d00-033.md",
+          "source_start": 1031,
+          "source_end": 1047,
+          "title": "**Isolate levers first, then combine.** Prefer variants that",
+          "sha256": "170aea433c5e395fd6567ab4c0ade11c054a83ec129deb5dcd101c5c13136082",
+          "bytes": 941,
+          "text_tokens": 196
+        },
+        {
+          "path": "modules/d00-034.md",
+          "source_start": 1048,
+          "source_end": 1066,
+          "title": "**Non-dominated winning pairs obligate a combination.** If two",
+          "sha256": "bffcc5b2e2d7b4a7d41d323b7d04f90c47493a0618aff887d1de1fff083e8c35",
+          "bytes": 1108,
+          "text_tokens": 242
+        },
+        {
+          "path": "modules/d00-035.md",
+          "source_start": 1067,
+          "source_end": 1079,
+          "title": "**Audit but don't dismiss.** You may never write a candidate",
+          "sha256": "242ace1cd297bdd87d54104177e5f015831ab337aadf251b0a814ca404f76437",
+          "bytes": 786,
+          "text_tokens": 173
+        },
+        {
+          "path": "modules/d00-036.md",
+          "source_start": 1080,
+          "source_end": 1160,
+          "title": "**Measure, do not predict efficacy.** Closely related to the audit",
+          "sha256": "f494d3b9778ec0cd314af409d8b47f69677a15e972b6fac81917137f7c4ad413",
+          "bytes": 4835,
+          "text_tokens": 1066
+        },
+        {
+          "path": "modules/d00-037.md",
+          "source_start": 1161,
+          "source_end": 1171,
+          "title": "**The \"baseline\" is always the user's reference backend.** The very",
+          "sha256": "3242512cd198c432846b715e772cb5e126d362e2f34b5919ff1e380aac7b4fdb",
+          "bytes": 630,
+          "text_tokens": 137
+        },
+        {
+          "path": "modules/d00-038.md",
+          "source_start": 1172,
+          "source_end": 1181,
+          "title": "**Stopping criterion.** You may stop when every variant in your",
+          "sha256": "08349b63cc3a58e9b2499d110b21ab784d47a6b5a007c021d3494e432c6fc668",
+          "bytes": 546,
+          "text_tokens": 135
+        },
+        {
+          "path": "modules/d00-039.md",
+          "source_start": 1182,
+          "source_end": 1210,
+          "title": "### Verification and benchmarking are non-negotiable",
+          "sha256": "ba56a350ce0e9b1503ced1b34b3b9c3197771a87c2cc8ad0435a6a080739c7bf",
+          "bytes": 1585,
+          "text_tokens": 336
+        },
+        {
+          "path": "modules/d00-040.md",
+          "source_start": 1211,
+          "source_end": 1226,
+          "title": "**The test and benchmark harnesses must actually run end-to-end.**",
+          "sha256": "590881a02f4d07243a68f3dcabc0252af6328151c8da8818ad16789ae1ab222e",
+          "bytes": 787,
+          "text_tokens": 171
+        },
+        {
+          "path": "modules/d00-041.md",
+          "source_start": 1227,
+          "source_end": 1237,
+          "title": "**If you observe any of these symptoms, the run was not valid:**",
+          "sha256": "7dca7f44f038f80d86fa3aab5012f5d80db8eab81e8c04205d2ea2edea78a425",
+          "bytes": 474,
+          "text_tokens": 98
+        },
+        {
+          "path": "modules/d00-042.md",
+          "source_start": 1238,
+          "source_end": 1249,
+          "title": "**What \"PASS\" means.** A validation result may be labeled **PASS** in",
+          "sha256": "d65bffe7cf26279357b71f5292fa2041c3f361c95c31a1f4c18b4ee9dcb78268",
+          "bytes": 732,
+          "text_tokens": 162
+        },
+        {
+          "path": "modules/d00-043.md",
+          "source_start": 1250,
+          "source_end": 1251,
+          "title": "### Process cleanup",
+          "sha256": "31704986d93dead714ce6967404b210a2f9f29ee4f3edae4a9702b23c43a3879",
+          "bytes": 21,
+          "text_tokens": 4
+        },
+        {
+          "path": "modules/d00-044.md",
+          "source_start": 1252,
+          "source_end": 1277,
+          "title": "**Every** test or benchmark script you write must guarantee that all",
+          "sha256": "afb2b92ea28f5e9bfd65ab511e9e6015c9185965db8d0992f4c3c73b33acb58b",
+          "bytes": 1364,
+          "text_tokens": 335
+        },
+        {
+          "path": "modules/d00-045.md",
+          "source_start": 1278,
+          "source_end": 1310,
+          "title": "### Testing without a human in the loop",
+          "sha256": "62d691ff08098fd6cbda21b209bcd0b3e2752f19ed11d35450c4014ce6dc539a",
+          "bytes": 1567,
+          "text_tokens": 363
+        },
+        {
+          "path": "modules/d00-046.md",
+          "source_start": 1311,
+          "source_end": 1312,
+          "title": "### Multi-GPU coordination: use the shared `torch.distributed` abstractions",
+          "sha256": "3ca2e599d4831d09418a5cef1ab39c754f13119361a2394b07840a4728c26c0b",
+          "bytes": 77,
+          "text_tokens": 19
+        },
+        {
+          "path": "modules/d00-047.md",
+          "source_start": 1313,
+          "source_end": 1333,
+          "title": "**Default rule, in one line: use the shared-runtime abstractions",
+          "sha256": "36f028d90c89e38cf5a02b3eefff69d95464b9ac835156dace8a47e8f64886e8",
+          "bytes": 1028,
+          "text_tokens": 219
+        },
+        {
+          "path": "modules/d00-048.md",
+          "source_start": 1334,
+          "source_end": 1352,
+          "title": "**Do not hand-roll a multi-GPU design that substitutes Python-level",
+          "sha256": "caee08294a015a9e1cab1d95409dcd565c0b1ef18a7abdaa51b921ead3236cf4",
+          "bytes": 1131,
+          "text_tokens": 252
+        },
+        {
+          "path": "modules/d00-049.md",
+          "source_start": 1353,
+          "source_end": 1409,
+          "title": "**When the shared abstraction genuinely does not cover a case you",
+          "sha256": "89e92e10d96074082b90dab837b8296d524c351af9f821edd36c1fb14b027ba8",
+          "bytes": 3277,
+          "text_tokens": 739
+        },
+        {
+          "path": "modules/d00-050.md",
+          "source_start": 1410,
+          "source_end": 1422,
+          "title": "**exploratory scaffolding**, not a completed queue entry: the queue",
+          "sha256": "e4f95054ada4a2d22f20f71ec564d6d4e561d2ce410fad84edf50bb90a0c25eb",
+          "bytes": 722,
+          "text_tokens": 166
+        },
+        {
+          "path": "modules/d00-051.md",
+          "source_start": 1423,
+          "source_end": 1449,
+          "title": "**Bugs in agent-written distributed code are not blockers.** When",
+          "sha256": "57b95ef2c0cd43cd89c06cff3744ed974b6a3c7bf9fe7dc55ce700ced65c6a5a",
+          "bytes": 1559,
+          "text_tokens": 354
+        },
+        {
+          "path": "modules/d00-052.md",
+          "source_start": 1450,
+          "source_end": 1519,
+          "title": "### Known pitfall: `torch.distributed` env-var collisions",
+          "sha256": "30416a312ce32291ad3640b68b377e4cf88f72eb8e34e99b309682db4dd9642c",
+          "bytes": 2526,
+          "text_tokens": 680
+        },
+        {
+          "path": "modules/d00-053.md",
+          "source_start": 1520,
+          "source_end": 1611,
+          "title": "## Resources you can use",
+          "sha256": "f0c08e1f544c4841eeebe6e88423ad2f17b1b90992457f094f4913203038b2d3",
+          "bytes": 5092,
+          "text_tokens": 1291
+        },
+        {
+          "path": "modules/d00-054.md",
+          "source_start": 1612,
+          "source_end": 1640,
+          "title": "## Communication conventions",
+          "sha256": "25b949a94d61c289b161edc930fbefec3774b2c41406f2eb3474cab0da602a85",
+          "bytes": 1619,
+          "text_tokens": 359
+        },
+        {
+          "path": "modules/d00-055.md",
+          "source_start": 1641,
+          "source_end": 1749,
+          "title": "## Definition of done",
+          "sha256": "902ba5a4dc34e3d9fadc751b89c6bd26f063da4c74c38f716371f02d83319018",
+          "bytes": 6246,
+          "text_tokens": 1396
+        }
+      ]
+    },
+    {
+      "logical_path": "flashrt/apps/AGENTS.md",
+      "original": "original/d01.md",
+      "source_sha256": "ec8f03cc24ec9082da9aa23ccc93984fa02f7787ca84b4f0993f83325863e84d",
+      "bytes": 29556,
+      "lines": 622,
+      "text_tokens": 7071,
+      "modules": [
+        {
+          "path": "modules/d01-000.md",
+          "source_start": 1,
+          "source_end": 20,
+          "title": "entry",
+          "sha256": "2bd367e7ba2af4d9071a4efcfa1363580664603f3574a1496290d5ae4dfce4df",
+          "bytes": 914,
+          "text_tokens": 200
+        },
+        {
+          "path": "modules/d01-001.md",
+          "source_start": 21,
+          "source_end": 66,
+          "title": "## Ownership: read-only vs. yours",
+          "sha256": "79ad23d232558b3807e7c566b268fbf0d81ba6838795f58ee79f86a3e8c24866",
+          "bytes": 2309,
+          "text_tokens": 566
+        },
+        {
+          "path": "modules/d01-002.md",
+          "source_start": 67,
+          "source_end": 137,
+          "title": "## Expected sub-layout for `flashrt/apps/<app>/backend/<platform>/`",
+          "sha256": "d3ebbff96ceb93c18995e493ef8d3b0aa43d15dd4be11e2356debd0e7dcfdb40",
+          "bytes": 3774,
+          "text_tokens": 835
+        },
+        {
+          "path": "modules/d01-003.md",
+          "source_start": 138,
+          "source_end": 164,
+          "title": "### No stub variants — measure it or remove it",
+          "sha256": "32374a434ba280995c36abf7833d79d2873e59cd795b8abfccaf0918ae0a5357",
+          "bytes": 1334,
+          "text_tokens": 324
+        },
+        {
+          "path": "modules/d01-004.md",
+          "source_start": 165,
+          "source_end": 170,
+          "title": "### The `ir/` subdirectory",
+          "sha256": "d658555e1c4b3264160f3b560be988e99ac435dacc0ec27f7915a3b11c82eba2",
+          "bytes": 223,
+          "text_tokens": 54
+        },
+        {
+          "path": "modules/d01-005.md",
+          "source_start": 171,
+          "source_end": 189,
+          "title": "**`graph_builder.py`** constructs `IRGraph` instances that represent",
+          "sha256": "6fd72ed2b6013940faac8e47a5b4e3be046393808c606175535fd6078558ff02",
+          "bytes": 1077,
+          "text_tokens": 255
+        },
+        {
+          "path": "modules/d01-006.md",
+          "source_start": 190,
+          "source_end": 216,
+          "title": "**`ops.py`** defines the operators themselves. Each operator carries",
+          "sha256": "1a5ba53869ae9ebd12921ba65a1e88c1da519677905d8873984f0a068e897fb6",
+          "bytes": 1453,
+          "text_tokens": 370
+        },
+        {
+          "path": "modules/d01-007.md",
+          "source_start": 217,
+          "source_end": 237,
+          "title": "**Phase 2 validation skeleton** (for `tests/test_ir.py`):",
+          "sha256": "728fe36ca2d9c181ce9e69df9ef11df762a23d6014ce2d167a0d3a2afd73941f",
+          "bytes": 810,
+          "text_tokens": 207
+        },
+        {
+          "path": "modules/d01-008.md",
+          "source_start": 238,
+          "source_end": 243,
+          "title": "### Variant naming",
+          "sha256": "60657226d73adf1d27b68e725d67c0eea9ddd31499286fec7d7807f7629d360b",
+          "bytes": 184,
+          "text_tokens": 48
+        },
+        {
+          "path": "modules/d01-009.md",
+          "source_start": 244,
+          "source_end": 264,
+          "title": "### Backend contract",
+          "sha256": "2fc6a53251d1782ee2a9a7c91e71a099c021b6f52424b6fad28d428ba4065a21",
+          "bytes": 1025,
+          "text_tokens": 255
+        },
+        {
+          "path": "modules/d01-010.md",
+          "source_start": 265,
+          "source_end": 280,
+          "title": "### Correctness harness pattern",
+          "sha256": "dcae8e61084ce37973590aa3255a695ddafb3177c7b3622b0ea18ef90f3c5d73",
+          "bytes": 728,
+          "text_tokens": 153
+        },
+        {
+          "path": "modules/d01-011.md",
+          "source_start": 281,
+          "source_end": 314,
+          "title": "**a harness that has not actually run end-to-end and printed a",
+          "sha256": "1789d336dab09cba2aa8605d0393496e82bbc258dd7b54ac4719d73b74886de7",
+          "bytes": 1861,
+          "text_tokens": 442
+        },
+        {
+          "path": "modules/d01-012.md",
+          "source_start": 315,
+          "source_end": 325,
+          "title": "### Benchmark harness pattern",
+          "sha256": "2224dc6a2e1fb2a3995d1a155a6c7889b18370d94b608b9cf01229556a951f41",
+          "bytes": 503,
+          "text_tokens": 100
+        },
+        {
+          "path": "modules/d01-013.md",
+          "source_start": 326,
+          "source_end": 368,
+          "title": "**both** of:",
+          "sha256": "418b29e286a99ae2b8481a2d35f0ec046b4b82da9240cc2071211f1f6ac8b529",
+          "bytes": 2073,
+          "text_tokens": 498
+        },
+        {
+          "path": "modules/d01-014.md",
+          "source_start": 369,
+          "source_end": 370,
+          "title": "### Process cleanup (critical)",
+          "sha256": "92e07d734ea3c41db04b7d29e86c78139bfebc4e06e01cf0fb906c0e6b56661d",
+          "bytes": 32,
+          "text_tokens": 6
+        },
+        {
+          "path": "modules/d01-015.md",
+          "source_start": 371,
+          "source_end": 411,
+          "title": "**Every** test or benchmark script you write must guarantee that all",
+          "sha256": "70e79e3aeee043bda5e7ba9c7ab940a73e0748de25316b6a765a389127d88875",
+          "bytes": 1168,
+          "text_tokens": 291
+        },
+        {
+          "path": "modules/d01-016.md",
+          "source_start": 412,
+          "source_end": 432,
+          "title": "### Other process hygiene",
+          "sha256": "97eddfb8296d64afe92b2e83140d38d14cde6927f3cdd65357678c0a1f04199a",
+          "bytes": 1034,
+          "text_tokens": 253
+        },
+        {
+          "path": "modules/d01-017.md",
+          "source_start": 433,
+          "source_end": 446,
+          "title": "### Experiment log format",
+          "sha256": "63d9938c346bdf241c20586ad1661ba8d1798a559b287bff26be4b037f19272a",
+          "bytes": 608,
+          "text_tokens": 156
+        },
+        {
+          "path": "modules/d01-018.md",
+          "source_start": 447,
+          "source_end": 473,
+          "title": "**IR conversion record** (one block, at the top of the log):",
+          "sha256": "8f4e7b5768f8aae021c7ceb36b27609425be8e9b57773a09a2f298e405a21c34",
+          "bytes": 1033,
+          "text_tokens": 259
+        },
+        {
+          "path": "modules/d01-019.md",
+          "source_start": 474,
+          "source_end": 514,
+          "title": "**Variant queue** (one block at the top of the deployment-iteration",
+          "sha256": "31d47738d47a74678df981683fb7770451efa9e76838c34b02d71cdee132f2cf",
+          "bytes": 1889,
+          "text_tokens": 480
+        },
+        {
+          "path": "modules/d01-020.md",
+          "source_start": 515,
+          "source_end": 586,
+          "title": "**Deployment iteration records** (one block per variant, appended",
+          "sha256": "2607023d989e8f73fbfaeacf8bcd15c33d00c9f9ab5a7e120ea7688f0224eb7a",
+          "bytes": 3655,
+          "text_tokens": 878
+        },
+        {
+          "path": "modules/d01-021.md",
+          "source_start": 587,
+          "source_end": 615,
+          "title": "### Importing from the shared runtime, IR, and adapters",
+          "sha256": "f413e4ec3c1550eb2d31cba4151d77124b64259c2f340eddc6f66709f7b495e6",
+          "bytes": 1545,
+          "text_tokens": 371
+        },
+        {
+          "path": "modules/d01-022.md",
+          "source_start": 616,
+          "source_end": 622,
+          "title": "### Keep variants self-contained",
+          "sha256": "66852a3736305b9c5f3450882155a01d06d55b4896bd17c257f47286acdc325d",
+          "bytes": 324,
+          "text_tokens": 70
+        }
+      ]
+    },
+    {
+      "logical_path": "flashrt/ir/AGENTS.md",
+      "original": "original/d02.md",
+      "source_sha256": "f79381e87720bfce87f036fbbbe276d5546b14c04ff91e76e1b0508e5d7386c2",
+      "bytes": 9714,
+      "lines": 213,
+      "text_tokens": 2481,
+      "modules": [
+        {
+          "path": "modules/d02-000.md",
+          "source_start": 1,
+          "source_end": 2,
+          "title": "entry",
+          "sha256": "7776f3ece30248cb0619adb293ffdf564f78abc0fcb56719afb073b0ed4bfca0",
+          "bytes": 31,
+          "text_tokens": 12
+        },
+        {
+          "path": "modules/d02-001.md",
+          "source_start": 3,
+          "source_end": 9,
+          "title": "**This directory is read-only for coding agents.**",
+          "sha256": "331fc5ba208c9cfd69a4d2778a84b712b0af11cf34c38cedf51d1f5e39250a43",
+          "bytes": 286,
+          "text_tokens": 58
+        },
+        {
+          "path": "modules/d02-002.md",
+          "source_start": 10,
+          "source_end": 92,
+          "title": "## What each file does",
+          "sha256": "1c2f4f0550ec13c767290f2051a573ba101211edbf7136211057c78475f64e90",
+          "bytes": 4304,
+          "text_tokens": 1113
+        },
+        {
+          "path": "modules/d02-003.md",
+          "source_start": 93,
+          "source_end": 94,
+          "title": "## Building an operator",
+          "sha256": "d904c3e2c78304c3a4a80156c4fb974930bc8871ce4cac95e7573879a1cc07cf",
+          "bytes": 25,
+          "text_tokens": 5
+        },
+        {
+          "path": "modules/d02-004.md",
+          "source_start": 95,
+          "source_end": 127,
+          "title": "**Parameterized ops — subclass `IROperator`.** Use this when the",
+          "sha256": "bd47f48447b0bd95286df308366b180c87d7b0da19f341a27bb0e2228453ba48",
+          "bytes": 1182,
+          "text_tokens": 306
+        },
+        {
+          "path": "modules/d02-005.md",
+          "source_start": 128,
+          "source_end": 149,
+          "title": "**Leaf ops — use `@ir_operator`.** For one-off operators with no",
+          "sha256": "1abd0869a3bff8093a255604ac80de9727ea40bc368726ffac2ff68adde56a14",
+          "bytes": 657,
+          "text_tokens": 186
+        },
+        {
+          "path": "modules/d02-006.md",
+          "source_start": 150,
+          "source_end": 156,
+          "title": "**Chunk-conditional ops.** If an op should only run under some",
+          "sha256": "50d583f7052ad8ef026d73bc8685b20b13346bedc100e9866f5ace5f14d1df13",
+          "bytes": 376,
+          "text_tokens": 94
+        },
+        {
+          "path": "modules/d02-007.md",
+          "source_start": 157,
+          "source_end": 182,
+          "title": "## State access",
+          "sha256": "76edb9da8e0d46a8820fce6494619b12007ea3da4ce7902ceb006ffa87e3304e",
+          "bytes": 1223,
+          "text_tokens": 300
+        },
+        {
+          "path": "modules/d02-008.md",
+          "source_start": 183,
+          "source_end": 213,
+          "title": "## How to use this module",
+          "sha256": "ac98c42cc4c81c17649641e8483a0991e4ce1e4807fdbf6ec696c88371463237",
+          "bytes": 1630,
+          "text_tokens": 407
+        }
+      ]
+    },
+    {
+      "logical_path": "assets/AGENTS.md",
+      "original": "original/d03.md",
+      "source_sha256": "4466341a7d71142e07be3659660a8446b32aee5fbb0aeed0425b1ebba8af4004",
+      "bytes": 845,
+      "lines": 18,
+      "text_tokens": 191,
+      "modules": [
+        {
+          "path": "modules/d03-000.md",
+          "source_start": 1,
+          "source_end": 2,
+          "title": "entry",
+          "sha256": "a7c22d7019de7a9862e1b019659faf14c2e5634ebffc197389ce62894c708fa3",
+          "bytes": 27,
+          "text_tokens": 9
+        },
+        {
+          "path": "modules/d03-001.md",
+          "source_start": 3,
+          "source_end": 18,
+          "title": "**This directory is read-only for coding agents.**",
+          "sha256": "15d021abf8b0af436dc641e65df6e04b1f513780c9aeb89599ed825c8e0b68df",
+          "bytes": 818,
+          "text_tokens": 182
+        }
+      ]
+    }
+  ]
+}

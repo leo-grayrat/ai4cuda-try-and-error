@@ -1,4 +1,8 @@
-# CUDA Agent skill 效果测试
+# FlashRT 说明文档效果研究
+
+当前入口：[FlashRT 材料与实测](flashrt/README.md)、[研究起点](RESEARCH_FRAME.zh.md)、[执行计划](PLAN.zh.md)。研究回到原始 FlashRT AGENTS.md 及其整理方式，先核实源码、已有检查与可运行任务，再冻结比较方案。
+
+## 已停止的 CUDAAgent 方案记录
 
 **本方案已停止，研究对象待纠正。** 回读用户原始思考后确认，长篇 AGENTS.md 与图论架构的讨论指向 FlashRT；此前错误选用 CUDAAgent 作为正式主体。后台实验与后处理已停止，以下保留旧方案记录，不能自动续跑。详见[研究对象纠正](SCOPE_CORRECTION.zh.md)。
 
