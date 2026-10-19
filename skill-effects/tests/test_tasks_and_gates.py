@@ -37,6 +37,23 @@ def test_document_only_submission_is_not_silently_given_a_checker(tmp_path):
     assert result["submitted"]
 
 
+def test_agent_can_read_the_log_filename_returned_by_its_tools(tmp_path):
+    from agent_trial import Executor
+    executor = Executor(tmp_path, permissions=False, checker=False)
+    (tmp_path / "tool-001-compile.log").write_text("actual compiler diagnosis", encoding="utf-8")
+    assert executor.execute({"operation": "read", "path": "tool-001-compile.log"})["content"] == "actual compiler diagnosis"
+
+
+def test_writing_a_workspace_log_name_cannot_replace_the_real_tool_log(tmp_path):
+    from agent_trial import Executor
+    executor = Executor(tmp_path, permissions=False, checker=False)
+    log = tmp_path / "tool-001-compile.log"
+    log.write_text("real tool evidence", encoding="utf-8")
+    executor.execute({"operation": "write", "path": log.name, "content": "fake log"})
+    assert executor.execute({"operation": "read", "path": log.name})["content"] == "real tool evidence"
+    assert log.read_text(encoding="utf-8") == "real tool evidence"
+
+
 def test_document_only_can_submit_missing_code_for_independent_failure_scoring(tmp_path):
     from agent_trial import Executor
     executor = Executor(tmp_path, permissions=False, checker=False)

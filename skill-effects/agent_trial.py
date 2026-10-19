@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -43,6 +44,8 @@ Platform: Windows, RTX 5060 Laptop (sm_120), PyTorch 2.11.0+cu128, CUDA Toolkit 
 For Windows cuBLAS bindings, the installed CUDA toolkit provides cublas_v2.h and cublas.lib. A binding may use #pragma comment(lib, "cublas.lib") under _MSC_VER with the fixed compiler tool. No change to compile infrastructure is needed.
 
 The workspace begins with model.py, model_new.py, binding.cpp, binding_registry.h and utils/. Use workspace tools to inspect and implement the solution. Finish by calling finish with your final report. No text response alone submits the task. You have {steps} model requests and at most {output_budget} generated tokens in total, including reasoning. No new libraries can be installed through these tools.
+
+Every workspace call needs an operation. A write uses operation="write", path and content as separate fields. Log filenames returned by compile, verify and benchmark can be read with operation="read"; tool evidence logs are read-only.
 """
 
 
@@ -190,6 +193,10 @@ class Executor:
         if operation == "list":
             return {"files": self.files.list()}
         if operation == "read":
+            name = args["path"]
+            if re.fullmatch(r"tool-\d+-(?:compile|verify|benchmark)\.log", name):
+                log = self.run / name
+                return {"content": log.read_text(encoding="utf-8", errors="replace")[:18000]}
             return {"content": self.files.read(args["path"])[:18000]}
         if operation == "write":
             self.files.write(args["path"], args["content"])
