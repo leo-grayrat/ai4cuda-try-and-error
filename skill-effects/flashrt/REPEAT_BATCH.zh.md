@@ -19,3 +19,11 @@ python skill-effects/flashrt/repeat_batch.py
 ```powershell
 python skill-effects/flashrt/repeat_batch.py --execute
 ```
+
+## 路由故障后的恢复
+
+2026-10-20，原exec句柄58866失效。宿主机只读进程核对未找到原批量或候选进程，t001—t003没有最终结果，最后事件停在00:16左右。三轮归类为 infrastructure_interrupted，全部响应、候选和已知成本保留，382个条目归档于 evidence/repeat-interruption-01。它们不进入模型失败比例，运行时长只保留到最后事件的下界。
+
+恢复清单保留原48个槽位，再为三个外部中断追加t049—t051，原中断不被覆盖。未启动45轮及追加3轮沿用同一候选控制器、任务、材料与预算。普通候选失败不追加替换。恢复过程使用 recover_batch.py，原冻结源码指纹仍须一致。分析时传入 materials/repeat-batch-recovery-v1.json，同时展示51次尝试与48个计划完整观察的状态。
+
+独立隐藏后台进程于00:26启动，PID31996；启动工具结束后再次核对仍存活，后续已建立t004—t006目录。进程启动记录与控制台输出位于 `.cache/flashrt-repeat-recovery-controller/`。先前中断已预热部分文档缓存，费用比较继续给出缓存中性估算；追加槽位在时间上后移，需在解释小样本差异时保留此限制。

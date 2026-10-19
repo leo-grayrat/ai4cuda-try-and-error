@@ -28,7 +28,8 @@ def summarize(manifest):
         result = json.loads((run / 'result.json').read_text(encoding='utf-8'))
         events = [json.loads(line) for line in (run / 'events.jsonl').read_text(encoding='utf-8').splitlines()]
         row['api_response_seconds'] = sum(e.get('seconds', 0) for e in events if e['type'] == 'response')
-        row['model_observation_eligible'] = result['state'] != 'api_or_trace_error'
+        row['model_observation_eligible'] = result['state'] not in ['api_or_trace_error', 'infrastructure_interrupted']
+        row['wall_seconds_is_lower_bound'] = result.get('wall_seconds_is_lower_bound', False)
         row['independent_benchmark_completed'] = bool(result.get('final_evaluation', {}).get('benchmark', {}).get('ok'))
         row['protected_source_unchanged'] = not row['protected_files_changed']
         row['valid_backend'] = row['final_correctness'] is True and row['protected_source_unchanged']
@@ -55,13 +56,17 @@ def summarize(manifest):
         eligible = [r for r in done if r['model_observation_eligible']]
         summary = {'arm': name, 'planned': len(group), 'terminal': len(done),
                    'started': sum(r['started'] for r in group), 'eligible_model_observations': len(eligible),
-                   'api_or_trace_errors': len(done) - len(eligible)}
+                   'ineligible_infrastructure_observations': len(done) - len(eligible)}
         for key in ['valid_backend', 'independent_benchmark_completed', 'report_available',
                     'prose_available', 'protected_source_unchanged']:
             summary[key + '_count'] = sum(r[key] for r in eligible)
         for field in ['seconds', 'current_offpeak_estimate_usd', 'cache_neutral_offpeak_estimate_usd']:
-            values = [r[field] for r in done if r[field] is not None]
+            population = eligible if field == 'seconds' else done
+            values = [r[field] for r in population if r[field] is not None]
             summary[field + '_median'] = statistics.median(values) if values else None
+        summary['all_attempt_known_cost_usd_sum'] = sum(r['current_offpeak_estimate_usd'] or 0 for r in done)
+        summary['infrastructure_known_cost_usd_sum'] = sum(r['current_offpeak_estimate_usd'] or 0
+            for r in done if not r['model_observation_eligible'])
         values = [(r['usage'] or {}).get('output_tokens') for r in done]
         values = [v for v in values if v is not None]
         summary['generated_tokens_median'] = statistics.median(values) if values else None
@@ -78,8 +83,9 @@ def summarize(manifest):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--manifest', type=Path, default=BASE / 'materials/repeat-batch-v1.json')
     args = parser.parse_args()
-    manifest = json.loads((BASE / 'materials/repeat-batch-v1.json').read_text(encoding='utf-8'))
+    manifest = json.loads(args.manifest.read_text(encoding='utf-8'))
     result = summarize(manifest)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')

@@ -1,0 +1,574 @@
+{
+  "created_utc": "2026-10-19T12:52:26.887166+00:00",
+  "seed": 20261019,
+  "description": "Eight conditions, two tasks, three repetitions; wider common budget; all failures retained",
+  "output_budget": 96000,
+  "steps": 48,
+  "report_budget": 8000,
+  "report_requests": 6,
+  "concurrency": 3,
+  "run_root": "skill-effects/runs/flashrt-repeat-v1",
+  "source_sha256": {
+    "skill-effects/flashrt/archive_pilots.py": "9abaa121149262fe102c20da789090bf87e05395698d2d4308907012a492f728",
+    "skill-effects/flashrt/benchmark_local.py": "08ea46e28e7eb714b429fe9271fe953bc257992b847e096d669676b52b6b22d1",
+    "skill-effects/flashrt/branch_ir.py": "86caa092c284d3ebda3d91eed955a325baa67211f967922189af0392fa21a138",
+    "skill-effects/flashrt/build_phase4_draft.py": "7f5468287bede879ad9c76044ebd7732c88f2bd9b129d6fecd0268241c4961ea",
+    "skill-effects/flashrt/collect_pilots.py": "72b0ce0f6a03fe7a678edf3a31d46bb7e16e9cc13b0c58ec4818a23e48d421a0",
+    "skill-effects/flashrt/index_requirements.py": "b477758b00c582a7f7f054793477f4c8f2b077c8fccbfa8244260570760bb9d4",
+    "skill-effects/flashrt/local_session.py": "5382c694b4ddc704d4713addc1dd5f16f378e51f4d1f204cb20086a3abe8a23b",
+    "skill-effects/flashrt/materials/format-v1/d00.md": "c83edce77f41f409ab865d6239b445dc92e0b9d9acbf9576fb8293c10d7bdda6",
+    "skill-effects/flashrt/materials/format-v1/d01.md": "7cf816d3c02da418ff153cb990d2c13a1c0cd657f02c716784ca4cb96a377663",
+    "skill-effects/flashrt/materials/format-v1/d02.md": "bdad7c4cd1af02278272f22906ad2feae23d4a4fa909e4a75c77913f8c01a395",
+    "skill-effects/flashrt/materials/format-v1/d03.md": "d1e32ad80c03d4e088eba45fe091ffdbab31d2218ba2cd86cfe2b2705daee77f",
+    "skill-effects/flashrt/materials/format-v1/manifest.json": "458fca727142ae23476af0ed0184b4cadf0cc41ebdd9677ad6fe993ab194cca9",
+    "skill-effects/flashrt/materials/phase4-draft-v1/AUDIT.zh.md": "6b33afeef6a468ab916dea4fc3a805b689e36754396f967ec30883b4300799d6",
+    "skill-effects/flashrt/materials/phase4-draft-v1/build.json": "6120d88d79be993ef6dc7f4ca3d054f897be7a796882d7da60684ce9d74805c1",
+    "skill-effects/flashrt/materials/phase4-draft-v1/replacement.md": "e09a677451430957a987f54e56ffae66b1c3a8a6780fd3e8ae5bf6832d3f3e81",
+    "skill-effects/flashrt/materials/phase4-draft-v1/root-draft.md": "7437ebe2f41379cc009216f0720ef6e1c8c94b141bf9785773dbd5351462322e",
+    "skill-effects/flashrt/materials/verbatim-v1/manifest.json": "4c47ef57ec74a0d291509e5c2e586c5bda9bc8f8666811521d51d7f0a49297fe",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-000.md": "f938ba0fa715da0ada12e91f971a49931cc0b262c49c832f79c5d74b0f82e86b",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-001.md": "41b1558a90de6888dd20e593c75fe403eff90ef8dc19c58486cb9bc2fc384150",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-002.md": "34fb4e616a394226f44773b84b6b7762671a824be5758b923698907e1b5ecc49",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-003.md": "7aa7680f0df78a36e6a5856f7a9ab6be0331620fac20d05a9a653dd05434bcfe",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-004.md": "6e473018545469f71f54596ea1babb84850744de41d6d2c3b5bcc63146df6c20",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-005.md": "f6c5a1bd3052f240430abc786ebad30c0d1dd239d058a1ecd46913cb21d4caf4",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-006.md": "04de0b6cec1ff71a3b6963b28591f14fe72f63ee11ccb6e226c3110ffc0f5e88",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-007.md": "f03bab8bf37ac1ea0415ff5d9190c54ffd3cad6d2a3f7f137be3b6db4a184d53",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-008.md": "54d00cdffbf5f870003714d9fd1f68dd0487bffbc89ffdeb664e48d52a93c262",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-009.md": "d034905d58a4931594bde10c9be7bc7497d2ed3722611ac9ad6fa5b83ce905aa",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-010.md": "bf3055a93405fff6b5f30101022860c8580a0f6ca200ed792d083b6d56c6a553",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-011.md": "d8395acafa1e9cfb455845be86383bad958bc8096ac5649238ef81d8c5a27696",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-012.md": "9b8fd4feab4f7f47e0ec96026187a65ee504fcd84f037b3b5b421bbf7a481564",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-013.md": "da7f2aeece1c08426c08786917d4ac04ad678df4c0368488ba9e05cbcd9f85da",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-014.md": "a8d147f1745dd701dfa0da4257c4ea57424f20c948177579ccf4399c3839faf9",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-015.md": "583e442af6349e4f0c0ca20d728dd029ccf9ea2b097343d6df501da81476c177",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-016.md": "d45f2910f6d22560605d51572cb7edb5b7255444ac37d48edf7b0d82672625df",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-017.md": "bf16f1ebdddc0c01307aa94e8d6bda1a7ff604aa5b62ec137ecc2219645b8511",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-018.md": "59b24991ecfa62cbd8ccc7faeb407081fa4ddd41e25043987690842bf44c43c0",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-019.md": "1bd0264e2d86778e09e161cf4bf61ac96371eb7ee1622f82842ffc8b9226b1d1",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-020.md": "acef2081b646185d8447ab5e9077a57c798c9028cebe2da0db2b2209084f8134",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-021.md": "9c7d4d38db51ac8f90b89284ddafb297f4f54bdae14cad1d2bd46f6e43ed6aec",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-022.md": "d903f9e13ef26bbf6da682176e592380d8cb676c5088c6fdd626734de3039a14",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-023.md": "2730ac272b15536a70f40e03ea49f701b1366440e9c3aab21ef9d68c819e8629",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-024.md": "b887672dd56965a15161c488cb860ac3046361433518018752830cba772a10f3",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-025.md": "0a69f2a240a36a95de70732149f7bedf165d0322aec0e7ea7b2553490119bdc3",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-026.md": "022c543bd70ff7a05b34066ffa219af7b9647a0531312f3b2dfd3eb00c88e1e6",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-027.md": "aa3996259fc74c79241463b4232eb17789b328aa9fd85ee13d326081af9fe284",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-028.md": "92510c2da236043fd9764be435e7b9757ff0da401ff015a6b45c59896a80b2d7",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-029.md": "50f6d11c111d67c58c29428abe38692329f61243b4fe01d6e33cfb3ac3b774d6",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-030.md": "74ed667d86aa2c2b1f944a504af25809859aeaaaad299569037c73d8ba6c5caa",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-031.md": "3d7f0f9caa7b31941bb6baab9e93c1b96b0b01ab80e1512fb1b9f2625b88373a",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-032.md": "45879ff17ad1cc8aa8e960ddfe89690725c8cf8168c56609f0e1e2b1aac8fe78",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-033.md": "170aea433c5e395fd6567ab4c0ade11c054a83ec129deb5dcd101c5c13136082",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-034.md": "bffcc5b2e2d7b4a7d41d323b7d04f90c47493a0618aff887d1de1fff083e8c35",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-035.md": "242ace1cd297bdd87d54104177e5f015831ab337aadf251b0a814ca404f76437",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-036.md": "f494d3b9778ec0cd314af409d8b47f69677a15e972b6fac81917137f7c4ad413",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-037.md": "3242512cd198c432846b715e772cb5e126d362e2f34b5919ff1e380aac7b4fdb",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-038.md": "08349b63cc3a58e9b2499d110b21ab784d47a6b5a007c021d3494e432c6fc668",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-039.md": "ba56a350ce0e9b1503ced1b34b3b9c3197771a87c2cc8ad0435a6a080739c7bf",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-040.md": "590881a02f4d07243a68f3dcabc0252af6328151c8da8818ad16789ae1ab222e",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-041.md": "7dca7f44f038f80d86fa3aab5012f5d80db8eab81e8c04205d2ea2edea78a425",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-042.md": "d65bffe7cf26279357b71f5292fa2041c3f361c95c31a1f4c18b4ee9dcb78268",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-043.md": "31704986d93dead714ce6967404b210a2f9f29ee4f3edae4a9702b23c43a3879",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-044.md": "afb2b92ea28f5e9bfd65ab511e9e6015c9185965db8d0992f4c3c73b33acb58b",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-045.md": "62d691ff08098fd6cbda21b209bcd0b3e2752f19ed11d35450c4014ce6dc539a",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-046.md": "3ca2e599d4831d09418a5cef1ab39c754f13119361a2394b07840a4728c26c0b",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-047.md": "36f028d90c89e38cf5a02b3eefff69d95464b9ac835156dace8a47e8f64886e8",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-048.md": "caee08294a015a9e1cab1d95409dcd565c0b1ef18a7abdaa51b921ead3236cf4",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-049.md": "89e92e10d96074082b90dab837b8296d524c351af9f821edd36c1fb14b027ba8",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-050.md": "e4f95054ada4a2d22f20f71ec564d6d4e561d2ce410fad84edf50bb90a0c25eb",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-051.md": "57b95ef2c0cd43cd89c06cff3744ed974b6a3c7bf9fe7dc55ce700ced65c6a5a",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-052.md": "30416a312ce32291ad3640b68b377e4cf88f72eb8e34e99b309682db4dd9642c",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-053.md": "f0c08e1f544c4841eeebe6e88423ad2f17b1b90992457f094f4913203038b2d3",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-054.md": "25b949a94d61c289b161edc930fbefec3774b2c41406f2eb3474cab0da602a85",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d00-055.md": "902ba5a4dc34e3d9fadc751b89c6bd26f063da4c74c38f716371f02d83319018",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-000.md": "2bd367e7ba2af4d9071a4efcfa1363580664603f3574a1496290d5ae4dfce4df",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-001.md": "79ad23d232558b3807e7c566b268fbf0d81ba6838795f58ee79f86a3e8c24866",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-002.md": "d3ebbff96ceb93c18995e493ef8d3b0aa43d15dd4be11e2356debd0e7dcfdb40",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-003.md": "32374a434ba280995c36abf7833d79d2873e59cd795b8abfccaf0918ae0a5357",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-004.md": "d658555e1c4b3264160f3b560be988e99ac435dacc0ec27f7915a3b11c82eba2",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-005.md": "6fd72ed2b6013940faac8e47a5b4e3be046393808c606175535fd6078558ff02",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-006.md": "1a5ba53869ae9ebd12921ba65a1e88c1da519677905d8873984f0a068e897fb6",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-007.md": "728fe36ca2d9c181ce9e69df9ef11df762a23d6014ce2d167a0d3a2afd73941f",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-008.md": "60657226d73adf1d27b68e725d67c0eea9ddd31499286fec7d7807f7629d360b",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-009.md": "2fc6a53251d1782ee2a9a7c91e71a099c021b6f52424b6fad28d428ba4065a21",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-010.md": "dcae8e61084ce37973590aa3255a695ddafb3177c7b3622b0ea18ef90f3c5d73",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-011.md": "1789d336dab09cba2aa8605d0393496e82bbc258dd7b54ac4719d73b74886de7",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-012.md": "2224dc6a2e1fb2a3995d1a155a6c7889b18370d94b608b9cf01229556a951f41",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-013.md": "418b29e286a99ae2b8481a2d35f0ec046b4b82da9240cc2071211f1f6ac8b529",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-014.md": "92e07d734ea3c41db04b7d29e86c78139bfebc4e06e01cf0fb906c0e6b56661d",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-015.md": "70e79e3aeee043bda5e7ba9c7ab940a73e0748de25316b6a765a389127d88875",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-016.md": "97eddfb8296d64afe92b2e83140d38d14cde6927f3cdd65357678c0a1f04199a",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-017.md": "63d9938c346bdf241c20586ad1661ba8d1798a559b287bff26be4b037f19272a",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-018.md": "8f4e7b5768f8aae021c7ceb36b27609425be8e9b57773a09a2f298e405a21c34",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-019.md": "31d47738d47a74678df981683fb7770451efa9e76838c34b02d71cdee132f2cf",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-020.md": "2607023d989e8f73fbfaeacf8bcd15c33d00c9f9ab5a7e120ea7688f0224eb7a",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-021.md": "f413e4ec3c1550eb2d31cba4151d77124b64259c2f340eddc6f66709f7b495e6",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d01-022.md": "66852a3736305b9c5f3450882155a01d06d55b4896bd17c257f47286acdc325d",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d02-000.md": "7776f3ece30248cb0619adb293ffdf564f78abc0fcb56719afb073b0ed4bfca0",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d02-001.md": "331fc5ba208c9cfd69a4d2778a84b712b0af11cf34c38cedf51d1f5e39250a43",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d02-002.md": "1c2f4f0550ec13c767290f2051a573ba101211edbf7136211057c78475f64e90",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d02-003.md": "d904c3e2c78304c3a4a80156c4fb974930bc8871ce4cac95e7573879a1cc07cf",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d02-004.md": "bd47f48447b0bd95286df308366b180c87d7b0da19f341a27bb0e2228453ba48",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d02-005.md": "1abd0869a3bff8093a255604ac80de9727ea40bc368726ffac2ff68adde56a14",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d02-006.md": "50d583f7052ad8ef026d73bc8685b20b13346bedc100e9866f5ace5f14d1df13",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d02-007.md": "76edb9da8e0d46a8820fce6494619b12007ea3da4ce7902ceb006ffa87e3304e",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d02-008.md": "ac98c42cc4c81c17649641e8483a0991e4ce1e4807fdbf6ec696c88371463237",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d03-000.md": "a7c22d7019de7a9862e1b019659faf14c2e5634ebffc197389ce62894c708fa3",
+    "skill-effects/flashrt/materials/verbatim-v1/modules/d03-001.md": "15d021abf8b0af436dc641e65df6e04b1f513780c9aeb89599ed825c8e0b68df",
+    "skill-effects/flashrt/materials/verbatim-v1/original/d00.md": "8ee46af445c5b33292e523de303cd6ed60df63fd085a4e0be5fdfbc64b622019",
+    "skill-effects/flashrt/materials/verbatim-v1/original/d01.md": "ec8f03cc24ec9082da9aa23ccc93984fa02f7787ca84b4f0993f83325863e84d",
+    "skill-effects/flashrt/materials/verbatim-v1/original/d02.md": "f79381e87720bfce87f036fbbbe276d5546b14c04ff91e76e1b0508e5d7386c2",
+    "skill-effects/flashrt/materials/verbatim-v1/original/d03.md": "4466341a7d71142e07be3659660a8446b32aee5fbb0aeed0425b1ebba8af4004",
+    "skill-effects/flashrt/pilot_trial.py": "108a8b7d1d8e617a38c36c217445264e37cb6fea109d8ff850ffdaacf6f31751",
+    "skill-effects/flashrt/prepare_documents.py": "0446474de77faff2acdeff6fd82f45524253f67caca46a2701e90f7d8806cfdb",
+    "skill-effects/flashrt/prepare_format_control.py": "dffbb5bd0dc1f89a4da3107c2714f25a1ab6e852245a9096760dc10bc49e3a31",
+    "skill-effects/flashrt/probe_branch_workload.py": "b745f4269c1acf4d7e8d77b989cce8ebaefa537504975585106de9d42cfaa402",
+    "skill-effects/flashrt/probe_ir.py": "13d497b747b69974ec046b90b665fcdf327f1eb5da724f5c5145c801e6eb3d3d",
+    "skill-effects/flashrt/probe_small_workloads.py": "b59034523afad324e1a86beb7bebdb50a29ee52ec4de238c2deeb777f307c3cd",
+    "skill-effects/flashrt/repeat_batch.py": "2cacabbb5bdab73fe224ba012380880983e0203b9673a561baa70b150d76da04",
+    "skill-effects/flashrt/run_local_reference.py": "b760d84c6068865d81977746958f93a7ef7f11b1e88a2f618fdb233e2c4a1655",
+    "skill-effects/flashrt/verify_local_ir.py": "f01638b5b6431d56d0a03b3e2d2f1e12ad25e4ea8b5750332e283dc36528e08f",
+    "skill-effects/flashrt/workloads/branch_features/__init__.py": "31c9db562f005f593731be332301850b55bf796527a0030fe00636cdc2e48881",
+    "skill-effects/flashrt/workloads/branch_features/adapter.py": "cf49777e032f401ea3def8b6b04224a92a718eae86a614d7c7d7ea16c34787f4",
+    "skill-effects/flashrt/workloads/branch_features/model.py": "64347a68235099f3b1d7b3be4533079108f6ebace072b67e4500ff52d6fca7a5",
+    "skill-effects/flashrt/workloads/branch_features/reference.py": "200c8ac3c2913f8cfd7e01481f2ea658982d9e391838f7c33882f79aee56095a",
+    "skill-effects/flashrt/workloads/causal_features/__init__.py": "5c1579582a6642302ec8827dd9b46d53a1a7bc1a4e10bd55e670622d1d65b113",
+    "skill-effects/flashrt/workloads/causal_features/adapter.py": "1923c08525c04831ec959d5cb8f571d8be2e8556d7ad088487bb87d738d1f2c0",
+    "skill-effects/flashrt/workloads/causal_features/model.py": "0c5774a4c5b04715e51703de12c016f73940c3d08940478d1fa9210519cf00ff",
+    "skill-effects/flashrt/workloads/causal_features/reference.py": "d5ae52db8580383ebd62fe08aa69ec692bcf891041ac08f7549b2a37c066a468"
+  },
+  "trials": [
+    {
+      "id": "t001",
+      "repeat": 1,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": true
+    },
+    {
+      "id": "t002",
+      "repeat": 1,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t003",
+      "repeat": 1,
+      "task": "causal_features",
+      "condition": "original",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t004",
+      "repeat": 1,
+      "task": "causal_features",
+      "condition": "formatted",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t005",
+      "repeat": 1,
+      "task": "causal_features",
+      "condition": "source_core",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t006",
+      "repeat": 1,
+      "task": "causal_features",
+      "condition": "task_only",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t007",
+      "repeat": 1,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": true,
+      "checker": true
+    },
+    {
+      "id": "t008",
+      "repeat": 1,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": true,
+      "checker": false
+    },
+    {
+      "id": "t009",
+      "repeat": 1,
+      "task": "branch_features",
+      "condition": "phase4",
+      "permissions": true,
+      "checker": true
+    },
+    {
+      "id": "t010",
+      "repeat": 1,
+      "task": "branch_features",
+      "condition": "formatted",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t011",
+      "repeat": 1,
+      "task": "branch_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": true
+    },
+    {
+      "id": "t012",
+      "repeat": 1,
+      "task": "branch_features",
+      "condition": "source_core",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t013",
+      "repeat": 1,
+      "task": "branch_features",
+      "condition": "original",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t014",
+      "repeat": 1,
+      "task": "branch_features",
+      "condition": "task_only",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t015",
+      "repeat": 1,
+      "task": "branch_features",
+      "condition": "phase4",
+      "permissions": true,
+      "checker": false
+    },
+    {
+      "id": "t016",
+      "repeat": 1,
+      "task": "branch_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t017",
+      "repeat": 2,
+      "task": "branch_features",
+      "condition": "source_core",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t018",
+      "repeat": 2,
+      "task": "branch_features",
+      "condition": "formatted",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t019",
+      "repeat": 2,
+      "task": "branch_features",
+      "condition": "task_only",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t020",
+      "repeat": 2,
+      "task": "branch_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": true
+    },
+    {
+      "id": "t021",
+      "repeat": 2,
+      "task": "branch_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t022",
+      "repeat": 2,
+      "task": "branch_features",
+      "condition": "original",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t023",
+      "repeat": 2,
+      "task": "branch_features",
+      "condition": "phase4",
+      "permissions": true,
+      "checker": false
+    },
+    {
+      "id": "t024",
+      "repeat": 2,
+      "task": "branch_features",
+      "condition": "phase4",
+      "permissions": true,
+      "checker": true
+    },
+    {
+      "id": "t025",
+      "repeat": 2,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t026",
+      "repeat": 2,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": true,
+      "checker": true
+    },
+    {
+      "id": "t027",
+      "repeat": 2,
+      "task": "causal_features",
+      "condition": "task_only",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t028",
+      "repeat": 2,
+      "task": "causal_features",
+      "condition": "formatted",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t029",
+      "repeat": 2,
+      "task": "causal_features",
+      "condition": "source_core",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t030",
+      "repeat": 2,
+      "task": "causal_features",
+      "condition": "original",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t031",
+      "repeat": 2,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": true,
+      "checker": false
+    },
+    {
+      "id": "t032",
+      "repeat": 2,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": true
+    },
+    {
+      "id": "t033",
+      "repeat": 3,
+      "task": "causal_features",
+      "condition": "formatted",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t034",
+      "repeat": 3,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t035",
+      "repeat": 3,
+      "task": "causal_features",
+      "condition": "source_core",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t036",
+      "repeat": 3,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": true,
+      "checker": false
+    },
+    {
+      "id": "t037",
+      "repeat": 3,
+      "task": "causal_features",
+      "condition": "task_only",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t038",
+      "repeat": 3,
+      "task": "causal_features",
+      "condition": "original",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t039",
+      "repeat": 3,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": true,
+      "checker": true
+    },
+    {
+      "id": "t040",
+      "repeat": 3,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": true
+    },
+    {
+      "id": "t041",
+      "repeat": 3,
+      "task": "branch_features",
+      "condition": "formatted",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t042",
+      "repeat": 3,
+      "task": "branch_features",
+      "condition": "phase4",
+      "permissions": true,
+      "checker": true
+    },
+    {
+      "id": "t043",
+      "repeat": 3,
+      "task": "branch_features",
+      "condition": "phase4",
+      "permissions": true,
+      "checker": false
+    },
+    {
+      "id": "t044",
+      "repeat": 3,
+      "task": "branch_features",
+      "condition": "task_only",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t045",
+      "repeat": 3,
+      "task": "branch_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t046",
+      "repeat": 3,
+      "task": "branch_features",
+      "condition": "original",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t047",
+      "repeat": 3,
+      "task": "branch_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": true
+    },
+    {
+      "id": "t048",
+      "repeat": 3,
+      "task": "branch_features",
+      "condition": "source_core",
+      "permissions": false,
+      "checker": false
+    },
+    {
+      "id": "t049",
+      "repeat": 1,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": true,
+      "supplement_for": "t001",
+      "supplement_reason": "External process interruption; original remains in cost ledger"
+    },
+    {
+      "id": "t050",
+      "repeat": 1,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": false,
+      "supplement_for": "t002",
+      "supplement_reason": "External process interruption; original remains in cost ledger"
+    },
+    {
+      "id": "t051",
+      "repeat": 1,
+      "task": "causal_features",
+      "condition": "original",
+      "permissions": false,
+      "checker": false,
+      "supplement_for": "t003",
+      "supplement_reason": "External process interruption; original remains in cost ledger"
+    }
+  ],
+  "original_manifest_sha256": "784cd46d358a51103b387afed0e306daea7fdd4bb5d1624183cb1d74b5048188",
+  "recovery_created_utc": "2026-10-19T16:26:29.494730+00:00",
+  "interrupted_and_supplementary_slots": [
+    {
+      "original": "t001",
+      "supplement": "t049"
+    },
+    {
+      "original": "t002",
+      "supplement": "t050"
+    },
+    {
+      "original": "t003",
+      "supplement": "t051"
+    }
+  ],
+  "recovery_policy": "Only external interruptions receive appended slots; ordinary model failures are not replaced"
+}
