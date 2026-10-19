@@ -1,0 +1,24 @@
+{
+  "run": "skill-effects/runs/flashrt-repeat-v1/t017",
+  "reviewed_thought_response_indices": [
+    39,
+    40
+  ],
+  "sha256": {
+    "events.jsonl": "f0efe8e42d3bac919d66a64ac893a5d91f4b30769f478bad0539477785a0b998",
+    "report.md": "23c8502033d3ccd5d7c428aaaaa932d7946371c872696d5769c3115a06b95f44",
+    "result.json": "35d85f43e86c9255e335d142734e7bc004cdf7965df44da917eccd1cfcd43f74",
+    "response-039.json": "dab476620d188e951e4f9b5c2c07ad1c77f0f9824ebebb8e39f1d7188d6ab62a",
+    "response-040.json": "759f4068e68dadf4b44fed4bb0a71bc487f09d287b95b5b9d2a3f75727024b8d",
+    "control/execute-013/stdout.log": "f4ad1aa4d82c88e9195d5d32c694e794e07ca790825681edcee090c7dd669637",
+    "control/execute-013/stderr.log": "2e863cfd3e35623e4fc58a40fb82052c0550a7584d878dc4f69235bfd34d2252",
+    "control/execute-016/stdout.log": "b2b0ea2c146aa06a2ff34913272c1ce34d084d57b43d656a33ec26d0267b4d00",
+    "control/execute-016/stderr.log": "b530d93cea5281319efae6a02b73c279c0e03590610b0d8de950aba14e8889bf",
+    "work/flashrt/apps/branch_features/backend/ir/ops.py": "df89dfbe3794992ee5c17eac926a735a1197f69a20bead9e6bc0fa8d25dd7088",
+    "work/flashrt/apps/branch_features/backend/ir/graph_builder.py": "0ae5a7786c2b503abe0253b522a3a6808e475a8aca15390a5b00271835739088",
+    "work/flashrt/apps/branch_features/backend/tests/test_ir.py": "456eb86619382238aeac8627c37f825dce499b884ef23d5898abead1a11e47e5"
+  },
+  "source_hashes_matched_to_archive": true,
+  "log_sequence_checked": true,
+  "candidate_code_modified_by_reviewer": false
+}
