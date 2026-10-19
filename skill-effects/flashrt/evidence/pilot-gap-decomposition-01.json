@@ -1,0 +1,82 @@
+{
+  "scope": "Post-hoc decomposition of a development pilot; original verdicts retained, no formal trial reclassification",
+  "input_sha256": {
+    "skill-effects\\runs\\flashrt-pilot-phase4-01\\control\\benchmark-002\\reference\\result.json": "61358c3cf4d51027c68affe2419cb3308bd28817d9ed7aaf9f9aea8e15547149",
+    "skill-effects\\runs\\flashrt-pilot-phase4-01\\control\\benchmark-002\\candidate\\result.json": "6ee9b56d33c47a1672c380bec26674a7581eef64610c94b388234ff3bb13dc7a"
+  },
+  "method": "Within: adjacent output_ns in each request. Boundary: first output_ns of request i+1 minus last output_ns of request i. Nanoseconds divided by 1e6. Threshold strictly greater than 20 ms.",
+  "loads": [
+    {
+      "backend": "reference",
+      "rate": 50.0,
+      "within_count": 400,
+      "within_exceed_20ms": 0,
+      "within_max_ms": 1.6616,
+      "boundary_count": 49,
+      "boundary_exceed_20ms": 0,
+      "boundary_max_ms": 17.1179,
+      "raw_smoothness_gate_passed": true,
+      "raw_over_budget_fraction": 0.0
+    },
+    {
+      "backend": "reference",
+      "rate": 100.0,
+      "within_count": 800,
+      "within_exceed_20ms": 0,
+      "within_max_ms": 2.1821,
+      "boundary_count": 99,
+      "boundary_exceed_20ms": 0,
+      "boundary_max_ms": 7.4248,
+      "raw_smoothness_gate_passed": true,
+      "raw_over_budget_fraction": 0.0
+    },
+    {
+      "backend": "reference",
+      "rate": 200.0,
+      "within_count": 1600,
+      "within_exceed_20ms": 0,
+      "within_max_ms": 1.6931,
+      "boundary_count": 199,
+      "boundary_exceed_20ms": 0,
+      "boundary_max_ms": 2.1943,
+      "raw_smoothness_gate_passed": true,
+      "raw_over_budget_fraction": 0.0
+    },
+    {
+      "backend": "candidate",
+      "rate": 50.0,
+      "within_count": 400,
+      "within_exceed_20ms": 0,
+      "within_max_ms": 0.0523,
+      "boundary_count": 49,
+      "boundary_exceed_20ms": 17,
+      "boundary_max_ms": 21.5879,
+      "raw_smoothness_gate_passed": false,
+      "raw_over_budget_fraction": 0.0378619153674833
+    },
+    {
+      "backend": "candidate",
+      "rate": 100.0,
+      "within_count": 800,
+      "within_exceed_20ms": 0,
+      "within_max_ms": 0.0802,
+      "boundary_count": 99,
+      "boundary_exceed_20ms": 0,
+      "boundary_max_ms": 11.384,
+      "raw_smoothness_gate_passed": true,
+      "raw_over_budget_fraction": 0.0
+    },
+    {
+      "backend": "candidate",
+      "rate": 200.0,
+      "within_count": 1600,
+      "within_exceed_20ms": 0,
+      "within_max_ms": 0.0465,
+      "boundary_count": 199,
+      "boundary_exceed_20ms": 0,
+      "boundary_max_ms": 6.0144,
+      "raw_smoothness_gate_passed": true,
+      "raw_over_budget_fraction": 0.0
+    }
+  ]
+}
