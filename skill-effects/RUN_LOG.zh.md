@@ -109,3 +109,9 @@ RMSNorm 第一轮在单次 8,192 生成 token 上限内只完成推理，没有�
 新增 native_trace_worker.py 与 trace_formal.py。使用 Nsight CLI 的 profile-from-start off 和本地 PyTorch 对 cudaProfilerStart/Stop 的包装，仅采集初始化与十次预热之后的单次 forward；eager、compiled、candidate 分别执行，避免将初始化、随机输入、比较和调优 kernel 算入目标调用。原生 CSV 保存名称、grid/block、stream 与正耗时，耗时之和不替代完整调用计时。
 
 解析器以已归档的真实 AXPBY trace 验证 2,624 ns、kernel 名称与启动参数，并检查空日志、权限错误、零值、NaN、单位异常和重复行；连同汇总、说明材料测试共十项通过。实际调用已确认在当前正式序列仍活动时拒绝执行，尚未对任何正式候选启动 Nsight。核查还会保留失败槽位，检查前后源码与二进制哈希，并使用同一 GPU 锁。命令依据 NVIDIA 官方 CLI 文档 https://docs.nvidia.com/nsight-compute/NsightComputeCli/ 及本机 2025.2.1 帮助核对。
+
+## 全部槽位的比较表准备
+
+新增 analyze_formal.py，按封存计划核对全部编号、条件、任务与重复次序，输出十项预定比较的逐题配对表。失败运行继续计入条件分母及消耗；零交付时不计算每次交付成本；速度比较只在双方最后代码独立正确且有有效计时时形成差值，同时保留没有速度的双方终态。数值交付与全部适用要求另列，说明缺失与文风评分另列。新增三个分析测试与此前分析测试合计十三项通过，当前部分数据不能生成正式比较结论。
+
+检查文献记录时发现“本轮落实”仍沿用已放弃的追加过程描述，已改为原始 skill 的格式化、优化、子集及机制执行，文献论证与当前设计一致。此处不改变封存实验输入。

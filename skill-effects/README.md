@@ -23,4 +23,7 @@
 python skill-effects/collect_formal.py --output skill-effects/runs/formal-series-01/collection.json
 python skill-effects/prepare_blind_review.py --collection skill-effects/runs/formal-series-01/collection.json --output skill-effects/runs/formal-series-01/blind-review-final
 python skill-effects/trace_formal.py --collection skill-effects/runs/formal-series-01/collection.json --output skill-effects/runs/formal-series-01/native-activity
+python skill-effects/analyze_formal.py --collection skill-effects/runs/formal-series-01/collection.json --output skill-effects/runs/formal-series-01/analysis.json
 ```
+
+`analyze_formal.py` 仅在全部槽位结束后输出条件汇总和逐题、逐次配对表。成本包含失败运行；没有数值交付时，每次交付成本留空。有一侧未通过独立正确性或没有有效计时时，配对表保留双方结果，但不编造性能差值。文风与适用要求的审阅结果另行合并。
