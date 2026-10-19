@@ -1,0 +1,66 @@
+{
+  "scope": "Local workload feasibility; not a full app or a skill-treatment effect estimate",
+  "device": "cuda",
+  "gpu": "NVIDIA GeForce RTX 5060 Laptop GPU",
+  "torch": "2.11.0+cu128",
+  "source_sha256": {
+    "flashrt/layers/audio.py": "1023dbaf30014a558466697ab739df228939bf601881323d05f208e6d6d0c2bf",
+    "flashrt/channels/shm_channel/tensor_buffer.py": "fcdbf27cbd336b4c181c7e6798cce4157f618ecb8be4824fd60df418d95a8bcb"
+  },
+  "class_source_lines": [
+    10,
+    31
+  ],
+  "class_loading": "Exact original class AST; unrelated imports excluded, no class body edits",
+  "weights": "Seeded fixed random initialization, no pretrained quality claim or weights download",
+  "audio_cases": [
+    {
+      "channels": 16,
+      "hidden": 32,
+      "length": 1024,
+      "chunk": 128,
+      "parameters": 9296,
+      "chunks_emitted": 8,
+      "max_abs_difference": 0.0,
+      "numerical_match": true,
+      "atol": 3e-05,
+      "rtol": 0.0003,
+      "peak_allocated_bytes": 655872
+    },
+    {
+      "channels": 16,
+      "hidden": 32,
+      "length": 1043,
+      "chunk": 127,
+      "parameters": 9296,
+      "chunks_emitted": 9,
+      "max_abs_difference": 0.0,
+      "numerical_match": true,
+      "atol": 3e-05,
+      "rtol": 0.0003,
+      "peak_allocated_bytes": 651264
+    },
+    {
+      "channels": 128,
+      "hidden": 256,
+      "length": 16384,
+      "chunk": 512,
+      "parameters": 590464,
+      "chunks_emitted": 32,
+      "max_abs_difference": 0.0,
+      "numerical_match": true,
+      "atol": 3e-05,
+      "rtol": 0.0003,
+      "peak_allocated_bytes": 79445504
+    }
+  ],
+  "tensor_channel": {
+    "child_exitcode": 0,
+    "child_message": {
+      "written": 3
+    },
+    "frames_read": 3,
+    "values_match": true,
+    "child_alive_after_cleanup": false
+  }
+}

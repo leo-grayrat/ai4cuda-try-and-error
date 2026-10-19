@@ -1,0 +1,83 @@
+{
+  "scope": "Local workload feasibility; not a full app or a skill-treatment effect estimate",
+  "device": "cuda",
+  "gpu": "NVIDIA GeForce RTX 5060 Laptop GPU",
+  "torch": "2.11.0+cu128",
+  "source_sha256": {
+    "flashrt/layers/audio.py": "1023dbaf30014a558466697ab739df228939bf601881323d05f208e6d6d0c2bf",
+    "flashrt/channels/shm_channel/tensor_buffer.py": "fcdbf27cbd336b4c181c7e6798cce4157f618ecb8be4824fd60df418d95a8bcb",
+    "flashrt/ir/graph.py": "2f4037527da321c3d241a70a3e8f543b2b68d21fdf59765f237d5125b57af012",
+    "flashrt/ir/executor.py": "7dc0542628b478415e941e5d6ffb6a596fae355ae4547ba8d34be1bcdb551c5a",
+    "flashrt/ir/analysis.py": "41eaea5137b5dc256ff4742894b2420b88cbf1cee1a3e668bee36bc79344d772"
+  },
+  "class_source_lines": [
+    10,
+    31
+  ],
+  "class_loading": "Exact original class AST; unrelated imports excluded, no class body edits",
+  "weights": "Seeded fixed random initialization, no pretrained quality claim or weights download",
+  "audio_cases": [
+    {
+      "channels": 16,
+      "hidden": 32,
+      "length": 1024,
+      "chunk": 128,
+      "parameters": 9296,
+      "chunks_emitted": 8,
+      "max_abs_difference": 0.0,
+      "numerical_match": true,
+      "atol": 3e-05,
+      "rtol": 0.0003,
+      "original_ir_executor_matches": true,
+      "same_executor_reset_matches": true,
+      "missing_history_counterexample_detected": true,
+      "peak_allocated_bytes": 919552
+    },
+    {
+      "channels": 16,
+      "hidden": 32,
+      "length": 1043,
+      "chunk": 127,
+      "parameters": 9296,
+      "chunks_emitted": 9,
+      "max_abs_difference": 0.0,
+      "numerical_match": true,
+      "atol": 3e-05,
+      "rtol": 0.0003,
+      "original_ir_executor_matches": true,
+      "same_executor_reset_matches": true,
+      "missing_history_counterexample_detected": true,
+      "peak_allocated_bytes": 960000
+    },
+    {
+      "channels": 128,
+      "hidden": 256,
+      "length": 16384,
+      "chunk": 512,
+      "parameters": 590464,
+      "chunks_emitted": 32,
+      "max_abs_difference": 0.0,
+      "numerical_match": true,
+      "atol": 3e-05,
+      "rtol": 0.0003,
+      "original_ir_executor_matches": true,
+      "same_executor_reset_matches": true,
+      "missing_history_counterexample_detected": true,
+      "peak_allocated_bytes": 113084928
+    }
+  ],
+  "original_ir_analysis": [
+    "=== IR Graph Summary: causal_audio_chain ===\n\n## Operators (3 total)\n  Preamble: 0  |  Chunk: 3\n\n  conv_0 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_0\n    state writes: history_0\n\n  conv_1 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_1\n    state writes: history_1\n\n  conv_2 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_2\n    state writes: history_2\n\n## State Objects (3 total)\n  history_0 (scope=chunk_persistent): \n  history_1 (scope=chunk_persistent): \n  history_2 (scope=chunk_persistent): \n\n## Edges (2 total: 2 data, 0 ordering, 0 streaming)\n  conv_0.features -> conv_1.features\n  conv_1.features -> conv_2.features\n\n## Cross-Chunk Dependencies\n  conv_0 <-(history_0)-> conv_0\n  conv_1 <-(history_1)-> conv_1\n  conv_2 <-(history_2)-> conv_2\n\n## Cross-Chunk Independent Pairs\n  conv_0 || conv_1  (can overlap across chunks)\n  conv_0 || conv_2  (can overlap across chunks)\n  conv_1 || conv_2  (can overlap across chunks)\n\n## Pipeline Stages (3 stages = 3 GPUs for pipeline parallelism)\n  Stage 0: [conv_0]\n    Persistent state: history_0\n  Stage 1: [conv_1]\n    Persistent state: history_1\n  Stage 2: [conv_2]\n    Persistent state: history_2\n\n## Streaming Overlaps (0 opportunities)\n  (none)\n\n## Validation: PASS\n",
+    "=== IR Graph Summary: causal_audio_chain ===\n\n## Operators (3 total)\n  Preamble: 0  |  Chunk: 3\n\n  conv_0 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_0\n    state writes: history_0\n\n  conv_1 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_1\n    state writes: history_1\n\n  conv_2 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_2\n    state writes: history_2\n\n## State Objects (3 total)\n  history_0 (scope=chunk_persistent): \n  history_1 (scope=chunk_persistent): \n  history_2 (scope=chunk_persistent): \n\n## Edges (2 total: 2 data, 0 ordering, 0 streaming)\n  conv_0.features -> conv_1.features\n  conv_1.features -> conv_2.features\n\n## Cross-Chunk Dependencies\n  conv_0 <-(history_0)-> conv_0\n  conv_1 <-(history_1)-> conv_1\n  conv_2 <-(history_2)-> conv_2\n\n## Cross-Chunk Independent Pairs\n  conv_0 || conv_1  (can overlap across chunks)\n  conv_0 || conv_2  (can overlap across chunks)\n  conv_1 || conv_2  (can overlap across chunks)\n\n## Pipeline Stages (3 stages = 3 GPUs for pipeline parallelism)\n  Stage 0: [conv_0]\n    Persistent state: history_0\n  Stage 1: [conv_1]\n    Persistent state: history_1\n  Stage 2: [conv_2]\n    Persistent state: history_2\n\n## Streaming Overlaps (0 opportunities)\n  (none)\n\n## Validation: PASS\n",
+    "=== IR Graph Summary: causal_audio_chain ===\n\n## Operators (3 total)\n  Preamble: 0  |  Chunk: 3\n\n  conv_0 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_0\n    state writes: history_0\n\n  conv_1 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_1\n    state writes: history_1\n\n  conv_2 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_2\n    state writes: history_2\n\n## State Objects (3 total)\n  history_0 (scope=chunk_persistent): \n  history_1 (scope=chunk_persistent): \n  history_2 (scope=chunk_persistent): \n\n## Edges (2 total: 2 data, 0 ordering, 0 streaming)\n  conv_0.features -> conv_1.features\n  conv_1.features -> conv_2.features\n\n## Cross-Chunk Dependencies\n  conv_0 <-(history_0)-> conv_0\n  conv_1 <-(history_1)-> conv_1\n  conv_2 <-(history_2)-> conv_2\n\n## Cross-Chunk Independent Pairs\n  conv_0 || conv_1  (can overlap across chunks)\n  conv_0 || conv_2  (can overlap across chunks)\n  conv_1 || conv_2  (can overlap across chunks)\n\n## Pipeline Stages (3 stages = 3 GPUs for pipeline parallelism)\n  Stage 0: [conv_0]\n    Persistent state: history_0\n  Stage 1: [conv_1]\n    Persistent state: history_1\n  Stage 2: [conv_2]\n    Persistent state: history_2\n\n## Streaming Overlaps (0 opportunities)\n  (none)\n\n## Validation: PASS\n"
+  ],
+  "tensor_channel": {
+    "child_exitcode": 0,
+    "child_message": {
+      "written": 3
+    },
+    "frames_read": 3,
+    "values_match": true,
+    "child_alive_after_cleanup": false
+  }
+}

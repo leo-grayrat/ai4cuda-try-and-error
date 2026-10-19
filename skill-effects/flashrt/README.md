@@ -21,6 +21,8 @@
 
 [原文核对单](REQUIREMENTS.zh.md)覆盖四份说明，共 69 个研究核对单元；[索引](materials/requirements-v1.json)固定每项来源范围和校验值。这些单元区分字段、执行与语义要求，并非原文原子规则计数。[来源张力记录](SOURCE_TENSIONS.zh.md)保留路径、基线、失败判决等原有歧义。[比较草案](COMPARISON_DRAFT.zh.md)据此安排四问的证据与条件。
 
+[仅排版对照](materials/format-v1/manifest.json)只合并普通正文中的软换行，四份文档由 31,543 变为 30,973 token。全部非空白词序、代码块原字节和 CommonMark 渲染结构核对一致；未用改写要求来制造排版效果。
+
 ## 原项目已有检查
 
 [CPU 实测](evidence/ir-state-probe-01.json)直接使用原仓库执行器：未声明的状态读取、未声明的状态写入均被拒绝；声明写入后可以执行；声明读取后取出列表再原地修改，也能执行。最后一种边界在源码注释中已有说明。原依赖分析对共享状态采取保守处理，本次实测没有证明该边界造成错误调度。
@@ -31,7 +33,7 @@
 
 先确定能实际运行的顺序参考后端，保持适配器、输入输出和流式状态约定一致，再比较原文、整理版及相应机制。检查原有程序已经约束什么，才能判断额外提醒或新增检查带来的收益。每项整理须映射回原文，保留要求强度、适用条件和示例。
 
-原仓库五个现成应用依赖大型视频或多模态模型，安装说明要求 Linux，部分配置使用多卡。本机 8GB 显存条件下尚未复现这些应用；正在确认是否有远端资源。模板的参考流水线仍为 TODO，不能直接当成可运行基准。若采用新增轻量应用，必须明确其来源、保留 FlashRT 原有应用接口与执行流程，并单独限定结论范围。
+原仓库五个现成应用依赖大型视频或多模态模型，但框架允许新增简单、顺序、单卡应用。按用户纠正，现采用[本机任务](LOCAL_TASKS.zh.md)，不再等待远端资源。已实测原因果卷积组成的小网络、原 IR 执行器的逐块数值一致性与重置，以及 Windows 跨进程共享内存传输。正式参考应用和独立计时继续据此搭建。
 
 详见[源码审视](SOURCE_AUDIT.zh.md)和[当前执行计划](../PLAN.zh.md)。旧 CUDAAgent 条件及其试验保持停止，不纳入本研究的正式比较。
 
@@ -42,6 +44,8 @@ python skill-effects/flashrt/prepare_documents.py --repository .cache/flashrt/dd
 python skill-effects/flashrt/probe_ir.py --repository .cache/flashrt/dd9dae0072a72964a2bdc3ca3f06f68afa122a7f/repository --output .cache/flashrt-ir-probe-check.json
 python skill-effects/flashrt/build_phase4_draft.py --tokenizer .cache/skill-effects-tokenizer/tokenizer.json
 python skill-effects/flashrt/index_requirements.py
+python skill-effects/flashrt/prepare_format_control.py --tokenizer .cache/skill-effects-tokenizer/tokenizer.json --output .cache/flashrt-format-check
+python skill-effects/flashrt/probe_small_workloads.py --repository .cache/flashrt/dd9dae0072a72964a2bdc3ca3f06f68afa122a7f/repository --output .cache/flashrt-small-probe-check.json
 ```
 
 第一条命令要求输出目录尚不存在，以免覆盖既有材料。分词器校验值记录在材料清单中。
