@@ -1,0 +1,22 @@
+{
+  "packet_sha256": "60b51fbb8a5a80c5835ed8b6a69eeaa8252562f018ed9779517e763ce9216868",
+  "rules_sha256": "5305cf7976f51f2b9f5e9a57252bc2dcffd99f0d7edb5c8880964d19d44416ed",
+  "reviewer_sha256": "d2ed9e71689374a61b849d5885492c5412a42970bede2349398bb105f9a076d9",
+  "review_id": "R-2a2e2f8cdcd31c52",
+  "purpose": "Fresh-context masked model review; provisional judgments require evidence adjudication",
+  "started_utc": "2026-10-19T04:41:57.522815+00:00",
+  "status": "review_failed_validation_or_request",
+  "usage": {
+    "input_tokens": 59878,
+    "uncached_input_tokens": 59878,
+    "cached_input_tokens": 0,
+    "output_tokens": 4411,
+    "reasoning_tokens": null,
+    "total_tokens": 64289
+  },
+  "model": "deepseek-flash",
+  "finish_reason": "stop",
+  "error": "Unverifiable quotation from final_timing",
+  "seconds": 14.642710599997372,
+  "completed_utc": "2026-10-19T04:42:12.166340+00:00"
+}
