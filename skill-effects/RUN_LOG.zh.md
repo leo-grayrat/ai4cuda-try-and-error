@@ -103,3 +103,9 @@ RMSNorm 第一轮在单次 8,192 生成 token 上限内只完成推理，没有�
 首轮消耗 96,000 生成 token 后截断，未正式提交说明。最后文件独立编译、正确性和计时均通过；交付缺失与可用代码分列，不把二者合成成功。序列继续运行第二轮，未重做首轮。单轮结果尚不足以比较文档处理效果。
 
 新增独立审阅材料生成器 prepare_blind_review.py，以随机不透明编号隐藏条件和运行标签，单独保管对应表；只提取可见说明、工具记录、源码与最终独立评测，不输出内部推理。缺失说明保持缺失，不能拿过程中的回复替代最终说明。行为可能暴露执行机制，审阅者须记录疑似识别条件的情况。相关分析测试三项通过；封存输入保持原样。
+
+## 正式序列之后的 kernel 核查准备
+
+新增 native_trace_worker.py 与 trace_formal.py。使用 Nsight CLI 的 profile-from-start off 和本地 PyTorch 对 cudaProfilerStart/Stop 的包装，仅采集初始化与十次预热之后的单次 forward；eager、compiled、candidate 分别执行，避免将初始化、随机输入、比较和调优 kernel 算入目标调用。原生 CSV 保存名称、grid/block、stream 与正耗时，耗时之和不替代完整调用计时。
+
+解析器以已归档的真实 AXPBY trace 验证 2,624 ns、kernel 名称与启动参数，并检查空日志、权限错误、零值、NaN、单位异常和重复行；连同汇总、说明材料测试共十项通过。实际调用已确认在当前正式序列仍活动时拒绝执行，尚未对任何正式候选启动 Nsight。核查还会保留失败槽位，检查前后源码与二进制哈希，并使用同一 GPU 锁。命令依据 NVIDIA 官方 CLI 文档 https://docs.nvidia.com/nsight-compute/NsightComputeCli/ 及本机 2025.2.1 帮助核对。
