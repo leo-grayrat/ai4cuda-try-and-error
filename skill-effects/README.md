@@ -11,6 +11,6 @@
 - [文献核对](LITERATURE.zh.md)
 - [执行记录](RUN_LOG.zh.md)
 
-分支为 `research/skill-effects`。原始 skill 为 3,392 文字 token；仅格式化版为 3,400，优化版为 2,768。两者保留全部九个原始示例。正式清单按 11 条件、四题、两次重复安排，运行前封存。
+分支为 `research/skill-effects`。原始 skill 为 3,392 文字 token；仅格式化版为 3,400，核对后的优化版为 2,768。两者保留全部九个原始示例。[正式清单](protocol/v1/manifest.json)已按 11 条件、四题、两次重复封存，共 88 次；[分析约定](FORMAL_PROTOCOL.zh.md)先于候选运行固定。正式序列已启动，原始运行保存在被忽略的 `runs/formal-series-01` 和 `runs/f01-*`。
 
 此前构造的追加历史、长篇重复压力和相关压缩材料保留在旧材料与 evidence 中，作为探索档案，不进入正式主实验。
