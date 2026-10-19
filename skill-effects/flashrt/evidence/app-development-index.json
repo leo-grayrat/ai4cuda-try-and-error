@@ -1,0 +1,93 @@
+{
+  "scope": "Development and calibration history, not skill-treatment outcome comparisons",
+  "runs": [
+    {
+      "run_directory": "skill-effects/flashrt/evidence/reference-app-01",
+      "result_sha256": "dd2f0160922a1f76033d0520c4086bccde9eb0d5bf0b060f60d821f64758d86a",
+      "status": "invalid_cleanup",
+      "requests_completed": 6,
+      "numerical_matches": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "backend_exitcode": 0,
+      "shared_memory_leftovers": [],
+      "snapshot_available": false
+    },
+    {
+      "run_directory": "skill-effects/flashrt/evidence/reference-app-02",
+      "result_sha256": "fd6c53b17496fe68363dc67ef4febac22d22785688b3104f194a3c4957586d22",
+      "status": "reference_run_passed",
+      "requests_completed": 6,
+      "numerical_matches": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "backend_exitcode": 0,
+      "shared_memory_leftovers": [],
+      "snapshot_available": false
+    },
+    {
+      "run_directory": "skill-effects/flashrt/evidence/reference-app-03",
+      "result_sha256": "3f1ae23686d69f0e0411321d4605e95306f080a388dd2e88519d51a14f312a04",
+      "status": "reference_run_passed",
+      "requests_completed": 6,
+      "numerical_matches": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "backend_exitcode": 0,
+      "shared_memory_leftovers": [],
+      "snapshot_available": true
+    },
+    {
+      "run_directory": "skill-effects/flashrt/evidence/reference-app-abort-01",
+      "result_sha256": "b2432f1a38e9eaaec9dc563d914bc66e879333b2e37120ed383dda6ec36bf16a",
+      "status": "invalid_run",
+      "requests_completed": 0,
+      "numerical_matches": [],
+      "backend_exitcode": 0,
+      "shared_memory_leftovers": [],
+      "snapshot_available": false
+    },
+    {
+      "run_directory": "skill-effects/flashrt/evidence/reference-app-abort-02",
+      "result_sha256": "cb9dabbbaf7349fbae69cfc6d57080e49b386b55028e38e170f78eb0a1dd3d1d",
+      "status": "invalid_run",
+      "requests_completed": 0,
+      "numerical_matches": [],
+      "backend_exitcode": 0,
+      "shared_memory_leftovers": [],
+      "snapshot_available": true
+    },
+    {
+      "run_directory": "skill-effects/runs/flashrt-reference-large-01",
+      "result_sha256": "76f8b30f23345d197dc846f6f9dd31a6186a2d210ec31452fb9d4a917c49f2a7",
+      "status": "reference_run_passed",
+      "requests_completed": 6,
+      "numerical_matches": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "backend_exitcode": 0,
+      "shared_memory_leftovers": [],
+      "snapshot_available": false
+    }
+  ]
+}

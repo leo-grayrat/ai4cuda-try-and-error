@@ -33,7 +33,7 @@
 
 先确定能实际运行的顺序参考后端，保持适配器、输入输出和流式状态约定一致，再比较原文、整理版及相应机制。检查原有程序已经约束什么，才能判断额外提醒或新增检查带来的收益。每项整理须映射回原文，保留要求强度、适用条件和示例。
 
-原仓库五个现成应用依赖大型视频或多模态模型，但框架允许新增简单、顺序、单卡应用。按用户纠正，现采用[本机任务](LOCAL_TASKS.zh.md)，不再等待远端资源。已实测原因果卷积组成的小网络、原 IR 执行器的逐块数值一致性与重置，以及 Windows 跨进程共享内存传输。正式参考应用和独立计时继续据此搭建。
+原仓库五个现成应用依赖大型视频或多模态模型，但框架允许新增简单、顺序、单卡应用。按用户纠正，现采用[本机任务](LOCAL_TASKS.zh.md)，不再等待远端资源。[完整参考应用](workloads/causal_features/CONTRACT.zh.md)已通过适配器完成六请求数值检查，包括连续会话、末尾短块和重置；原 IR 执行器也与这些实际输出比较通过。工具保留原始时序、输入输出、清理记录及代码快照，接着加入负载测量与候选比较。
 
 详见[源码审视](SOURCE_AUDIT.zh.md)和[当前执行计划](../PLAN.zh.md)。旧 CUDAAgent 条件及其试验保持停止，不纳入本研究的正式比较。
 
@@ -46,6 +46,8 @@ python skill-effects/flashrt/build_phase4_draft.py --tokenizer .cache/skill-effe
 python skill-effects/flashrt/index_requirements.py
 python skill-effects/flashrt/prepare_format_control.py --tokenizer .cache/skill-effects-tokenizer/tokenizer.json --output .cache/flashrt-format-check
 python skill-effects/flashrt/probe_small_workloads.py --repository .cache/flashrt/dd9dae0072a72964a2bdc3ca3f06f68afa122a7f/repository --output .cache/flashrt-small-probe-check.json
+python skill-effects/flashrt/run_local_reference.py --repository .cache/flashrt/dd9dae0072a72964a2bdc3ca3f06f68afa122a7f/repository --output .cache/flashrt-reference-check
+python skill-effects/flashrt/verify_local_ir.py --repository .cache/flashrt/dd9dae0072a72964a2bdc3ca3f06f68afa122a7f/repository --run .cache/flashrt-reference-check
 ```
 
 第一条命令要求输出目录尚不存在，以免覆盖既有材料。分词器校验值记录在材料清单中。

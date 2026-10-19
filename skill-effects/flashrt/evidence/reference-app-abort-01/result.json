@@ -1,0 +1,37 @@
+{
+  "scope": "Reference application development run, not a skill-treatment comparison",
+  "schema": 2,
+  "config": {
+    "channels": 16,
+    "hidden": 32,
+    "length": 1043,
+    "chunk": 127,
+    "weight_seed": 703,
+    "device": "cuda",
+    "prefix": "flashrt_features_df87d7d816044c5eb039ba8b0f2b978f"
+  },
+  "status": "invalid_run",
+  "requests": [],
+  "timing_scope": "Adapter-observed finite request bursts; not maximum sustainable-rate evidence",
+  "oracle": "CPU full-sequence evaluation; reference worker runs chunk caches through original IPC",
+  "source_sha256": {
+    "run_local_reference.py": "83ad4f596965b296bcd5fb0385dcd53c9e2c1e8b7ab810c0a6a18abc6561652b",
+    "workloads\\causal_features\\adapter.py": "1923c08525c04831ec959d5cb8f571d8be2e8556d7ad088487bb87d738d1f2c0",
+    "workloads\\causal_features\\model.py": "0c5774a4c5b04715e51703de12c016f73940c3d08940478d1fa9210519cf00ff",
+    "workloads\\causal_features\\reference.py": "d5ae52db8580383ebd62fe08aa69ec692bcf891041ac08f7549b2a37c066a468",
+    "workloads\\causal_features\\__init__.py": "5c1579582a6642302ec8827dd9b46d53a1a7bc1a4e10bd55e670622d1d65b113"
+  },
+  "backend_pid": 57428,
+  "startup_seconds": 5.735010700009298,
+  "error": "RuntimeError: Injected harness interruption after receiving a real chunk",
+  "backend_exitcode": 0,
+  "backend_alive_after_cleanup": false,
+  "shared_memory_leftovers_after_cleanup": [],
+  "backend_stderr": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n",
+  "known_interpreter_diagnostics": [
+    "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe"
+  ],
+  "unexpected_backend_stderr": [],
+  "cleanup_verified": true,
+  "elapsed_seconds": 11.590483799998765
+}

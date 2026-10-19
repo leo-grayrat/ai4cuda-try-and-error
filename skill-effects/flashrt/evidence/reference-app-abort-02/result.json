@@ -1,0 +1,50 @@
+{
+  "scope": "Reference application development run, not a skill-treatment comparison",
+  "schema": 2,
+  "config": {
+    "channels": 16,
+    "hidden": 32,
+    "length": 1043,
+    "chunk": 127,
+    "weight_seed": 703,
+    "device": "cuda",
+    "prefix": "flashrt_features_703a6c776c1843e2936135deb6dd56c9"
+  },
+  "status": "invalid_run",
+  "requests": [],
+  "timing_scope": "Adapter-observed finite request bursts; not maximum sustainable-rate evidence",
+  "oracle": "CPU full-sequence evaluation; reference worker runs chunk caches through original IPC",
+  "source_sha256": {
+    "run_local_reference.py": "3fb568d045787f8855c6bf8c4c52d693da53f3659a6ad79dc2536b1d76ef9e29",
+    "workloads\\causal_features\\adapter.py": "1923c08525c04831ec959d5cb8f571d8be2e8556d7ad088487bb87d738d1f2c0",
+    "workloads\\causal_features\\model.py": "0c5774a4c5b04715e51703de12c016f73940c3d08940478d1fa9210519cf00ff",
+    "workloads\\causal_features\\reference.py": "d5ae52db8580383ebd62fe08aa69ec692bcf891041ac08f7549b2a37c066a468",
+    "workloads\\causal_features\\__init__.py": "5c1579582a6642302ec8827dd9b46d53a1a7bc1a4e10bd55e670622d1d65b113"
+  },
+  "fixture_seed": 917,
+  "upstream_source_sha256": {
+    "flashrt/layers/audio.py": "1023dbaf30014a558466697ab739df228939bf601881323d05f208e6d6d0c2bf",
+    "flashrt/channels/shm_channel/tensor_buffer.py": "fcdbf27cbd336b4c181c7e6798cce4157f618ecb8be4824fd60df418d95a8bcb",
+    "flashrt/channels/shm_channel/control_buffer.py": "852e7b77ac507be631755fe55f2bc9900ccb5a14be88128bf47c527bc7e11d96"
+  },
+  "backend_pid": 62288,
+  "startup_seconds": 5.099003600000287,
+  "error": "RuntimeError: Injected harness interruption after receiving a real chunk",
+  "backend_exitcode": 0,
+  "backend_alive_after_cleanup": false,
+  "shared_memory_leftovers_after_cleanup": [],
+  "backend_stderr": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n",
+  "known_interpreter_diagnostics": [
+    "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe"
+  ],
+  "unexpected_backend_stderr": [],
+  "cleanup_verified": true,
+  "source_changed_during_run": [],
+  "artifacts": {
+    "backend.stderr.log": "2c019085c1fd913d3a235b197141f050799e8280890f9fd0e2017c0566a96891",
+    "backend.stdout.log": "d3f708560ba0ccdc6808f03c03d36fbcae90a3b9b56b438ee8f69338c1bd8bf1",
+    "config.json": "77e3cadb962c94a7e1d8c2b8f99ac0dbd55a27d3d13cafb854c848f978e28195",
+    "fixtures.npz": "7f39dbd604facb0ab7b54a978abcff0195b1dee233489dd35a41e423142456e9"
+  },
+  "elapsed_seconds": 10.397193900003913
+}

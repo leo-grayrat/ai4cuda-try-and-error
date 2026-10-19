@@ -1,0 +1,9 @@
+{
+  "channels": 16,
+  "hidden": 32,
+  "length": 1043,
+  "chunk": 127,
+  "weight_seed": 703,
+  "device": "cuda",
+  "prefix": "flashrt_features_d1f547966541488faefcd8f7a0783fe4"
+}

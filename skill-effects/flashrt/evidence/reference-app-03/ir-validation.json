@@ -1,0 +1,64 @@
+{
+  "status": "ir_reference_comparison_passed",
+  "reference_result_sha256": "3f1ae23686d69f0e0411321d4605e95306f080a388dd2e88519d51a14f312a04",
+  "verifier_sha256": "b99244cb316d85cee72c5216599573d25f6c9991bfeaa6d26d8492df3dc97a5c",
+  "source_sha256": {
+    "flashrt/ir/graph.py": "2f4037527da321c3d241a70a3e8f543b2b68d21fdf59765f237d5125b57af012",
+    "flashrt/ir/executor.py": "7dc0542628b478415e941e5d6ffb6a596fae355ae4547ba8d34be1bcdb551c5a",
+    "flashrt/ir/analysis.py": "41eaea5137b5dc256ff4742894b2420b88cbf1cee1a3e668bee36bc79344d772",
+    "flashrt/layers/audio.py": "1023dbaf30014a558466697ab739df228939bf601881323d05f208e6d6d0c2bf"
+  },
+  "scope": "Original CPU IR executor versus reference backend outputs captured through original IPC",
+  "requests": [
+    {
+      "request_index": 0,
+      "reset_before": false,
+      "numerical_match": true,
+      "max_abs_difference": 2.9802322387695312e-08,
+      "atol": 3e-05,
+      "rtol": 0.0003
+    },
+    {
+      "request_index": 1,
+      "reset_before": false,
+      "numerical_match": true,
+      "max_abs_difference": 4.470348358154297e-08,
+      "atol": 3e-05,
+      "rtol": 0.0003
+    },
+    {
+      "request_index": 2,
+      "reset_before": true,
+      "numerical_match": true,
+      "max_abs_difference": 2.9802322387695312e-08,
+      "atol": 3e-05,
+      "rtol": 0.0003
+    },
+    {
+      "request_index": 3,
+      "reset_before": true,
+      "numerical_match": true,
+      "max_abs_difference": 5.21540641784668e-08,
+      "atol": 3e-05,
+      "rtol": 0.0003
+    },
+    {
+      "request_index": 4,
+      "reset_before": true,
+      "numerical_match": true,
+      "max_abs_difference": 2.9802322387695312e-08,
+      "atol": 3e-05,
+      "rtol": 0.0003
+    },
+    {
+      "request_index": 5,
+      "reset_before": true,
+      "numerical_match": true,
+      "max_abs_difference": 4.470348358154297e-08,
+      "atol": 3e-05,
+      "rtol": 0.0003
+    }
+  ],
+  "analysis": "=== IR Graph Summary: causal_features_reference ===\n\n## Operators (3 total)\n  Preamble: 0  |  Chunk: 3\n\n  conv_0 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_0\n    state writes: history_0\n\n  conv_1 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_1\n    state writes: history_1\n\n  conv_2 (exposed, batch, chunk)\n    inputs:  features\n    outputs: features\n    state reads:  history_2\n    state writes: history_2\n\n## State Objects (3 total)\n  history_0 (scope=chunk_persistent): \n  history_1 (scope=chunk_persistent): \n  history_2 (scope=chunk_persistent): \n\n## Edges (2 total: 2 data, 0 ordering, 0 streaming)\n  conv_0.features -> conv_1.features\n  conv_1.features -> conv_2.features\n\n## Cross-Chunk Dependencies\n  conv_0 <-(history_0)-> conv_0\n  conv_1 <-(history_1)-> conv_1\n  conv_2 <-(history_2)-> conv_2\n\n## Cross-Chunk Independent Pairs\n  conv_0 || conv_1  (can overlap across chunks)\n  conv_0 || conv_2  (can overlap across chunks)\n  conv_1 || conv_2  (can overlap across chunks)\n\n## Pipeline Stages (3 stages = 3 GPUs for pipeline parallelism)\n  Stage 0: [conv_0]\n    Persistent state: history_0\n  Stage 1: [conv_1]\n    Persistent state: history_1\n  Stage 2: [conv_2]\n    Persistent state: history_2\n\n## Streaming Overlaps (0 opportunities)\n  (none)\n\n## Validation: PASS\n",
+  "analysis_validation_label": "Structural only; numerical comparisons are recorded separately above"
+}
