@@ -1,0 +1,127 @@
+{
+  "scope": "Preserved raw repeated-trial records; index is not a result-quality verdict",
+  "archives": [
+    {
+      "manifest": "repeat-completed-01/traces.manifest.json",
+      "manifest_sha256": "7b522b2bee41c1db1c3d19388e093c0fe28d8529745fca9fa9e585e51fd14ea8",
+      "archive": "repeat-completed-01/traces.zip",
+      "archive_sha256": "34b225274b689fdb76dc295cb34366a34858d7220b2e1c3671bf7d7724a10616",
+      "bytes": 18677357,
+      "file_entries": 803,
+      "trials": [
+        "t004",
+        "t005",
+        "t006"
+      ],
+      "entry_hash_verification_on_creation": true
+    },
+    {
+      "manifest": "repeat-completed-02/t007.manifest.json",
+      "manifest_sha256": "c5a811eb9a1dfd17505b85be10294ff0e2c0fc75df5c74b179f25e80039769d1",
+      "archive": "repeat-completed-02/t007.zip",
+      "archive_sha256": "3ef3c58aa65aa7d4e43543dae0b060b8920b0eaebe069f4903abc8bd80985335",
+      "bytes": 85106051,
+      "file_entries": 271,
+      "trials": [
+        "t007"
+      ],
+      "entry_hash_verification_on_creation": true
+    },
+    {
+      "manifest": "repeat-completed-02/t008-t012.manifest.json",
+      "manifest_sha256": "d6ee38ac6c90ca81b5644312ded3e560583a900cfb95a4ec0cba97172f282958",
+      "archive": "repeat-completed-02/t008-t012.zip",
+      "archive_sha256": "329eeb6b402ccc4e08310feee32c0c3116b67f2a66685940f917784bea9f1c9f",
+      "bytes": 44617578,
+      "file_entries": 1906,
+      "trials": [
+        "t008",
+        "t009",
+        "t010",
+        "t011",
+        "t012"
+      ],
+      "entry_hash_verification_on_creation": true
+    },
+    {
+      "manifest": "repeat-completed-03/t017.manifest.json",
+      "manifest_sha256": "ec19d055b1bda4accc7b686bc73017c56fb2b55148f94778eb399c0db7fbfbd3",
+      "archive": "repeat-completed-03/t017.zip",
+      "archive_sha256": "7df16cb47580215a14478eaa0c7de27ac8aaf6d7cca50c4faa53070f71a16593",
+      "bytes": 5557921,
+      "file_entries": 255,
+      "trials": [
+        "t017"
+      ],
+      "entry_hash_verification_on_creation": true
+    },
+    {
+      "manifest": "repeat-completed-04/traces.manifest.json",
+      "manifest_sha256": "eb9b501a9b136b6cbdb2324d898ab9dbeb9c2740405d138cf20c468aca7d8dbb",
+      "archive": "repeat-completed-04/traces.zip",
+      "archive_sha256": "91557b594487e8f09f705cb3973ab4a5461225fe2f1fa5e9fb54c06956522d62",
+      "bytes": 79937013,
+      "file_entries": 3370,
+      "trials": [
+        "t013",
+        "t014",
+        "t015",
+        "t016",
+        "t018",
+        "t019",
+        "t020",
+        "t021",
+        "t022",
+        "t023",
+        "t024",
+        "t025",
+        "t026"
+      ],
+      "entry_hash_verification_on_creation": true
+    },
+    {
+      "manifest": "repeat-interruption-01/traces.manifest.json",
+      "manifest_sha256": "d71923e2596d8d946de7e29bbce64a31751d09cf1d984458c645cfdea197f18b",
+      "archive": "repeat-interruption-01/traces.zip",
+      "archive_sha256": "9a89c35e7a8478ced0799048b49f4d60dad08af79d16de37912ebda911232de5",
+      "bytes": 8215769,
+      "file_entries": 382,
+      "trials": [
+        "t001",
+        "t002",
+        "t003"
+      ],
+      "entry_hash_verification_on_creation": true
+    }
+  ],
+  "archived_trial_count": 26,
+  "archived_trial_ids": [
+    "t001",
+    "t002",
+    "t003",
+    "t004",
+    "t005",
+    "t006",
+    "t007",
+    "t008",
+    "t009",
+    "t010",
+    "t011",
+    "t012",
+    "t013",
+    "t014",
+    "t015",
+    "t016",
+    "t017",
+    "t018",
+    "t019",
+    "t020",
+    "t021",
+    "t022",
+    "t023",
+    "t024",
+    "t025",
+    "t026"
+  ],
+  "excluded_source_clones": "Pinned public source clones are reconstructed from source manifests; candidate backend and controller records are included."
+}
