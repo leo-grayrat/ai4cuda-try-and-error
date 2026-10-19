@@ -1,0 +1,107 @@
+{
+  "run": "skill-effects/runs/flashrt-repeat-v1/t021",
+  "thought_passages_reviewed": {
+    "6": "last 10000 characters",
+    "19": "complete",
+    "22": "complete"
+  },
+  "variants": [
+    {
+      "name": "spin_chunked",
+      "correctness_pass": true,
+      "first_output_median_ms": 1.58095,
+      "closed_loop_chunks_per_second": 300.5325269414888
+    },
+    {
+      "name": "cpu_full",
+      "correctness_pass": true,
+      "first_output_median_ms": 1.05295,
+      "closed_loop_chunks_per_second": 6257.169673584315
+    },
+    {
+      "name": "gpu_full",
+      "correctness_pass": true,
+      "first_output_median_ms": 2.0797499999999998,
+      "closed_loop_chunks_per_second": 490.0074771511328
+    },
+    {
+      "name": "gpu_full_graph",
+      "correctness_pass": true,
+      "first_output_median_ms": 0.53145,
+      "closed_loop_chunks_per_second": 15891.934843067143
+    },
+    {
+      "name": "gpu_prefix",
+      "correctness_pass": true,
+      "first_output_median_ms": 1.0991,
+      "closed_loop_chunks_per_second": 494.00244439728044
+    },
+    {
+      "name": "gpu_prefix_graph",
+      "correctness_pass": true,
+      "first_output_median_ms": 0.5419,
+      "closed_loop_chunks_per_second": 14441.39867620512
+    },
+    {
+      "name": "gpu_fused_full",
+      "correctness_pass": true,
+      "first_output_median_ms": 1.73095,
+      "closed_loop_chunks_per_second": 582.5534937836688
+    },
+    {
+      "name": "gpu_fused_prefix",
+      "correctness_pass": true,
+      "first_output_median_ms": 1.5946,
+      "closed_loop_chunks_per_second": 570.9262167732836
+    },
+    {
+      "name": "gpu_fused_full_graph",
+      "correctness_pass": true,
+      "first_output_median_ms": 0.5235000000000001,
+      "closed_loop_chunks_per_second": 14696.276943174396
+    },
+    {
+      "name": "gpu_fused_prefix_graph",
+      "correctness_pass": true,
+      "first_output_median_ms": 0.53305,
+      "closed_loop_chunks_per_second": 12636.456176067955
+    }
+  ],
+  "first_queue_write_index": 26,
+  "suite_execution_indices": [
+    18,
+    21
+  ],
+  "sha256": {
+    "config.json": "aea85cde5e31185ebd40397eca42ee1c90baa4dac170dce24777ea6bf83b9fd2",
+    "events.jsonl": "4bc28f1371231401c8245a8f0b29bb1e28a99dc0140ee81fb4cb2db7b2ba5fbf",
+    "result.json": "6cefec1425c76870ee313bc2f16688246dbc3436cfa8113b5a4276b586cd5e49",
+    "report.md": "14398941cb1ac2c9adcd0262788f05145fa185de877583d801ea40c2aaa71b9e",
+    "response-006.json": "037d836f98b946eef067b7ba4b62b2750c42d0b679781edc11532703671be28e",
+    "response-019.json": "ede08e4512e80a3bcf2b97f5fdd07291ec499b0da203bd9a08eec38f284c7c5d",
+    "response-022.json": "28017ad96c9c00a7e61d7870bf14f25ab5529b240af0188ba6db6982dc419cfd",
+    "control/execute-004/stdout.log": "6487cd435c23d12e219bd03fa14e4c49782e69ddd945eef6a5d2c4231d00babb",
+    "control/execute-005/stdout.log": "febfef65478c315f26b3a0af55e864af5d4ea2b791ae9b560dcacef6f5b54df9",
+    "control/execute-008/stdout.log": "90db1f1b49fb094ecee803c1e871aca992b72bcf7e7e5cc71533c3218360e5b7",
+    "work/flashrt/apps/branch_features/backend/strategies.py": "d413dcad8bc38ddfd58b667a5c8e226897259f15e9df3a0dfc0cfa7e372a4264",
+    "work/flashrt/apps/branch_features/backend/worker.py": "66cc82460a314f3e46cd392e0d6d98ae0b0f8c48598567d6bc8dfb6f0a1ad6ad",
+    "work/flashrt/apps/branch_features/backend/tests/harness.py": "98e3ea127492ace57a6b6b934be94d8b895956e7623c99973ae98c2efd2e2452",
+    "work/flashrt/apps/branch_features/backend/tests/run_all.py": "cb228f6440fb4e7d1889649ad4c481743d2f8736dfef9b05d698b884fa6d1595",
+    "work/flashrt/apps/branch_features/backend/tests/rerun.py": "e28e0bc8bb300d3881ce27b213df474c21fed1443ba8a511a50c3f055a7053a9",
+    "work/flashrt/apps/branch_features/backend/tests/test_ir.py": "06d70146524659dc44f1b1c2722f47739a4605554cb294fd400231f23e3943d9",
+    "work/flashrt/apps/branch_features/backend/ir/graph_builder.py": "112330854a0f9041aad27dbc9a1cc641d67bd50e48194591a364e4d2bf171075",
+    "work/flashrt/apps/branch_features/backend/notes/experiment_log.md": "95288f1be57782e7afc4eb27c8326f7818455e38aa9abb9cb9747bcbd64b9030",
+    "work/flashrt/apps/branch_features/backend/notes/ir_analysis.txt": "509e6e6d63d9c7e2471c08b16cc9be748d851e1c50e015acaa6bc139214b8ed7",
+    "work/flashrt/apps/branch_features/backend/benchmarks/results/spin_chunked.json": "6437264f048cb292ae0a9767e49419635468f1bbec9b3727ab9a461ecdf93e94",
+    "work/flashrt/apps/branch_features/backend/benchmarks/results/cpu_full.json": "9ada636372d8992e482e8c5d4fccabc4ce3fb5522439d8f1fac7fee2c09620c3",
+    "work/flashrt/apps/branch_features/backend/benchmarks/results/gpu_full.json": "7b09ccc944b4c311fdc2582783981675313db2e27087a0624e13d1ec087d8305",
+    "work/flashrt/apps/branch_features/backend/benchmarks/results/gpu_full_graph.json": "3f5999c6e0e6308494b58e849ca592f74a8b698342b03f8793c1f4fb7f866926",
+    "work/flashrt/apps/branch_features/backend/benchmarks/results/gpu_prefix.json": "c80639584174963378b1df9eb44095aa5eb5a5a05073abe92a2c4d352bc1839e",
+    "work/flashrt/apps/branch_features/backend/benchmarks/results/gpu_prefix_graph.json": "4c79f68397a0452ffcde8ff7ec369be595540f34b6e342707b4fb3f3ecd7d4c3",
+    "work/flashrt/apps/branch_features/backend/benchmarks/results/gpu_fused_full.json": "051eba676fa8c575733e0a9c980711fae91c3139d6237ed49bac3b063f4d9372",
+    "work/flashrt/apps/branch_features/backend/benchmarks/results/gpu_fused_prefix.json": "a9399e8fcb3a1d2224401a1a51f3ffb4e9c3cfc5e8989517d60205eb4363cee3",
+    "work/flashrt/apps/branch_features/backend/benchmarks/results/gpu_fused_full_graph.json": "73dcc9901329df690c46988a4c9722acb225aa11350a19e463260b139b2deb76",
+    "work/flashrt/apps/branch_features/backend/benchmarks/results/gpu_fused_prefix_graph.json": "6acdff26a8bc049c7120dedb0e4c96aeaf5dd9894b9b0564995cb28543adc8af"
+  },
+  "all_source_hashes_match_archive": true
+}
