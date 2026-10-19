@@ -1,0 +1,77 @@
+{
+  "scope": "Two observed rejections; not an aggregate treatment effect",
+  "trials": [
+    {
+      "trial": "t007",
+      "rejected_response_index": 34,
+      "first_rejected_report": "本次观测未能完成 causal_features 任务的开发目标，工作停在“部分变体已通过正确性验证、基准与 IR 验证尚未落盘”的阶段。以下按实际证据说明。\n\n**已完成并可复现的部分。** 我在 `flashrt/apps/causal_features/backend/` 下写了一个自包含后端：`core.py` 实现推理核心与全部变体策略，`worker.py` 是推荐入口（接受 `--repository`/`--config`，内部按 “hybrid” 策略运行），`variants/<name>/worker.py` 是各变体的独立入口，`configs/dev.json` 与 `configs/large.json` 是两种案例配置，`tests/harness.py` 是用固定适配器 `causal_features.adapter` 驱动子进程并通过 `try/finally` 清理进程和共享内存的测量/对照脚本。核心优化思路来自对参考 `ReferencePipeline.step` 的阅读：三层 CausalConv1d+SiLU 的块持久状态只有每层输入的 k-1 个历史样本，参考实现却每块都做 host 往返、零填充分配、两次共享内存发布和一次设备同步。我的实现让历史常驻显存、整请求一次分层前向、单次 pinned 拷贝与一次同步、输出环一次性发布，并保留“先发数据后发元数据”的协议顺序、块编号和最后短块的有效长度。\n\n**实际跑出的结果。** 正确性脚本（`tests/run_correctness.py` 及其后 `tests/sweep.py`/`tests/_phase.py`）确实端到端启动参考后端与候选后端：参考后端相对 CPU 全序列 oracle 为 PASS；`ref_replica`、`chunk_pinned`、`fullseq`、`cpu_full`、`hybrid` 五个入口均为 PASS（vs_oracle=True、vs_reference=True，max_abs=5.215e-08 或 3.725e-08，最大相对误差 3.043e-03/1.826e-03 出现在接近零的元素上，处于 atol=3e-5、rtol=3e-4 的容差内，且六请求序列包含连续会话、重复输入、reset 后复现与末尾短块）。这些结论来自 `benchmarks/results/` 下的 `correctness_dev_*.log` 与 `sweep_state.json`。\n\n**失败与未完成项。** 第一，`fullseq_prealloc`、`fullseq_chunkpub`、`head_split`、`layer_streams`、`cold_nowarm` 五个变体只写了入口并启动过（此前一次全量正确性运行在它们进入并行验证阶段时被单次调用时限截断），没有拿到完成的正确性判定；`layer_streams` 的多流波前实现只做过静态梳理，未验证。第二，基准测量没有产出有效 JSON：我多次尝试串行基准扫描，均因每次工具调用有时限、而每个后端进程启动开销很大、且上一次超时遗留的后端进程可能占用 GPU，导致调用在做完 `<start>` 打印前就被截断；`bench_insert` 类结果一个也没有记录，因此针对参考后端的成对有限负载扫描、首块时延中位数/p95、以及 20ms 块间隔的平滑度分布都缺失。第三，IR 阶段没有完成：`ir/ops.py` 与 `ir/graph_builder.py` 已写好，但 `SequentialExecutor` 与参考后端数值对照、以及 `summarize_graph` 分析输出都没有执行并落盘，`notes/experiment_log.md` 也仍是空标题。第四，`hybrid` 策略中“小请求走 CPU、否则 GPU”的阈值仍是未测量的猜测值，没有依据实测做取舍。第五，README 与最终实验日志、变体队列（含每个变体的终态）都没有写完，也没有对推荐入口执行独立控制器的 verify/benchmark。\n\n**结论。** 当前只能声称：一个不改变计算含义、协议完全一致的流式后端在 dev 案例上通过了六请求正确性对照，并减少了每块的主机往返与同步。关于“首块时延”和“可持续输出速率/平滑度”这两个优化目标，我没有可引用的实测数字，不能宣称任何加速幅度；IR 转换的数值验证、十变体基准矩阵、独立 verify/benchmark 证据以及中文实验日志均属于未满足的适用要求。\n",
+      "subsequent_tools": [
+        {
+          "index": 35,
+          "operation": "write",
+          "ok": false,
+          "error": "ValueError: Development is closed; submit the report or inspect existing evidence"
+        },
+        {
+          "index": 36,
+          "operation": "verify",
+          "ok": true,
+          "error": null
+        },
+        {
+          "index": 37,
+          "operation": "benchmark",
+          "ok": true,
+          "error": null
+        },
+        {
+          "index": 38,
+          "operation": "finish",
+          "ok": true,
+          "error": null
+        }
+      ],
+      "subsequent_api_responses": 4,
+      "subsequent_generated_tokens": 2024,
+      "subsequent_api_response_seconds": 12.824253900005715,
+      "source_sha256": {
+        "events.jsonl": "c660ef9f4636877e034d2714d35101a04a24f52cb4b245664099202783b5a6c3",
+        "report.md": "7856fca35012393e6e9c86ce0533692e5d1a2108662f99a34cf302ed9f71886c",
+        "result.json": "f1f11c31232b0b064ad06cece0d17b1f8f3955a0d09968a2ff3cf1e04b073a6e"
+      }
+    },
+    {
+      "trial": "t020",
+      "rejected_response_index": 42,
+      "first_rejected_report": "## branch_features 后端优化结果报告\n\n### 做了什么\n\n我在 `flashrt/apps/branch_features/backend/` 下交付了独立后端 `worker.py`（`--repository` / `--config`，策略由 `--strategy`、入口脚本或 `BF_STRATEGY` 选择，默认 `whole_graph`），并保留 12 个可独立启动的变体入口 `backend/tests/entries/<name>.py`。所有策略共享一个代数变换：参考实现的四个 `CausalConv1d` 中，核长 3 的卷积等价于核长 5 卷积前两拍为 0，因此 `a0`/`b0` 合并成一个 C→2H 卷积（共享同一份 4 拍原始特征历史），`a1`/`b1` 用 `groups=2` 合并成一个卷积同时产出两条分支；门控只依赖当前输入，故唯一跨块状态是 `(hist_x[4], hist_a[2], hist_b[4])`，跨请求保持、reset 清零，首个请求用 replicate 填充，与参考完全一致。在此基础上再叠加三种手段：整请求 eager 融合、CUDA 图捕获（分别为\"会话开始\"和\"续接\"两次捕获）、块级/超块级的批处理，以及 CPU 放置和输入轮询方式（自旋 vs. 200µs sleep）的对照。\n\n### 证据与数字（同一 RTX 5060 Laptop、torch 2.11.0+cu128，dev 尺寸 C=16 H=32 T=1043 chunk=127）\n\n`tests/harness.py --all`（由 `tests/run_phase.py` 驱动）把参考和每个候选都作为子进程经 `branch_features.adapter` 驱动：先用六个完整请求（续接、无 reset 重复输入、reset 复现、27 样本尾块）与 CPU 全序列 oracle 比较，再做配对有限负载扫描（unpaced, 2000/1000/500/250/100 req/s，每档 20 个随机输入，20ms 块间隔预算）。结果文件在 `benchmarks/results/<tag>.json`、`<tag>.log`、`smoke.json`、`environment.json`。\n\n- 参考基线：首块延迟中位 1.45ms，unpaced 90.6 req/s，可持续 100 req/s，块间隔中位 1.06ms/p95 2.16ms，超预算 0。\n- 推荐 `whole_graph`：首块延迟 0.545ms（约 2.7x 改善），unpaced 1168 req/s（约 12.9x），可持续 1000 req/s，块间隔中位 8.8µs/p95 15.6µs，超预算 0，正确性 PASS（max|Δ|=1.43e-6，容差 atol=3e-5、rtol=3e-4）。\n- 其他通过的变体：`ref_mirror`（1.44ms/82 req/s）、`chunk_fused`（1.08ms/143.7）、`whole_eager`（1.07ms/709）、`hybrid_eager`（1.06ms/495）、`chunk_graph`、`superchunk_graph`（0.53ms/1182）、`superchunk_eager`（1.57ms/218，首块因 3 块批处理而变差）、`hybrid_graph`、`whole_graph_pinned`（0.53ms/1333）、`whole_graph_sleeppoll`（0.81ms/927）、`whole_cpu_eager`（0.54ms/1177，max|Δ|=7.7e-7）。所有变体 `clean_exit=true`，块间隔超预算比例均为 0。\n\n### 失败与教训\n\n第一轮完整扫描时所有 CUDA 图变体都数值 FAIL（max|Δ|≈1.2–1.4）。根因是我自己的实现缺陷：每个图各自持有历史缓冲，而\"续接\"图从未看到上一个图写入的状态。改为在整个会话内共享 `(hx, ha, hb)` 张量后，图变体在进程内复检和完整复跑中都回到 2.4e-7 量级并通过六请求验证。另外 `superchunk_eager` 说明粗粒度批处理会牺牲首块延迟，因此未作为推荐策略。`whole_cpu_eager` 与 `whole_graph` 首块延迟接近，说明该模型小到 PCIe 往返与启动开销相当。\n\n### 未完成的适用要求（如实列出）\n\n1. **Phase 1–2 完全未做**：我没有在 `backend/ir/` 下构建任何 `IRGraph`，也没有运行 `SequentialExecutor` 与参考对比，因此 `summarize_graph()` 的分析（流水级划分、流式重叠、关键路径、跨块独立算子对）缺失；上述关于状态依赖与合法性的论述来自阅读 `reference.py`、`model.py`、`flashrt/layers/audio.py` 的静态推理，而非已验证 IR。任务要求\"用 IR 表达并验证状态依赖\"，这一条未满足。\n2. **变体队列协议只部分遵守**：12 个变体都做了端到端正确性 + 基准并持久化，但队列表是在测量完成后才写入 `notes/experiment_log.md` 和 `README.md` 的，没有做到\"测量前提交初始队列、每次测量间更新\"；未产出去重后的 `combined(A,B)` 行。这属于流程违规，不是结果造假。\n3. **平滑度分辨力有限**：块间隔测量包含适配器侧 200µs 睡眠轮询（参考与候选相同），变体间抖动差异在该量级下不可分辨；20ms 预算本身非常宽松，所以\"超预算比例 0\"这一结论区分度低。\n4. **多 GPU 不适用**（单卡任务），因此未做跨设备放置/流水并行探索；模型内部的层间并行也仅做到卷积融合与图捕获层面。\n5. 基准只在 dev 尺寸（T=1043）上跑过，大尺寸（C=128 H=256 T=16384 chunk=512）未测；`whole_graph` 的两次捕获是按长度固定形状的，配置改变时会重新捕获（代码支持，但未在大尺寸上验证正确性与性能）。\n6. 我没有清理 `tests/` 下的辅助脚本（`fix_graph_state.py`、`probe.py`、`run_phase.py` 等），它们记录了修复过程和测量，但目录不够整洁。\n\n综上：正确性和性能都经过了真实的端到端进程级验证，推荐变体在首块延迟和可持续速率两个目标上都显著优于参考且无回退；但 IR 转换与验证这一核心要求缺失，队列协议也未严格按增量方式维护，这些是明确的未完成项。",
+      "subsequent_tools": [
+        {
+          "index": 43,
+          "operation": "verify",
+          "ok": true,
+          "error": null
+        },
+        {
+          "index": 43,
+          "operation": "benchmark",
+          "ok": true,
+          "error": null
+        },
+        {
+          "index": 44,
+          "operation": "finish",
+          "ok": true,
+          "error": null
+        }
+      ],
+      "subsequent_api_responses": 2,
+      "subsequent_generated_tokens": 1597,
+      "subsequent_api_response_seconds": 7.883012100006454,
+      "source_sha256": {
+        "events.jsonl": "f58e650f7b1e8fbb37a17edb1dd3ba1ca9930494d9bdfb510dd797bee05101ab",
+        "report.md": "639a8f7c58cac8df0dda6b43eea22566a1195dcf7daedf1275caa7b7a76e6c66",
+        "result.json": "ab1b586008e18f7f68e05669164fced642f6fe28e63f72e23f3895816aeb32fa"
+      }
+    }
+  ]
+}
