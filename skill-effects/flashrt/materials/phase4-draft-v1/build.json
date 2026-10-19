@@ -1,0 +1,38 @@
+{
+  "status": "Partial rewrite draft; not a frozen condition or demonstrated effective compression",
+  "source_root_sha256": "8ee46af445c5b33292e523de303cd6ed60df63fd085a4e0be5fdfbc64b622019",
+  "source_lines_replaced": [
+    547,
+    1181
+  ],
+  "untouched_prefix_sha256": "415e636b6acc43f5c85c65b5e9b03e596ccfe0ce30eb486cea68d293ba7a0012",
+  "untouched_suffix_sha256": "aeac13e356223c5c5406b56ba24890d6f932b4e8518edc316adff05f5dc963db",
+  "outside_replacement_identical": true,
+  "source_ranges_contiguous": true,
+  "tokenizer_sha256": "c90dfa01249db1be4245780a052ede752e1361c612ac6d08e2bdada7d599476b",
+  "tokens": {
+    "root_original": 21800,
+    "section_original": 8128,
+    "section_draft": 2577,
+    "root_draft": 16249
+  },
+  "root_draft_sha256": "33cb33e2dec839193bd32889e4383b62d67cad944f7a36ae5579fab3cc6c4598",
+  "unchanged_documents": [
+    {
+      "logical_path": "flashrt/apps/AGENTS.md",
+      "source_sha256": "ec8f03cc24ec9082da9aa23ccc93984fa02f7787ca84b4f0993f83325863e84d",
+      "text_tokens": 7071
+    },
+    {
+      "logical_path": "flashrt/ir/AGENTS.md",
+      "source_sha256": "f79381e87720bfce87f036fbbbe276d5546b14c04ff91e76e1b0508e5d7386c2",
+      "text_tokens": 2481
+    },
+    {
+      "logical_path": "assets/AGENTS.md",
+      "source_sha256": "4466341a7d71142e07be3659660a8446b32aee5fbb0aeed0425b1ebba8af4004",
+      "text_tokens": 191
+    }
+  ],
+  "semantic_review": "Author source comparison only; no independent review or task-outcome validation"
+}
