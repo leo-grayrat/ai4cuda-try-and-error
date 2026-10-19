@@ -65,7 +65,7 @@ def main():
                 'input_sha256': hashlib.sha256(features.tobytes()).hexdigest()}
 
     try:
-        with gpu_lock(base.parent / 'runs/native-gpu.lock', timeout=60) as waited:
+        with gpu_lock(base.parent / 'runs/native-gpu.lock', timeout=1800) as waited:
             result['gpu_lock_wait_seconds'] = waited
             with session:
                 for _ in range(2):

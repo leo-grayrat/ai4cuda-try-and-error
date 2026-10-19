@@ -86,7 +86,7 @@ class Workspace:
                     psutil.wait_procs(children, timeout=5)
                     return -999
         if lock:
-            with gpu_lock(BASE.parent / 'runs/native-gpu.lock', timeout=60):
+            with gpu_lock(BASE.parent / 'runs/native-gpu.lock', timeout=1800):
                 exitcode = invoke()
         else:
             exitcode = invoke()
