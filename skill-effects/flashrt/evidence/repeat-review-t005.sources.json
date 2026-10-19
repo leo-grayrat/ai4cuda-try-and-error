@@ -1,0 +1,9 @@
+{
+  "run": "skill-effects\\runs\\flashrt-repeat-v1\\t005",
+  "sha256": {
+    "result.json": "21f47f00c2bcbcdd60d826a1d54e2b5bcda53bf46b82f9d8be6b1f52960ec09a",
+    "report.md": "6eaac9039d49774c2b6eb2ce4b2e379131683bf3edbb64ac18badfc72ded802b",
+    "events.jsonl": "2ab4576a69b31af9aafda6d8b486be35b43ad687330dbf4892d934a33f2d9249",
+    "control/execute-020/stderr.log": "e9bf4f4bd31458552ebf9a0aec82eb7ab78a660d8efda57c2776d7488f3cf34e"
+  }
+}
