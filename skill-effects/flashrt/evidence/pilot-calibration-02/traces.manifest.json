@@ -1,0 +1,644 @@
+{
+  "archive": "traces.zip",
+  "sha256": "95581b5427add978347c739245b7e20f106efb0b6e3307b4a77c6379b6ad9a0b",
+  "bytes": 2671929,
+  "files": [
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/config.json",
+      "bytes": 381,
+      "sha256": "75143f0aab6b4163fbff49805e45d992d75bfc3618aa9b3365904f522dc75b63"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/candidate/backend/backend.stderr.log",
+      "bytes": 68,
+      "sha256": "2c019085c1fd913d3a235b197141f050799e8280890f9fd0e2017c0566a96891"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/candidate/backend/backend.stdout.log",
+      "bytes": 69,
+      "sha256": "32eb950dd8ab48584cb27f9902e215a6248241b211dbcbe87da0c4d648799cfc"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/candidate/backend/config.json",
+      "bytes": 174,
+      "sha256": "b7172c7379e1ee0677098559a7b0d2295e02f895ee0846eca746832af7e1f78c"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/candidate/backend/source-snapshot/00-local_session.py",
+      "bytes": 5430,
+      "sha256": "1de20485b81c94a8b8e785282bdf8824537160114a184e851627d5e4d98331ca"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/candidate/backend/source-snapshot/01-__init__.py",
+      "bytes": 82,
+      "sha256": "5c1579582a6642302ec8827dd9b46d53a1a7bc1a4e10bd55e670622d1d65b113"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/candidate/backend/source-snapshot/02-adapter.py",
+      "bytes": 4308,
+      "sha256": "1923c08525c04831ec959d5cb8f571d8be2e8556d7ad088487bb87d738d1f2c0"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/candidate/backend/source-snapshot/03-model.py",
+      "bytes": 2151,
+      "sha256": "0c5774a4c5b04715e51703de12c016f73940c3d08940478d1fa9210519cf00ff"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/candidate/backend/source-snapshot/04-reference.py",
+      "bytes": 2771,
+      "sha256": "d5ae52db8580383ebd62fe08aa69ec692bcf891041ac08f7549b2a37c066a468"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/candidate/backend/source-snapshot/05-worker.py",
+      "bytes": 13085,
+      "sha256": "563e110dc8223ab39b7f2a95bc8d01356d3a219496a4e893b205ea90d9babe4d"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/candidate/benchmark-snapshot.py",
+      "bytes": 7979,
+      "sha256": "14359c1659f2a25471bdf4afb96863d754cea07f0c0a2d087269a3783bf11a26"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/candidate/progress.json",
+      "bytes": 188150,
+      "sha256": "a285538cc41fddf6f98ad3f1a077cc52bd11e87dd1c87849d6a3594e7dce7f61"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/candidate/result.json",
+      "bytes": 189795,
+      "sha256": "21204a17c621246ee992eb60ff259d45e0493af8449ccf2e47f77fe666ffaf6d"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/candidate-controller/stderr.log",
+      "bytes": 68,
+      "sha256": "2c019085c1fd913d3a235b197141f050799e8280890f9fd0e2017c0566a96891"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/candidate-controller/stdout.log",
+      "bytes": 473,
+      "sha256": "dd23cb6daef6476acae9bc534a405b2577d802b6be81cba1d5f381fef7ec2518"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/reference/backend/backend.stderr.log",
+      "bytes": 68,
+      "sha256": "2c019085c1fd913d3a235b197141f050799e8280890f9fd0e2017c0566a96891"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/reference/backend/backend.stdout.log",
+      "bytes": 53,
+      "sha256": "d3f708560ba0ccdc6808f03c03d36fbcae90a3b9b56b438ee8f69338c1bd8bf1"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/reference/backend/config.json",
+      "bytes": 174,
+      "sha256": "fc3a7028a6db9f4f17cc3f36a45491127498f7d03bf3ddb1e724527819f093e5"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/reference/backend/source-snapshot/00-local_session.py",
+      "bytes": 5430,
+      "sha256": "1de20485b81c94a8b8e785282bdf8824537160114a184e851627d5e4d98331ca"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/reference/backend/source-snapshot/01-__init__.py",
+      "bytes": 82,
+      "sha256": "5c1579582a6642302ec8827dd9b46d53a1a7bc1a4e10bd55e670622d1d65b113"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/reference/backend/source-snapshot/02-adapter.py",
+      "bytes": 4308,
+      "sha256": "1923c08525c04831ec959d5cb8f571d8be2e8556d7ad088487bb87d738d1f2c0"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/reference/backend/source-snapshot/03-model.py",
+      "bytes": 2151,
+      "sha256": "0c5774a4c5b04715e51703de12c016f73940c3d08940478d1fa9210519cf00ff"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/reference/backend/source-snapshot/04-reference.py",
+      "bytes": 2771,
+      "sha256": "d5ae52db8580383ebd62fe08aa69ec692bcf891041ac08f7549b2a37c066a468"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/reference/benchmark-snapshot.py",
+      "bytes": 7979,
+      "sha256": "14359c1659f2a25471bdf4afb96863d754cea07f0c0a2d087269a3783bf11a26"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/reference/progress.json",
+      "bytes": 188577,
+      "sha256": "57db756abafac0bfa47ea2453dfa80099c4a5bd846cc9075fd669b801f6af0e8"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/reference/result.json",
+      "bytes": 189980,
+      "sha256": "fcc9d6ef5e6bd77db61af6ef03fe956a0ad808b73c368b60d11bfe31bf672b8f"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/reference-controller/stderr.log",
+      "bytes": 68,
+      "sha256": "2c019085c1fd913d3a235b197141f050799e8280890f9fd0e2017c0566a96891"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/benchmark-007/reference-controller/stdout.log",
+      "bytes": 474,
+      "sha256": "1b8fda742fb5a9f794a6762e7d2bcbe9c5ceb54185ffc8904763a965061e17bb"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/execute-001/stderr.log",
+      "bytes": 68,
+      "sha256": "2c019085c1fd913d3a235b197141f050799e8280890f9fd0e2017c0566a96891"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/execute-001/stdout.log",
+      "bytes": 1087,
+      "sha256": "a4eb26b890bb0f072ef92e5918652bc15087ca06120733852430c1ca475fefb2"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/execute-002/stderr.log",
+      "bytes": 68,
+      "sha256": "2c019085c1fd913d3a235b197141f050799e8280890f9fd0e2017c0566a96891"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/execute-002/stdout.log",
+      "bytes": 3999,
+      "sha256": "74d0c232514b1c6b6c015f5ad56e739b15f28981d7981a2c90f0411d7b741713"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/execute-003/stderr.log",
+      "bytes": 747,
+      "sha256": "84454d6f8fea28bfd89e20d052cbac775c9c8375435f956d4130dc85b47b1ed3"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/execute-003/stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/execute-004/stderr.log",
+      "bytes": 68,
+      "sha256": "2c019085c1fd913d3a235b197141f050799e8280890f9fd0e2017c0566a96891"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/execute-004/stdout.log",
+      "bytes": 10441,
+      "sha256": "18a155f170cbc53e7aa0b5786aca27486a8c3c2c8e546524b6ef76eea92b0564"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/execute-005/stderr.log",
+      "bytes": 68,
+      "sha256": "2c019085c1fd913d3a235b197141f050799e8280890f9fd0e2017c0566a96891"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/execute-005/stdout.log",
+      "bytes": 10052,
+      "sha256": "e429d0d4e5ae6bb4d38303c8afa0aeca2c8fb5b0d0ac5037f06d77ad4bfdd1a1"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/evaluation/backend.stderr.log",
+      "bytes": 68,
+      "sha256": "2c019085c1fd913d3a235b197141f050799e8280890f9fd0e2017c0566a96891"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/evaluation/backend.stdout.log",
+      "bytes": 69,
+      "sha256": "32eb950dd8ab48584cb27f9902e215a6248241b211dbcbe87da0c4d648799cfc"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/evaluation/candidate-entry.py",
+      "bytes": 13085,
+      "sha256": "563e110dc8223ab39b7f2a95bc8d01356d3a219496a4e893b205ea90d9babe4d"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/evaluation/config.json",
+      "bytes": 178,
+      "sha256": "74b880c90f8cdab3610ec603d7293d3ffae5a88aeecce5eef36a1617b6e05c26"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/evaluation/fixtures.npz",
+      "bytes": 372422,
+      "sha256": "c02708331e4620c22debefd01e92e84d4e8ad5868684859bc58c5c4ff5d58252"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/evaluation/outputs.npz",
+      "bytes": 371486,
+      "sha256": "94a9a8bd731f7c4f439deecc0ddb1a9b24c2db27b8f289bd3ad66d7c63efbaf3"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/evaluation/result.json",
+      "bytes": 9032,
+      "sha256": "c4b884fc868a1581d9d858abfb2d68b1ba5fb82ffd67dd484e06da528bcafd5b"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/evaluation/runner-snapshot/run_local_reference.py",
+      "bytes": 12047,
+      "sha256": "3fb568d045787f8855c6bf8c4c52d693da53f3659a6ad79dc2536b1d76ef9e29"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/evaluation/runner-snapshot/workloads/causal_features/__init__.py",
+      "bytes": 82,
+      "sha256": "5c1579582a6642302ec8827dd9b46d53a1a7bc1a4e10bd55e670622d1d65b113"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/evaluation/runner-snapshot/workloads/causal_features/adapter.py",
+      "bytes": 4308,
+      "sha256": "1923c08525c04831ec959d5cb8f571d8be2e8556d7ad088487bb87d738d1f2c0"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/evaluation/runner-snapshot/workloads/causal_features/model.py",
+      "bytes": 2151,
+      "sha256": "0c5774a4c5b04715e51703de12c016f73940c3d08940478d1fa9210519cf00ff"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/evaluation/runner-snapshot/workloads/causal_features/reference.py",
+      "bytes": 2771,
+      "sha256": "d5ae52db8580383ebd62fe08aa69ec692bcf891041ac08f7549b2a37c066a468"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/evaluation/upstream-snapshot/flashrt/channels/shm_channel/control_buffer.py",
+      "bytes": 3854,
+      "sha256": "852e7b77ac507be631755fe55f2bc9900ccb5a14be88128bf47c527bc7e11d96"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/evaluation/upstream-snapshot/flashrt/channels/shm_channel/tensor_buffer.py",
+      "bytes": 7964,
+      "sha256": "fcdbf27cbd336b4c181c7e6798cce4157f618ecb8be4824fd60df418d95a8bcb"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/evaluation/upstream-snapshot/flashrt/layers/audio.py",
+      "bytes": 7896,
+      "sha256": "1023dbaf30014a558466697ab739df228939bf601881323d05f208e6d6d0c2bf"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/stderr.log",
+      "bytes": 68,
+      "sha256": "2c019085c1fd913d3a235b197141f050799e8280890f9fd0e2017c0566a96891"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/control/verify-006/stdout.log",
+      "bytes": 240,
+      "sha256": "3aa6513785ba4c1ea22c6dc62d60becbdb74132c21a17ed6d51c53b322a7f681"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/events.jsonl",
+      "bytes": 142421,
+      "sha256": "85ddcdfcbf4d40e916329d459a8f27fb4cd4296d8d626682fc57b8f98c2b444b"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/messages.json",
+      "bytes": 390274,
+      "sha256": "08cead4f84eda585111d9d265be9b3f600475fe05d7502238e47b0bef7c6666b"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/protected-inventory.json",
+      "bytes": 60478,
+      "sha256": "c29bcaea1507fe8c2c5de2188f752fb5c73d45a5851811add5bd8fd074adc113"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-000.json",
+      "bytes": 118793,
+      "sha256": "da794d925cef9e0b022afd15cc47da0fa5d58126d1633e8d94b84b1406d2afb6"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-001.json",
+      "bytes": 120440,
+      "sha256": "7faf7ca2c03b64cfb8324417b519a461093085527451af4ef59835769f7f0985"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-002.json",
+      "bytes": 129337,
+      "sha256": "f305bc55c2adde30743b294b82a11946dc7268c612ddc7af03278b5ea8ef2530"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-003.json",
+      "bytes": 135750,
+      "sha256": "5030123e7f473602150e08571df276a1e258d3f717e210a6da5514e3ce9a8f53"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-004.json",
+      "bytes": 146616,
+      "sha256": "e4c9795758fc94701762d5d69014fbba30c0ac12ead1f90803343678dcf4cc11"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-005.json",
+      "bytes": 152240,
+      "sha256": "0ae9c4b481c5c08c21a74b70023437f40de5adaec37fd893d292f32c615e6b6f"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-006.json",
+      "bytes": 165927,
+      "sha256": "eb96651ef99855735126a9a363c1f61c1642dcdb105d36ad9d6a7eeb20884ee5"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-007.json",
+      "bytes": 167782,
+      "sha256": "cf30f3c9ee8b92790c45637721ce2d85579e2ce3c80121cd0c12207057aed8f0"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-008.json",
+      "bytes": 169784,
+      "sha256": "0462ec8830f8348ea7d7434263553cd7675e0c338590aace178da08e1cae7408"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-009.json",
+      "bytes": 266405,
+      "sha256": "7f244829b281f00ea6c16152eea6068f918d4124caea139f6eeabe9b2914f079"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-010.json",
+      "bytes": 291538,
+      "sha256": "ddc06b90dd3c9bae6ce6ad4be47b482e5239052fc6d61482006e6df6b77a4f45"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-011.json",
+      "bytes": 297352,
+      "sha256": "eb5e4bf91a8c25f3683c742df4d786d02304bc5394ab2db05f20765803fc286a"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-012.json",
+      "bytes": 332075,
+      "sha256": "20e9a77db640f2b63428b9b40aad98ca8d5c6b47336aeba6d5a5c0c8afc78d04"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-013.json",
+      "bytes": 343366,
+      "sha256": "033fb30266fac49b1fdb3290bae1126635cf303ff6b8ed277a20ec41e32a660a"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-014.json",
+      "bytes": 347501,
+      "sha256": "cf05711f511aa58a399dadc425ee058e135811e9fbf4a924a02be8db078f80d1"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-015.json",
+      "bytes": 353131,
+      "sha256": "2cc4d3a6a736802fb6e58035e6d5810b17f3bdd9292a715893600d2761478bdd"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-016.json",
+      "bytes": 367170,
+      "sha256": "2926d6f8c4edca9168778db76a119c3d0f345c3ff9db7028385cc1905212a715"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-017.json",
+      "bytes": 372567,
+      "sha256": "a97e00cbe1d34bcab9fac2b60f66bc0ea039c553922335ef885d754b46528870"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/request-018.json",
+      "bytes": 386167,
+      "sha256": "f0f7c6e8056ad3aa660ca63d82a4e3890178efac5a5fe56e560755cd4189506d"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-000.json",
+      "bytes": 1649,
+      "sha256": "1ab887b4351db9789c427f81ae17e73fc8b107f77e8e824b859bb36f122c5568"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-001.json",
+      "bytes": 1452,
+      "sha256": "1c8680ba7fbc22ebfdbf5ce6843043412f4930c767802093becb26999c4cf52e"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-002.json",
+      "bytes": 1413,
+      "sha256": "3f296fa844be4c9d27ced69d17600144cdd88c2affc25e9ec2d0d78f0ddade46"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-003.json",
+      "bytes": 2251,
+      "sha256": "0c6adbd3dc2cec53f5b59ac50d377265b4714947f9b41b9300cab21fb380733f"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-004.json",
+      "bytes": 1391,
+      "sha256": "ff575d92fc8e670d226fe1f9b3bcf030543c8c147bf94656b3407c8d46f05f49"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-005.json",
+      "bytes": 13785,
+      "sha256": "3f51af029aa112d3798ce26394f53ae046ba380c2bb37984979ddcf8764ed5d7"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-006.json",
+      "bytes": 2296,
+      "sha256": "2670b0e43642d47eafdef55753c8d0b3e29cb8aeb6c5288cd92020dae5d782ff"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-007.json",
+      "bytes": 1097,
+      "sha256": "d2ef0f35929df1d54c17a18f3936acb22fc07ad44948dbf07aaabfe7207c9583"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-008.json",
+      "bytes": 82914,
+      "sha256": "1c04f6592c7379fc08c4066694526d235ce0b3fe4b90222baedfe130f37fcbe5"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-009.json",
+      "bytes": 25371,
+      "sha256": "4507715020696a501f45ce3e4c6f5d15e11d3738e600dd199cf95bf4bb2b5ac2"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-010.json",
+      "bytes": 1917,
+      "sha256": "85c373dc2b70adef31933b3768738b04916ad51aabffdbcc0b0eac1b213c41cf"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-011.json",
+      "bytes": 34702,
+      "sha256": "045b8f53d564defbdcc8841dc2ef5772d14c30ebc13c62276ae5ad9f88aabae1"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-012.json",
+      "bytes": 11734,
+      "sha256": "13fa08ae0be605dd15dc15f801df95adf8fe2b2ee8c77bdbd80cb1fb9c3a4bb6"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-013.json",
+      "bytes": 3599,
+      "sha256": "c3dc6f3799c6f833197f0de30b539440c1832e753574352a487c373c98d60452"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-014.json",
+      "bytes": 6074,
+      "sha256": "359e62ca28062c5533f344eb9601fa351b34245bc7138029b0156e60c32dafa4"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-015.json",
+      "bytes": 1103,
+      "sha256": "1c267cbfe4274430fa07f1bc6b0e942fa81cc4ff6200ae94db8f0ea255b0c9ac"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-016.json",
+      "bytes": 5843,
+      "sha256": "ac7a22b4ab90cd8df2a5b100a236c64e3732b8261c047ece4e25729b42272263"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-017.json",
+      "bytes": 1104,
+      "sha256": "7419c005ae7e277333826030bc5e314f4ea5ab9d6b2106c195a780938221fb9f"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/response-018.json",
+      "bytes": 7277,
+      "sha256": "59a4fe8400ea3cc424b58b12fa8b911f47c8af4825d22c81fe0229f543e28cd4"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/result.json",
+      "bytes": 6832,
+      "sha256": "e7a65858572da5a833a87e01f79955353d6e8983db0bdcb896e990c5a17e5a7f"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/runner-snapshot.py",
+      "bytes": 22646,
+      "sha256": "f1292eaca133b83f192e141b143142d0f7df9ebd1bad2f2ce2f34a14fc3d791a"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/task-and-materials.json",
+      "bytes": 117704,
+      "sha256": "b893ef09b3cccd4806149edb0eae225575cc4b3426d0d2a19cb48846ba6629f8"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/benchmarks/results/bench_chunk.json",
+      "bytes": 1944,
+      "sha256": "a503770e3e4fe3f25d0d5cc1d2cff0d1f36270239a39360722a8be276b23ff39"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/benchmarks/results/bench_full.json",
+      "bytes": 1938,
+      "sha256": "de9d22c5c198e934b543b4064753ade2dc2b3ff92eb552be6b537fcaf4863850"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/benchmarks/results/bench_graph.json",
+      "bytes": 1907,
+      "sha256": "90e7e7543b179a99c5036fd24900cbc1cc84d5ea8b8986a01f2667567c579d2a"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/benchmarks/results/bench_hybrid.json",
+      "bytes": 1928,
+      "sha256": "43732aa7cc1b0dc061c87e07a3e628e31db41cfd0b67ddd508bc08dab54b60fa"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/benchmarks/results/bench_reference.json",
+      "bytes": 1971,
+      "sha256": "04c10a46c50d7f5fcfb84321eb783b4b97eb4d65b3dfdda86ef6462f16a6fbe1"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/benchmarks/results/check_chunk.json",
+      "bytes": 452,
+      "sha256": "a41e939712131af4a6fed8ddf76df3f1f51de3ec14c2980363b413adb7fd58ac"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/benchmarks/results/check_full.json",
+      "bytes": 449,
+      "sha256": "f8fbe8d7aed67a7205798799164366ee55c32285a782e2046653298f18b0bed5"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/benchmarks/results/check_graph.json",
+      "bytes": 452,
+      "sha256": "44cfdae4978e4a67184a5e13e64bd752f860f3add6e57f19e94c32966b9148e6"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/benchmarks/results/check_hybrid.json",
+      "bytes": 455,
+      "sha256": "31bfb6b31f364363bd3d1a8333ae31fdae334c7e178d9d784b422b5b324ddf10"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/benchmarks/results/check_reference.json",
+      "bytes": 432,
+      "sha256": "e2a835abe83160b27aaec075fab78f73681748dec4b14330c0ea49332f9d3622"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/benchmarks/results/checks.json",
+      "bytes": 2333,
+      "sha256": "2343bcb49c7d4d2e15ec958baa564d3d5c14235318faa417b9496ffb505bcc71"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/fix_and_run.py",
+      "bytes": 1335,
+      "sha256": "a5f139106bef5ab23b80e05acdba261bb20b9cf77429526788c05c486ea9ecb3"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/fix_and_run2.py",
+      "bytes": 940,
+      "sha256": "b1000536bb4f811d700819fedfeb85cff58df3ddf7cc0a1800edb6b7dcf8c6f5"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/ir/graph_builder.py",
+      "bytes": 2695,
+      "sha256": "1f373f33821c5d1672e6ca20b88703c8a1bbdfd18bd0e9b7400f8263ed711d48"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/probe.py",
+      "bytes": 670,
+      "sha256": "e9ad8a11850cd4a6e3c2dfbd15a6d1390ac2dd0ac5315620cd03741a45770427"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/tests/fixtures/cb_chunk.json",
+      "bytes": 122,
+      "sha256": "41e7b0a36528c62936029f903d483b0451faeb9021537b699227f48daefeede1"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/tests/fixtures/cb_full.json",
+      "bytes": 121,
+      "sha256": "27a250d2723504e537e4988246e79aafa9c2dc70e8c933c187e7dac5b38641a7"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/tests/fixtures/cb_graph.json",
+      "bytes": 122,
+      "sha256": "a0a38ddc7743adbb940b5097b1e3c28f7558c0f7e492cd2fac6764a20326b018"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/tests/fixtures/cb_hybrid.json",
+      "bytes": 123,
+      "sha256": "97ca37b78747593a5ff7e19cad856db90d787bfc26b6546e4a6207df3fe5b0fd"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/tests/fixtures/cb_reference.json",
+      "bytes": 126,
+      "sha256": "20cc8664922e1f1e2603304ff86389846aa2708694939005148b346342d2dfda"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/tests/fixtures/cf_chunk.json",
+      "bytes": 122,
+      "sha256": "804de3e26f71bbe05b6243716d1c80236c64cf6d50d232e8be5b3904dc1b7cf0"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/tests/fixtures/cf_full.json",
+      "bytes": 121,
+      "sha256": "acfcf60c9d5831d2409d915ee3a62070d78ef77f33b50995c45ac3651ae842be"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/tests/fixtures/cf_graph.json",
+      "bytes": 122,
+      "sha256": "a2de63b61e72ee1a8f3f4552c6c77fd6309d02f0686ee4c39d445791d7879f40"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/tests/fixtures/cf_hybrid.json",
+      "bytes": 123,
+      "sha256": "78c56a30b3fd3f4795b8b04f8f57dcee519b07f1da080e87433542ef8a4b6450"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/tests/fixtures/cf_reference.json",
+      "bytes": 126,
+      "sha256": "55405db65180dd7c1d7e0228c0436a2c23bcaafe240f02c23b9419d4aae2b860"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/tests/harness.py",
+      "bytes": 9488,
+      "sha256": "a2d8ae0b8f1e16c17c9b08fcbc2438dbcf522398026ad0622e4ffbd1602ec914"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/tests/test_ir.py",
+      "bytes": 3376,
+      "sha256": "fef8c29d5be085534c4107890120dffd9b39b5cfa148687b3f5c6a5877312735"
+    },
+    {
+      "path": "flashrt-pilot-phase4-mechanisms-01/work/flashrt/apps/causal_features/backend/worker.py",
+      "bytes": 13085,
+      "sha256": "563e110dc8223ab39b7f2a95bc8d01356d3a219496a4e893b205ea90d9babe4d"
+    }
+  ],
+  "excluded": "Public pinned source clones; reconstruct with the existing repository provenance and instruction manifests",
+  "verified_every_entry": true
+}

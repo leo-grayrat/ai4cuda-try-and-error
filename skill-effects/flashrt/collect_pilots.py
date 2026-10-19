@@ -37,13 +37,19 @@ def collect(run):
             if operation == 'write' and outcome.get('ok'):
                 writes.append({'index': row['index'], 'path': arguments['path']})
     payload = json.loads((run / 'task-and-materials.json').read_text(encoding='utf-8'))
-    prefix = payload['task'].split('The following four instruction documents retain their logical directory scopes:')[0]
+    prefix = payload['task']
+    for marker in ['The following four instruction documents retain their logical directory scopes:',
+                   'The following instruction documents retain their logical directory scopes:']:
+        if marker in prefix:
+            prefix = prefix.split(marker)[0]
     generated = (result.get('usage') or {}).get('output_tokens', 0)
     limit_kind = ('total_generation_budget' if generated >= config['output_budget'] else
                   'per_response_cap' if result['state'] == 'generation_truncated' else result['state'])
-    backend = run / 'work/flashrt/apps/causal_features/backend'
+    backend = run / 'work/flashrt/apps' / config.get('task', 'causal_features') / 'backend'
     final = result.get('final_evaluation', {})
     report = run / 'report.md'
+    attempted_reports = sorted((run / 'control').glob('submission-attempt-*.md'))
+    truncated_reports = sorted((run / 'control').glob('truncated-report-*.md'))
     return {'run': str(run), 'terminal_result_available': True, 'condition': config['condition'],
             'requests_attempted': result.get('requests_attempted', len(list(run.glob('request-*.json')))),
             'usage_records_complete': result.get('usage_records_complete', result['requests'] == len(list(run.glob('request-*.json')))),
@@ -57,6 +63,13 @@ def collect(run):
             'backend_files': [{'path': path.relative_to(backend).as_posix(), 'sha256': sha(path), 'bytes': path.stat().st_size}
                               for path in sorted(backend.rglob('*')) if path.is_file() and '__pycache__' not in path.parts],
             'report_available': report.exists(), 'report_sha256': sha(report) if report.exists() else None,
+            'prose_available': report.exists() or bool(attempted_reports),
+            'last_complete_prose': 'report.md' if report.exists() else attempted_reports[-1].relative_to(run).as_posix() if attempted_reports else None,
+            'task': config.get('task', 'causal_features'),
+            'report_budget': config.get('report_budget', 0), 'report_requests': config.get('report_requests', 0),
+            'report_stage_entered': result.get('report_stage_entered', False),
+            'attempted_reports': [{'path': path.relative_to(run).as_posix(), 'sha256': sha(path)} for path in attempted_reports],
+            'truncated_reports': [{'path': path.relative_to(run).as_posix(), 'sha256': sha(path)} for path in truncated_reports],
             'prose_review': None, 'final_correctness': final.get('correctness', {}).get('ok'),
             'final_benchmark': final.get('benchmark'), 'protected_files_changed': result['protected_files_changed'],
             'files_added_outside_backend': result.get('files_added_outside_backend'), 'result_sha256': sha(result_path)}
@@ -72,7 +85,7 @@ def main():
     comparable_groups = {}
     for row in terminal:
         key = (row['runner_sha256'], row['common_task_prefix_sha256'], row['output_budget'], row['steps'],
-               row['max_response_tokens'], row['permissions'], row['checker'])
+               row['max_response_tokens'], row['report_budget'], row['report_requests'])
         comparable_groups.setdefault(key, []).append(row['run'])
     result = {'scope': 'Development pilots; descriptive records only, no population effect estimate',
               'cache_note': 'Prior calibration requests can change cache hits; cached and uncached tokens remain separate',

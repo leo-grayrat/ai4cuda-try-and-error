@@ -17,7 +17,8 @@ def main():
         for run in args.runs:
             assert (run / 'result.json').exists(), 'Archive terminal pilots only'
             selected = [path for path in run.iterdir() if path.is_file()]
-            for subtree in ['control', 'work/flashrt/apps/causal_features/backend']:
+            config = json.loads((run / 'config.json').read_text(encoding='utf-8'))
+            for subtree in ['control', 'work/flashrt/apps/' + config.get('task', 'causal_features') + '/backend']:
                 selected += [path for path in (run / subtree).rglob('*')
                              if path.is_file() and '__pycache__' not in path.parts]
             for path in sorted(set(selected)):

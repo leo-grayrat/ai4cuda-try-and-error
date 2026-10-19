@@ -1,0 +1,688 @@
+{
+  "scope": "Development pilots; descriptive records only, no population effect estimate",
+  "cache_note": "Prior calibration requests can change cache hits; cached and uncached tokens remain separate",
+  "missing_report_policy": "No prose-quality score is assigned to an absent report",
+  "runs": [
+    {
+      "run": "skill-effects\\runs\\flashrt-pilot-phase4-mechanisms-01",
+      "terminal_result_available": true,
+      "condition": "phase4",
+      "requests_attempted": 19,
+      "usage_records_complete": true,
+      "permissions": true,
+      "checker": true,
+      "runner_sha256": "f1292eaca133b83f192e141b143142d0f7df9ebd1bad2f2ce2f34a14fc3d791a",
+      "common_task_prefix_sha256": "b656f2aad46fa276889b12029da42aec6469701cc781ee1a7c131e614a9129f4",
+      "steps": 24,
+      "output_budget": 48000,
+      "max_response_tokens": 48000,
+      "state": "output_budget",
+      "termination_classification": "total_generation_budget",
+      "usage": {
+        "input_tokens": 1106680,
+        "uncached_input_tokens": 49784,
+        "cached_input_tokens": 1056896,
+        "output_tokens": 48000,
+        "reasoning_tokens": 32252,
+        "total_tokens": 1154680
+      },
+      "seconds": 610.743424100001,
+      "responses": [
+        {
+          "index": 0,
+          "usage": {
+            "prompt_tokens": 27093,
+            "completion_tokens": 171,
+            "total_tokens": 27264,
+            "prompt_tokens_details": {
+              "cached_tokens": 640
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 59
+            },
+            "prompt_cache_hit_tokens": 640,
+            "prompt_cache_miss_tokens": 26453
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 1,
+          "usage": {
+            "prompt_tokens": 27403,
+            "completion_tokens": 130,
+            "total_tokens": 27533,
+            "prompt_tokens_details": {
+              "cached_tokens": 27264
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 11
+            },
+            "prompt_cache_hit_tokens": 27264,
+            "prompt_cache_miss_tokens": 139
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 2,
+          "usage": {
+            "prompt_tokens": 29482,
+            "completion_tokens": 115,
+            "total_tokens": 29597,
+            "prompt_tokens_details": {
+              "cached_tokens": 27520
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 27520,
+            "prompt_cache_miss_tokens": 1962
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 3,
+          "usage": {
+            "prompt_tokens": 30981,
+            "completion_tokens": 295,
+            "total_tokens": 31276,
+            "prompt_tokens_details": {
+              "cached_tokens": 29568
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 179
+            },
+            "prompt_cache_hit_tokens": 29568,
+            "prompt_cache_miss_tokens": 1413
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 4,
+          "usage": {
+            "prompt_tokens": 33609,
+            "completion_tokens": 112,
+            "total_tokens": 33721,
+            "prompt_tokens_details": {
+              "cached_tokens": 31232
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 31232,
+            "prompt_cache_miss_tokens": 2377
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 5,
+          "usage": {
+            "prompt_tokens": 34979,
+            "completion_tokens": 3018,
+            "total_tokens": 37997,
+            "prompt_tokens_details": {
+              "cached_tokens": 33664
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 2910
+            },
+            "prompt_cache_hit_tokens": 33664,
+            "prompt_cache_miss_tokens": 1315
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 6,
+          "usage": {
+            "prompt_tokens": 38105,
+            "completion_tokens": 371,
+            "total_tokens": 38476,
+            "prompt_tokens_details": {
+              "cached_tokens": 37888
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 157
+            },
+            "prompt_cache_hit_tokens": 37888,
+            "prompt_cache_miss_tokens": 217
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 7,
+          "usage": {
+            "prompt_tokens": 38517,
+            "completion_tokens": 65,
+            "total_tokens": 38582,
+            "prompt_tokens_details": {
+              "cached_tokens": 38272
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 38272,
+            "prompt_cache_miss_tokens": 245
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 8,
+          "usage": {
+            "prompt_tokens": 39026,
+            "completion_tokens": 19980,
+            "total_tokens": 59006,
+            "prompt_tokens_details": {
+              "cached_tokens": 38528
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 16853
+            },
+            "prompt_cache_hit_tokens": 38528,
+            "prompt_cache_miss_tokens": 498
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 9,
+          "usage": {
+            "prompt_tokens": 62400,
+            "completion_tokens": 6403,
+            "total_tokens": 68803,
+            "prompt_tokens_details": {
+              "cached_tokens": 58880
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 3171
+            },
+            "prompt_cache_hit_tokens": 58880,
+            "prompt_cache_miss_tokens": 3520
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 10,
+          "usage": {
+            "prompt_tokens": 68881,
+            "completion_tokens": 259,
+            "total_tokens": 69140,
+            "prompt_tokens_details": {
+              "cached_tokens": 68736
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 194
+            },
+            "prompt_cache_hit_tokens": 68736,
+            "prompt_cache_miss_tokens": 145
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 11,
+          "usage": {
+            "prompt_tokens": 70399,
+            "completion_tokens": 8990,
+            "total_tokens": 79389,
+            "prompt_tokens_details": {
+              "cached_tokens": 69120
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 4357
+            },
+            "prompt_cache_hit_tokens": 69120,
+            "prompt_cache_miss_tokens": 1279
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 12,
+          "usage": {
+            "prompt_tokens": 79515,
+            "completion_tokens": 2903,
+            "total_tokens": 82418,
+            "prompt_tokens_details": {
+              "cached_tokens": 79360
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 219
+            },
+            "prompt_cache_hit_tokens": 79360,
+            "prompt_cache_miss_tokens": 155
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 13,
+          "usage": {
+            "prompt_tokens": 82459,
+            "completion_tokens": 700,
+            "total_tokens": 83159,
+            "prompt_tokens_details": {
+              "cached_tokens": 82304
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 632
+            },
+            "prompt_cache_hit_tokens": 82304,
+            "prompt_cache_miss_tokens": 155
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 14,
+          "usage": {
+            "prompt_tokens": 83467,
+            "completion_tokens": 1356,
+            "total_tokens": 84823,
+            "prompt_tokens_details": {
+              "cached_tokens": 83072
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 890
+            },
+            "prompt_cache_hit_tokens": 83072,
+            "prompt_cache_miss_tokens": 395
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 15,
+          "usage": {
+            "prompt_tokens": 84864,
+            "completion_tokens": 67,
+            "total_tokens": 84931,
+            "prompt_tokens_details": {
+              "cached_tokens": 84608
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 84608,
+            "prompt_cache_miss_tokens": 256
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 16,
+          "usage": {
+            "prompt_tokens": 89376,
+            "completion_tokens": 1454,
+            "total_tokens": 90830,
+            "prompt_tokens_details": {
+              "cached_tokens": 84736
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 1077
+            },
+            "prompt_cache_hit_tokens": 84736,
+            "prompt_cache_miss_tokens": 4640
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 17,
+          "usage": {
+            "prompt_tokens": 90871,
+            "completion_tokens": 68,
+            "total_tokens": 90939,
+            "prompt_tokens_details": {
+              "cached_tokens": 90624
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 90624,
+            "prompt_cache_miss_tokens": 247
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 18,
+          "usage": {
+            "prompt_tokens": 95253,
+            "completion_tokens": 1543,
+            "total_tokens": 96796,
+            "prompt_tokens_details": {
+              "cached_tokens": 90880
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 1543
+            },
+            "prompt_cache_hit_tokens": 90880,
+            "prompt_cache_miss_tokens": 4373
+          },
+          "finish_reason": "length"
+        }
+      ],
+      "tool_operations": {
+        "list": 5,
+        "read": 8,
+        "write": 9,
+        "execute": 5,
+        "write\">\n": 1
+      },
+      "failed_tools": [
+        {
+          "index": 11,
+          "operation": "write\">\n",
+          "path": "flashrt/apps/causal_features/backend/tests/harness.py",
+          "error": "ValueError: Unknown workspace operation",
+          "exitcode": null
+        },
+        {
+          "index": 13,
+          "operation": "execute",
+          "path": "flashrt/apps/causal_features/backend/tests/harness.py",
+          "error": null,
+          "exitcode": 1
+        }
+      ],
+      "successful_writes": [
+        {
+          "index": 6,
+          "path": "flashrt/apps/causal_features/backend/probe.py"
+        },
+        {
+          "index": 8,
+          "path": "flashrt/apps/causal_features/backend/worker.py"
+        },
+        {
+          "index": 9,
+          "path": "flashrt/apps/causal_features/backend/tests/harness.py"
+        },
+        {
+          "index": 9,
+          "path": "flashrt/apps/causal_features/backend/probe.py"
+        },
+        {
+          "index": 11,
+          "path": "flashrt/apps/causal_features/backend/ir/graph_builder.py"
+        },
+        {
+          "index": 11,
+          "path": "flashrt/apps/causal_features/backend/tests/test_ir.py"
+        },
+        {
+          "index": 12,
+          "path": "flashrt/apps/causal_features/backend/tests/harness.py"
+        },
+        {
+          "index": 14,
+          "path": "flashrt/apps/causal_features/backend/fix_and_run.py"
+        },
+        {
+          "index": 16,
+          "path": "flashrt/apps/causal_features/backend/fix_and_run2.py"
+        }
+      ],
+      "backend_files": [
+        {
+          "path": "benchmarks/results/bench_chunk.json",
+          "sha256": "a503770e3e4fe3f25d0d5cc1d2cff0d1f36270239a39360722a8be276b23ff39",
+          "bytes": 1944
+        },
+        {
+          "path": "benchmarks/results/bench_full.json",
+          "sha256": "de9d22c5c198e934b543b4064753ade2dc2b3ff92eb552be6b537fcaf4863850",
+          "bytes": 1938
+        },
+        {
+          "path": "benchmarks/results/bench_graph.json",
+          "sha256": "90e7e7543b179a99c5036fd24900cbc1cc84d5ea8b8986a01f2667567c579d2a",
+          "bytes": 1907
+        },
+        {
+          "path": "benchmarks/results/bench_hybrid.json",
+          "sha256": "43732aa7cc1b0dc061c87e07a3e628e31db41cfd0b67ddd508bc08dab54b60fa",
+          "bytes": 1928
+        },
+        {
+          "path": "benchmarks/results/bench_reference.json",
+          "sha256": "04c10a46c50d7f5fcfb84321eb783b4b97eb4d65b3dfdda86ef6462f16a6fbe1",
+          "bytes": 1971
+        },
+        {
+          "path": "benchmarks/results/check_chunk.json",
+          "sha256": "a41e939712131af4a6fed8ddf76df3f1f51de3ec14c2980363b413adb7fd58ac",
+          "bytes": 452
+        },
+        {
+          "path": "benchmarks/results/check_full.json",
+          "sha256": "f8fbe8d7aed67a7205798799164366ee55c32285a782e2046653298f18b0bed5",
+          "bytes": 449
+        },
+        {
+          "path": "benchmarks/results/check_graph.json",
+          "sha256": "44cfdae4978e4a67184a5e13e64bd752f860f3add6e57f19e94c32966b9148e6",
+          "bytes": 452
+        },
+        {
+          "path": "benchmarks/results/check_hybrid.json",
+          "sha256": "31bfb6b31f364363bd3d1a8333ae31fdae334c7e178d9d784b422b5b324ddf10",
+          "bytes": 455
+        },
+        {
+          "path": "benchmarks/results/check_reference.json",
+          "sha256": "e2a835abe83160b27aaec075fab78f73681748dec4b14330c0ea49332f9d3622",
+          "bytes": 432
+        },
+        {
+          "path": "benchmarks/results/checks.json",
+          "sha256": "2343bcb49c7d4d2e15ec958baa564d3d5c14235318faa417b9496ffb505bcc71",
+          "bytes": 2333
+        },
+        {
+          "path": "fix_and_run.py",
+          "sha256": "a5f139106bef5ab23b80e05acdba261bb20b9cf77429526788c05c486ea9ecb3",
+          "bytes": 1335
+        },
+        {
+          "path": "fix_and_run2.py",
+          "sha256": "b1000536bb4f811d700819fedfeb85cff58df3ddf7cc0a1800edb6b7dcf8c6f5",
+          "bytes": 940
+        },
+        {
+          "path": "ir/graph_builder.py",
+          "sha256": "1f373f33821c5d1672e6ca20b88703c8a1bbdfd18bd0e9b7400f8263ed711d48",
+          "bytes": 2695
+        },
+        {
+          "path": "probe.py",
+          "sha256": "e9ad8a11850cd4a6e3c2dfbd15a6d1390ac2dd0ac5315620cd03741a45770427",
+          "bytes": 670
+        },
+        {
+          "path": "tests/fixtures/cb_chunk.json",
+          "sha256": "41e7b0a36528c62936029f903d483b0451faeb9021537b699227f48daefeede1",
+          "bytes": 122
+        },
+        {
+          "path": "tests/fixtures/cb_full.json",
+          "sha256": "27a250d2723504e537e4988246e79aafa9c2dc70e8c933c187e7dac5b38641a7",
+          "bytes": 121
+        },
+        {
+          "path": "tests/fixtures/cb_graph.json",
+          "sha256": "a0a38ddc7743adbb940b5097b1e3c28f7558c0f7e492cd2fac6764a20326b018",
+          "bytes": 122
+        },
+        {
+          "path": "tests/fixtures/cb_hybrid.json",
+          "sha256": "97ca37b78747593a5ff7e19cad856db90d787bfc26b6546e4a6207df3fe5b0fd",
+          "bytes": 123
+        },
+        {
+          "path": "tests/fixtures/cb_reference.json",
+          "sha256": "20cc8664922e1f1e2603304ff86389846aa2708694939005148b346342d2dfda",
+          "bytes": 126
+        },
+        {
+          "path": "tests/fixtures/cf_chunk.json",
+          "sha256": "804de3e26f71bbe05b6243716d1c80236c64cf6d50d232e8be5b3904dc1b7cf0",
+          "bytes": 122
+        },
+        {
+          "path": "tests/fixtures/cf_full.json",
+          "sha256": "acfcf60c9d5831d2409d915ee3a62070d78ef77f33b50995c45ac3651ae842be",
+          "bytes": 121
+        },
+        {
+          "path": "tests/fixtures/cf_graph.json",
+          "sha256": "a2de63b61e72ee1a8f3f4552c6c77fd6309d02f0686ee4c39d445791d7879f40",
+          "bytes": 122
+        },
+        {
+          "path": "tests/fixtures/cf_hybrid.json",
+          "sha256": "78c56a30b3fd3f4795b8b04f8f57dcee519b07f1da080e87433542ef8a4b6450",
+          "bytes": 123
+        },
+        {
+          "path": "tests/fixtures/cf_reference.json",
+          "sha256": "55405db65180dd7c1d7e0228c0436a2c23bcaafe240f02c23b9419d4aae2b860",
+          "bytes": 126
+        },
+        {
+          "path": "tests/harness.py",
+          "sha256": "a2d8ae0b8f1e16c17c9b08fcbc2438dbcf522398026ad0622e4ffbd1602ec914",
+          "bytes": 9488
+        },
+        {
+          "path": "tests/test_ir.py",
+          "sha256": "fef8c29d5be085534c4107890120dffd9b39b5cfa148687b3f5c6a5877312735",
+          "bytes": 3376
+        },
+        {
+          "path": "worker.py",
+          "sha256": "563e110dc8223ab39b7f2a95bc8d01356d3a219496a4e893b205ea90d9babe4d",
+          "bytes": 13085
+        }
+      ],
+      "report_available": false,
+      "report_sha256": null,
+      "prose_review": null,
+      "final_correctness": true,
+      "final_benchmark": {
+        "ok": true,
+        "paired_measurements": {
+          "reference": {
+            "execution": {
+              "exitcode": 0,
+              "seconds": 18.0014119999978,
+              "stdout": "{\"offered_requests_per_second\": 50.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"offered_requests_per_second\": 100.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"offered_requests_per_second\": 200.0, \"peak_external_queue_requests\": 36, \"rate_gate_passed\": false, \"smoothness_gate_passed\": true}\n{\"status\": \"load_sweep_completed\", \"highest_tested_passing_rate\": 100.0}\n",
+              "stderr": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n",
+              "evidence_directory": "benchmark-007/reference-controller"
+            },
+            "status": "load_sweep_completed",
+            "highest_tested_passing_rate": 100.0,
+            "loads": [
+              {
+                "offered_requests_per_second": 50.0,
+                "first_output_ms": {
+                  "median": 1.5501,
+                  "p95": 1.616245
+                },
+                "output_gap_ms": {
+                  "median": 0.5412,
+                  "p95": 16.214579999999998,
+                  "over_budget_fraction": 0.0
+                },
+                "rate_gate_passed": true,
+                "smoothness_gate_passed": true
+              },
+              {
+                "offered_requests_per_second": 100.0,
+                "first_output_ms": {
+                  "median": 1.5537,
+                  "p95": 1.7106599999999998
+                },
+                "output_gap_ms": {
+                  "median": 0.5415,
+                  "p95": 6.315329999999999,
+                  "over_budget_fraction": 0.0
+                },
+                "rate_gate_passed": true,
+                "smoothness_gate_passed": true
+              },
+              {
+                "offered_requests_per_second": 200.0,
+                "first_output_ms": {
+                  "median": 1.50715,
+                  "p95": 1.7162949999999992
+                },
+                "output_gap_ms": {
+                  "median": 0.545,
+                  "p95": 1.5533199999999998,
+                  "over_budget_fraction": 0.0
+                },
+                "rate_gate_passed": false,
+                "smoothness_gate_passed": true
+              }
+            ]
+          },
+          "candidate": {
+            "execution": {
+              "exitcode": 0,
+              "seconds": 18.074648199995863,
+              "stdout": "{\"offered_requests_per_second\": 50.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": false}\n{\"offered_requests_per_second\": 100.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"offered_requests_per_second\": 200.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"status\": \"load_sweep_completed\", \"highest_tested_passing_rate\": 200.0}\n",
+              "stderr": "Failed to find real location of C:\\Users\\34788\\anaconda3\\python.exe\n",
+              "evidence_directory": "benchmark-007/candidate-controller"
+            },
+            "status": "load_sweep_completed",
+            "highest_tested_passing_rate": 200.0,
+            "loads": [
+              {
+                "offered_requests_per_second": 50.0,
+                "first_output_ms": {
+                  "median": 1.5581,
+                  "p95": 1.7011349999999998
+                },
+                "output_gap_ms": {
+                  "median": 0.0059,
+                  "p95": 19.908299999999997,
+                  "over_budget_fraction": 0.042316258351893093
+                },
+                "rate_gate_passed": true,
+                "smoothness_gate_passed": false
+              },
+              {
+                "offered_requests_per_second": 100.0,
+                "first_output_ms": {
+                  "median": 1.55515,
+                  "p95": 1.65749
+                },
+                "output_gap_ms": {
+                  "median": 0.0058,
+                  "p95": 9.908639999999998,
+                  "over_budget_fraction": 0.0
+                },
+                "rate_gate_passed": true,
+                "smoothness_gate_passed": true
+              },
+              {
+                "offered_requests_per_second": 200.0,
+                "first_output_ms": {
+                  "median": 1.55065,
+                  "p95": 1.8769499999999997
+                },
+                "output_gap_ms": {
+                  "median": 0.0056,
+                  "p95": 5.09483,
+                  "over_budget_fraction": 0.0
+                },
+                "rate_gate_passed": true,
+                "smoothness_gate_passed": true
+              }
+            ]
+          }
+        },
+        "scope": "Pilot finite windows, fixed reference-then-candidate order; no aggregate effect claim"
+      },
+      "protected_files_changed": [],
+      "files_added_outside_backend": [],
+      "result_sha256": "e7a65858572da5a833a87e01f79955353d6e8983db0bdcb896e990c5a17e5a7f"
+    }
+  ],
+  "same_runner_and_task_groups": [
+    [
+      "skill-effects\\runs\\flashrt-pilot-phase4-mechanisms-01"
+    ]
+  ]
+}

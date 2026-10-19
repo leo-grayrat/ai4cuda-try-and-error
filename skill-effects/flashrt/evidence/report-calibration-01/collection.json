@@ -1,0 +1,628 @@
+{
+  "scope": "Development pilots; descriptive records only, no population effect estimate",
+  "cache_note": "Prior calibration requests can change cache hits; cached and uncached tokens remain separate",
+  "missing_report_policy": "No prose-quality score is assigned to an absent report",
+  "runs": [
+    {
+      "run": "skill-effects\\runs\\flashrt-report-smoke-01",
+      "terminal_result_available": true,
+      "condition": "task_only",
+      "requests_attempted": 5,
+      "usage_records_complete": true,
+      "permissions": false,
+      "checker": false,
+      "runner_sha256": "c2a13dfc6bd1ecbf70966e96090d882596273906e661751837a0482caa05b60b",
+      "common_task_prefix_sha256": "366e92eb6ed38884b17edda0a3859c5709c628a78e0b4035e0e7009e63761d75",
+      "steps": 6,
+      "output_budget": 3000,
+      "max_response_tokens": 3000,
+      "state": "report_request_budget",
+      "termination_classification": "report_request_budget",
+      "usage": {
+        "input_tokens": 19495,
+        "uncached_input_tokens": 10535,
+        "cached_input_tokens": 8960,
+        "output_tokens": 2043,
+        "reasoning_tokens": null,
+        "total_tokens": 21538
+      },
+      "seconds": 121.54852689999097,
+      "responses": [
+        {
+          "index": 0,
+          "usage": {
+            "prompt_tokens": 984,
+            "completion_tokens": 120,
+            "total_tokens": 1104,
+            "prompt_tokens_details": {
+              "cached_tokens": 512
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 8
+            },
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 472
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 1,
+          "usage": {
+            "prompt_tokens": 1277,
+            "completion_tokens": 253,
+            "total_tokens": 1530,
+            "prompt_tokens_details": {
+              "cached_tokens": 1024
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 29
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 253
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 2,
+          "usage": {
+            "prompt_tokens": 4927,
+            "completion_tokens": 1553,
+            "total_tokens": 6480,
+            "prompt_tokens_details": {
+              "cached_tokens": 1408
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 552
+            },
+            "prompt_cache_hit_tokens": 1408,
+            "prompt_cache_miss_tokens": 3519
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 3,
+          "usage": {
+            "prompt_tokens": 6015,
+            "completion_tokens": 64,
+            "total_tokens": 6079,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 6015
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 4,
+          "usage": {
+            "prompt_tokens": 6292,
+            "completion_tokens": 53,
+            "total_tokens": 6345,
+            "prompt_tokens_details": {
+              "cached_tokens": 6016
+            },
+            "prompt_cache_hit_tokens": 6016,
+            "prompt_cache_miss_tokens": 276
+          },
+          "finish_reason": "tool_calls"
+        }
+      ],
+      "tool_operations": {
+        "list": 3,
+        "read": 4,
+        "write": 1,
+        "verify": 1
+      },
+      "failed_tools": [
+        {
+          "index": 3,
+          "operation": "verify",
+          "path": "flashrt/apps/causal_features/backend/worker.py",
+          "error": null,
+          "exitcode": null
+        }
+      ],
+      "successful_writes": [
+        {
+          "index": 2,
+          "path": "flashrt/apps/causal_features/backend/worker.py"
+        }
+      ],
+      "backend_files": [
+        {
+          "path": "worker.py",
+          "sha256": "070682f19d0a743e3882db55bb78a61d63ecfb45f568a460a397d0f74cfad38a",
+          "bytes": 4152
+        }
+      ],
+      "report_available": false,
+      "report_sha256": null,
+      "prose_available": false,
+      "last_complete_prose": null,
+      "task": "causal_features",
+      "report_budget": 1000,
+      "report_requests": 2,
+      "report_stage_entered": true,
+      "attempted_reports": [],
+      "truncated_reports": [],
+      "prose_review": null,
+      "final_correctness": false,
+      "final_benchmark": null,
+      "protected_files_changed": [],
+      "files_added_outside_backend": [],
+      "result_sha256": "4c5a08e18b3a65795c1fcadf47e386e3f57a5414aacbf401daff20e6cce8043f"
+    },
+    {
+      "run": "skill-effects\\runs\\flashrt-report-smoke-02",
+      "terminal_result_available": true,
+      "condition": "task_only",
+      "requests_attempted": 3,
+      "usage_records_complete": true,
+      "permissions": false,
+      "checker": false,
+      "runner_sha256": "dc81659102f046fbf634c87acb375ff57d81b6cd5deb081eba2d44a080a9b7de",
+      "common_task_prefix_sha256": "3ceb1290495f3e2b70d1eec137e51e44e9e559b666f63f61fed9174a810c7af7",
+      "steps": 4,
+      "output_budget": 2000,
+      "max_response_tokens": 2000,
+      "state": "submitted",
+      "termination_classification": "submitted",
+      "usage": {
+        "input_tokens": 7296,
+        "uncached_input_tokens": 4992,
+        "cached_input_tokens": 2304,
+        "output_tokens": 749,
+        "reasoning_tokens": 30,
+        "total_tokens": 8045
+      },
+      "seconds": 6.520776900011697,
+      "responses": [
+        {
+          "index": 0,
+          "usage": {
+            "prompt_tokens": 983,
+            "completion_tokens": 120,
+            "total_tokens": 1103,
+            "prompt_tokens_details": {
+              "cached_tokens": 640
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 8
+            },
+            "prompt_cache_hit_tokens": 640,
+            "prompt_cache_miss_tokens": 343
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 1,
+          "usage": {
+            "prompt_tokens": 1296,
+            "completion_tokens": 246,
+            "total_tokens": 1542,
+            "prompt_tokens_details": {
+              "cached_tokens": 1024
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 22
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 272
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 2,
+          "usage": {
+            "prompt_tokens": 5017,
+            "completion_tokens": 383,
+            "total_tokens": 5400,
+            "prompt_tokens_details": {
+              "cached_tokens": 640
+            },
+            "prompt_cache_hit_tokens": 640,
+            "prompt_cache_miss_tokens": 4377
+          },
+          "finish_reason": "tool_calls"
+        }
+      ],
+      "tool_operations": {
+        "list": 2,
+        "read": 4,
+        "finish": 1
+      },
+      "failed_tools": [],
+      "successful_writes": [],
+      "backend_files": [],
+      "report_available": true,
+      "report_sha256": "5471dddf472fd07692049ed03d9c929ef9729006fbfd37ccac77a9a4003fee6a",
+      "prose_available": true,
+      "last_complete_prose": "report.md",
+      "task": "causal_features",
+      "report_budget": 1200,
+      "report_requests": 2,
+      "report_stage_entered": true,
+      "attempted_reports": [
+        {
+          "path": "control/submission-attempt-001.md",
+          "sha256": "5471dddf472fd07692049ed03d9c929ef9729006fbfd37ccac77a9a4003fee6a"
+        }
+      ],
+      "truncated_reports": [],
+      "prose_review": null,
+      "final_correctness": null,
+      "final_benchmark": null,
+      "protected_files_changed": [],
+      "files_added_outside_backend": [],
+      "result_sha256": "fd64d1eec96067f800e99ed6e01793f3d6735bdb01032e07c687e4a62a0a5817"
+    },
+    {
+      "run": "skill-effects\\runs\\flashrt-report-smoke-checker-01",
+      "terminal_result_available": true,
+      "condition": "task_only",
+      "requests_attempted": 3,
+      "usage_records_complete": true,
+      "permissions": true,
+      "checker": true,
+      "runner_sha256": "dc81659102f046fbf634c87acb375ff57d81b6cd5deb081eba2d44a080a9b7de",
+      "common_task_prefix_sha256": "3ceb1290495f3e2b70d1eec137e51e44e9e559b666f63f61fed9174a810c7af7",
+      "steps": 4,
+      "output_budget": 2000,
+      "max_response_tokens": 2000,
+      "state": "report_token_budget",
+      "termination_classification": "report_token_budget",
+      "usage": {
+        "input_tokens": 7318,
+        "uncached_input_tokens": 4502,
+        "cached_input_tokens": 2816,
+        "output_tokens": 1417,
+        "reasoning_tokens": 83,
+        "total_tokens": 8735
+      },
+      "seconds": 31.202205399997183,
+      "responses": [
+        {
+          "index": 0,
+          "usage": {
+            "prompt_tokens": 983,
+            "completion_tokens": 142,
+            "total_tokens": 1125,
+            "prompt_tokens_details": {
+              "cached_tokens": 768
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 30
+            },
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 215
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 1,
+          "usage": {
+            "prompt_tokens": 1318,
+            "completion_tokens": 277,
+            "total_tokens": 1595,
+            "prompt_tokens_details": {
+              "cached_tokens": 1024
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 53
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 294
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 2,
+          "usage": {
+            "prompt_tokens": 5017,
+            "completion_tokens": 998,
+            "total_tokens": 6015,
+            "prompt_tokens_details": {
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 3993
+          },
+          "finish_reason": "tool_calls"
+        }
+      ],
+      "tool_operations": {
+        "list": 2,
+        "read": 4,
+        "write": 1
+      },
+      "failed_tools": [],
+      "successful_writes": [
+        {
+          "index": 2,
+          "path": "flashrt/apps/causal_features/backend/worker.py"
+        }
+      ],
+      "backend_files": [
+        {
+          "path": "worker.py",
+          "sha256": "3de18c22845f180f03fffdc9be67006ca50aa982bffb701d21158d2d040cdf38",
+          "bytes": 4165
+        }
+      ],
+      "report_available": false,
+      "report_sha256": null,
+      "prose_available": false,
+      "last_complete_prose": null,
+      "task": "causal_features",
+      "report_budget": 1200,
+      "report_requests": 2,
+      "report_stage_entered": true,
+      "attempted_reports": [],
+      "truncated_reports": [],
+      "prose_review": null,
+      "final_correctness": false,
+      "final_benchmark": null,
+      "protected_files_changed": [],
+      "files_added_outside_backend": [],
+      "result_sha256": "1ea77121c186c202cf7909a78f6dd61ff916b3063165b38f59916fcb50a9f272"
+    },
+    {
+      "run": "skill-effects\\runs\\flashrt-report-smoke-03",
+      "terminal_result_available": true,
+      "condition": "task_only",
+      "requests_attempted": 4,
+      "usage_records_complete": true,
+      "permissions": false,
+      "checker": false,
+      "runner_sha256": "e8e0d979e3ae787a2cc97ce3369fed7b57dae48e791072d9037534fefa9faffc",
+      "common_task_prefix_sha256": "257559ddd0dae981eff4931982aaddd697500d0f58338639653b8bcd052dec05",
+      "steps": 4,
+      "output_budget": 2000,
+      "max_response_tokens": 2000,
+      "state": "submitted",
+      "termination_classification": "submitted",
+      "usage": {
+        "input_tokens": 8089,
+        "uncached_input_tokens": 6169,
+        "cached_input_tokens": 1920,
+        "output_tokens": 1355,
+        "reasoning_tokens": 500,
+        "total_tokens": 9444
+      },
+      "seconds": 10.371569299997645,
+      "responses": [
+        {
+          "index": 0,
+          "usage": {
+            "prompt_tokens": 1008,
+            "completion_tokens": 149,
+            "total_tokens": 1157,
+            "prompt_tokens_details": {
+              "cached_tokens": 640
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 33
+            },
+            "prompt_cache_hit_tokens": 640,
+            "prompt_cache_miss_tokens": 368
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 1,
+          "usage": {
+            "prompt_tokens": 2092,
+            "completion_tokens": 651,
+            "total_tokens": 2743,
+            "prompt_tokens_details": {
+              "cached_tokens": 1152
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 467
+            },
+            "prompt_cache_hit_tokens": 1152,
+            "prompt_cache_miss_tokens": 940
+          },
+          "finish_reason": "length"
+        },
+        {
+          "index": 2,
+          "usage": {
+            "prompt_tokens": 2422,
+            "completion_tokens": 61,
+            "total_tokens": 2483,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 2422
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 3,
+          "usage": {
+            "prompt_tokens": 2567,
+            "completion_tokens": 494,
+            "total_tokens": 3061,
+            "prompt_tokens_details": {
+              "cached_tokens": 128
+            },
+            "prompt_cache_hit_tokens": 128,
+            "prompt_cache_miss_tokens": 2439
+          },
+          "finish_reason": "tool_calls"
+        }
+      ],
+      "tool_operations": {
+        "list": 2,
+        "read": 1,
+        "finish": 1
+      },
+      "failed_tools": [],
+      "successful_writes": [],
+      "backend_files": [],
+      "report_available": true,
+      "report_sha256": "97f011e3ad469295221e1a7696bc49815ce4241cadf4c09d4dd40a0b53063796",
+      "prose_available": true,
+      "last_complete_prose": "report.md",
+      "task": "causal_features",
+      "report_budget": 1200,
+      "report_requests": 2,
+      "report_stage_entered": true,
+      "attempted_reports": [
+        {
+          "path": "control/submission-attempt-001.md",
+          "sha256": "97f011e3ad469295221e1a7696bc49815ce4241cadf4c09d4dd40a0b53063796"
+        }
+      ],
+      "truncated_reports": [],
+      "prose_review": null,
+      "final_correctness": null,
+      "final_benchmark": null,
+      "protected_files_changed": [],
+      "files_added_outside_backend": [],
+      "result_sha256": "4ff4a412d79a83ac499a10ee0b8f86ec4dc14606f2ec38a90da6af5d2739c896"
+    },
+    {
+      "run": "skill-effects\\runs\\flashrt-report-smoke-checker-02",
+      "terminal_result_available": true,
+      "condition": "task_only",
+      "requests_attempted": 4,
+      "usage_records_complete": true,
+      "permissions": true,
+      "checker": true,
+      "runner_sha256": "e8e0d979e3ae787a2cc97ce3369fed7b57dae48e791072d9037534fefa9faffc",
+      "common_task_prefix_sha256": "257559ddd0dae981eff4931982aaddd697500d0f58338639653b8bcd052dec05",
+      "steps": 4,
+      "output_budget": 2000,
+      "max_response_tokens": 2000,
+      "state": "report_generation_truncated",
+      "termination_classification": "report_generation_truncated",
+      "usage": {
+        "input_tokens": 13247,
+        "uncached_input_tokens": 9663,
+        "cached_input_tokens": 3584,
+        "output_tokens": 1581,
+        "reasoning_tokens": 45,
+        "total_tokens": 14828
+      },
+      "seconds": 11.03540079999948,
+      "responses": [
+        {
+          "index": 0,
+          "usage": {
+            "prompt_tokens": 1008,
+            "completion_tokens": 120,
+            "total_tokens": 1128,
+            "prompt_tokens_details": {
+              "cached_tokens": 768
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 8
+            },
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 240
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 1,
+          "usage": {
+            "prompt_tokens": 1321,
+            "completion_tokens": 261,
+            "total_tokens": 1582,
+            "prompt_tokens_details": {
+              "cached_tokens": 1024
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 37
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 297
+          },
+          "finish_reason": "tool_calls"
+        },
+        {
+          "index": 2,
+          "usage": {
+            "prompt_tokens": 5025,
+            "completion_tokens": 770,
+            "total_tokens": 5795,
+            "prompt_tokens_details": {
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 4129
+          },
+          "finish_reason": "stop"
+        },
+        {
+          "index": 3,
+          "usage": {
+            "prompt_tokens": 5893,
+            "completion_tokens": 430,
+            "total_tokens": 6323,
+            "prompt_tokens_details": {
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 4997
+          },
+          "finish_reason": "length"
+        }
+      ],
+      "tool_operations": {
+        "list": 2,
+        "read": 4,
+        "finish": 1
+      },
+      "failed_tools": [
+        {
+          "index": 2,
+          "operation": "finish",
+          "path": null,
+          "error": "ValueError: Submission requires correctness and load measurements for the current code",
+          "exitcode": null
+        }
+      ],
+      "successful_writes": [],
+      "backend_files": [],
+      "report_available": false,
+      "report_sha256": null,
+      "prose_available": true,
+      "last_complete_prose": "control/submission-attempt-001.md",
+      "task": "causal_features",
+      "report_budget": 1200,
+      "report_requests": 2,
+      "report_stage_entered": true,
+      "attempted_reports": [
+        {
+          "path": "control/submission-attempt-001.md",
+          "sha256": "e500d97f64b04569cbc311bcc7a94d7a26efa3bac2cb981875697a063abbaa01"
+        }
+      ],
+      "truncated_reports": [],
+      "prose_review": null,
+      "final_correctness": null,
+      "final_benchmark": null,
+      "protected_files_changed": [],
+      "files_added_outside_backend": [],
+      "result_sha256": "b9c4fb3fdef347db8ed7815b5110895c35e96560e45bbc01cdb96a39437d007e"
+    }
+  ],
+  "same_runner_and_task_groups": [
+    [
+      "skill-effects\\runs\\flashrt-report-smoke-01"
+    ],
+    [
+      "skill-effects\\runs\\flashrt-report-smoke-02",
+      "skill-effects\\runs\\flashrt-report-smoke-checker-01"
+    ],
+    [
+      "skill-effects\\runs\\flashrt-report-smoke-03",
+      "skill-effects\\runs\\flashrt-report-smoke-checker-02"
+    ]
+  ]
+}
