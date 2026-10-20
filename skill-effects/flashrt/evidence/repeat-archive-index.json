@@ -80,6 +80,18 @@
       "entry_hash_verification_on_creation": true
     },
     {
+      "manifest": "repeat-completed-05/t032.manifest.json",
+      "manifest_sha256": "c32de1fa3a1a59ec9d6466ba25175d1aca88a4a1e515bd278c2bec40d12d5caa",
+      "archive": "repeat-completed-05/t032.zip",
+      "archive_sha256": "574f2f8cf3506829b9d24f27ff7817f3b81a7195f283395cc5350c9673b23503",
+      "bytes": 8601961,
+      "file_entries": 354,
+      "trials": [
+        "t032"
+      ],
+      "entry_hash_verification_on_creation": true
+    },
+    {
       "manifest": "repeat-interruption-01/traces.manifest.json",
       "manifest_sha256": "d71923e2596d8d946de7e29bbce64a31751d09cf1d984458c645cfdea197f18b",
       "archive": "repeat-interruption-01/traces.zip",
@@ -108,7 +120,7 @@
       "entry_hash_verification_on_creation": true
     }
   ],
-  "archived_trial_count": 29,
+  "archived_trial_count": 30,
   "archived_trial_ids": [
     "t001",
     "t002",
@@ -136,6 +148,7 @@
     "t024",
     "t025",
     "t026",
+    "t032",
     "t038",
     "t039",
     "t040"
