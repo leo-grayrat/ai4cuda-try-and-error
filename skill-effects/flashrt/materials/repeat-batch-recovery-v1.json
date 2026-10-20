@@ -582,6 +582,36 @@
       "checker": true,
       "supplement_for": "t040",
       "supplement_reason": "External network reset; original trace and known costs retained"
+    },
+    {
+      "id": "t055",
+      "repeat": 3,
+      "task": "branch_features",
+      "condition": "task_only",
+      "permissions": false,
+      "checker": false,
+      "supplement_for": "t044",
+      "supplement_reason": "External service availability: HTTP 402; original trace and known usage retained"
+    },
+    {
+      "id": "t056",
+      "repeat": 3,
+      "task": "branch_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": false,
+      "supplement_for": "t045",
+      "supplement_reason": "External service availability: HTTP 402; original trace and known usage retained"
+    },
+    {
+      "id": "t057",
+      "repeat": 3,
+      "task": "branch_features",
+      "condition": "original",
+      "permissions": false,
+      "checker": false,
+      "supplement_for": "t046",
+      "supplement_reason": "External service availability: HTTP 402; original trace and known usage retained"
     }
   ],
   "original_manifest_sha256": "784cd46d358a51103b387afed0e306daea7fdd4bb5d1624183cb1d74b5048188",
@@ -610,9 +640,21 @@
     {
       "original": "t040",
       "supplement": "t054"
+    },
+    {
+      "original": "t044",
+      "supplement": "t055"
+    },
+    {
+      "original": "t045",
+      "supplement": "t056"
+    },
+    {
+      "original": "t046",
+      "supplement": "t057"
     }
   ],
-  "recovery_policy": "Only external process/network interruptions receive appended slots; ordinary model failures are not replaced",
+  "recovery_policy": "Only external process, network, or service-availability interruptions receive appended slots; ordinary model failures are not replaced",
   "network_recovery": {
     "created_utc": "2026-10-20T03:50:52.550712+00:00",
     "host_processes_verified_absent": true,
@@ -650,5 +692,61 @@
     ],
     "complete_model_observation_target_unchanged": 48,
     "original_partial_runs_not_replayed": true
+  },
+  "service_availability_interruption": {
+    "recorded_utc": "2026-10-20T04:10:26.941686+00:00",
+    "failures": [
+      {
+        "original": "t044",
+        "supplement": "t055",
+        "error": {
+          "utc": "2026-10-20T04:06:39.767814+00:00",
+          "type": "error",
+          "index": 20,
+          "error": "402 Client Error: Payment Required for url: https://api.deepseek.com/chat/completions"
+        },
+        "provider_error": {
+          "message": "Insufficient Balance (request_id: 11455f3e-64c2-434a-9449-0da1699bd9cd)",
+          "type": "unknown_error",
+          "param": null,
+          "code": "invalid_request_error"
+        }
+      },
+      {
+        "original": "t045",
+        "supplement": "t056",
+        "error": {
+          "utc": "2026-10-20T04:07:24.052664+00:00",
+          "type": "error",
+          "index": 14,
+          "error": "402 Client Error: Payment Required for url: https://api.deepseek.com/chat/completions"
+        },
+        "provider_error": {
+          "message": "Insufficient Balance (request_id: 1837fe54-9d30-4c3b-93d7-dd39d94dcd76)",
+          "type": "unknown_error",
+          "param": null,
+          "code": "invalid_request_error"
+        }
+      },
+      {
+        "original": "t046",
+        "supplement": "t057",
+        "error": {
+          "utc": "2026-10-20T04:06:41.137163+00:00",
+          "type": "error",
+          "index": 0,
+          "error": "402 Client Error: Payment Required for url: https://api.deepseek.com/chat/completions"
+        },
+        "provider_error": {
+          "message": "Insufficient Balance (request_id: 90076d9f-a184-4a60-a9a5-44ea06ba56df)",
+          "type": "unknown_error",
+          "param": null,
+          "code": "invalid_request_error"
+        }
+      }
+    ],
+    "supplement_slots_not_started": true,
+    "complete_model_observation_target_unchanged": 48,
+    "dispatch_stopped": true
   }
 }
