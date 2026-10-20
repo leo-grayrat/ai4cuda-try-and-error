@@ -1,0 +1,29 @@
+{
+  "kind": "User research questions, not instructions to execute and not implementation verification",
+  "verified_local_date": "2026-10-20",
+  "source_names_observed": "FlashRT in both relevant headings",
+  "documents": [
+    {
+      "source_file": "D:\\File\\Markdown\\Retire the Abstractions 等四篇文章.md",
+      "sha256": "8f56f161932565a07e8f57840e9b2e01b3129fe1639267114f754c72c00bbb53",
+      "excerpts": [
+        {
+          "start_line": 47,
+          "end_line": 49,
+          "text": "## [FlashRT](https://arxiv.org/pdf/2607.18171)\n\n它的核心是要求大模型在撰写代码的时候，为了让它能够更好地把握程序的各部分之间的关系，所以需要它**强制去画层次化的图**，然后每个节点**声明持久状态的读写**，然后每条这样的图……图中的**数据边要标 streaming 和 blocking**。简而言之就是让它做了一个图的这样的一个分析，然后对着这个上面的节点一个一个进行工作。"
+        }
+      ]
+    },
+    {
+      "source_file": "D:\\File\\Markdown\\haozhi reply.md",
+      "sha256": "97481bf136a16c31ca23d7f950068f1c9955c2e6dca2ff4805ffff7aca4b5fe9",
+      "excerpts": [
+        {
+          "start_line": 23,
+          "end_line": 28,
+          "text": "3. FlashRT\n\n   1. 确实提醒了一些新的方向：我们可能不再需要人的那些代码抽象工具和抽象层，但是AI也不是看了上下文就能直接开始眩晕瘫坐，他也需要一些属于AI的抽象层帮助他更好的把控整体。\n   2. 文中洋洋洒洒讲了自己的图论方法，结果看看仓库只是在一些文档之类的地方提出来了，没有什么外部核查或者脚本输出之类的（不过这也挺正常的，对skill；而且这个确实不好脚本验证）。\n   3. 更主要的，文中只字未提自己AGENT.md，然而其中塞满了几千行的“不要做xx”这种显然是AI遇到一点问题更新一下AGENT文档的文字，那我们怎么判断功劳来自它还是那个图论模型呢？\n   4. 更致命的，你怎么证明这种越塞越多的skill真的会越来越有用吗？定量压倒定性会不会出现？"
+        }
+      ]
+    }
+  ]
+}

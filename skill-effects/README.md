@@ -1,10 +1,10 @@
 # FlashRT 说明文档效果研究
 
-当前入口：[FlashRT 材料与实测](flashrt/README.md)、[研究起点](RESEARCH_FRAME.zh.md)、[执行计划](PLAN.zh.md)。研究回到原始 FlashRT AGENTS.md 及其整理方式，先核实源码、已有检查与可运行任务，再冻结比较方案。
+当前入口：[FlashRT 材料、批次与逐例证据](flashrt/README.md)、[研究起点](RESEARCH_FRAME.zh.md)、[执行计划](PLAN.zh.md)。原始说明、处理材料和共同本机任务已固定；显式预算批次完成后，按用户确认切到[自然工作对照](flashrt/NATURAL_WORK.zh.md)。
 
 ## 已停止的 CUDAAgent 方案记录
 
-**本方案已停止，研究对象待纠正。** 回读用户原始思考后确认，长篇 AGENTS.md 与图论架构的讨论指向 FlashRT；此前错误选用 CUDAAgent 作为正式主体。后台实验与后处理已停止，以下保留旧方案记录，不能自动续跑。详见[研究对象纠正](SCOPE_CORRECTION.zh.md)。
+**以下为已停止的CUDAAgent历史方案。** 回读用户原始思考后确认，长篇 AGENTS.md 与图论架构的讨论指向 FlashRT；此前错误选用 CUDAAgent 作为正式主体。其后台实验与后处理已停止，下列旧命令与材料只留档，不能自动续跑。当前工作使用上方FlashRT入口，详见[研究对象纠正](SCOPE_CORRECTION.zh.md)。
 
 以原始 CUDA Agent skill 为基准，比较格式化、去重优化、原文规则子集及权限和检查器处理后的表现、成本与遗漏。研究动机是追加禁令造成的臃肿；当前主任务是评测原文及其处理版。
 

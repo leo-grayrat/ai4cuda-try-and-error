@@ -1,6 +1,6 @@
 # FlashRT 说明文档效果研究
 
-研究从 FlashRT 的长篇 AGENTS.md 出发：增加要求能否改善交付，收益是否抵得上阅读和生成成本，要求增多后哪些内容容易遗漏，以及权限和程序检查能否代替反复提醒。原有图表示与调度方法属于被研究项目的基础设施；比较文档处理时保留这套基础。
+研究起点是用户对“遇到问题就追加规则”的质疑：几千行告诫会不会越来越难用，定量要求是否会压倒需要理解和解释的要求，论文中的图方法与长篇说明各有多少贡献。两份原始思考明确以FlashRT为对象，见[原文摘录与校验值](../sources/research-origin-verified-20261020.json)。本目录比较这些说明对交付、成本与遗漏的影响，以及权限和程序检查能否替代反复提醒。原有图表示与调度方法作为共同基础保留。
 
 ## 已核实的材料
 
@@ -14,6 +14,35 @@
 | assets/AGENTS.md | 18 | 191 |
 
 合计 31,543 token，按同一分词器计算。各文件的适用目录不同，这个合计不能充当每次试验的实际输入量。
+
+## 当前实验与证据入口
+
+[显式预算批次](REPEAT_BATCH.zh.md)比较八种文档/机制条件、两个任务、各三次重复，目标为48个完整观察。外部中断保留原记录和消耗，以追加槽位补足观察机会；[执行清单](materials/repeat-batch-recovery-v1.json)记录原槽位与补充关系。实时运行目录为被忽略的`skill-effects/runs/flashrt-repeat-v1/`，已提交原始记录见[归档索引](evidence/repeat-archive-index.json)。
+
+按用户确认，现有批次收完后直接切到[自然工作对照](NATURAL_WORK.zh.md)：同一真实任务配不同说明，模型正常实施和结束，用量由研究方在外记录。两阶段独立比较，不把前后变化全归因于预算提醒。分析口径见[分析计划](ANALYSIS_PLAN.zh.md)。
+
+已经核对的具体过程如下；它们是逐例证据，不代表各条件的总体频率。
+
+| 观察 | 证据 |
+| --- | --- |
+| 程序失败后，报告丢失已知的启动诊断事实 | [t004](evidence/repeat-review-t004.zh.md) |
+| 后端正确、较快，图验证却被安排到最后并未完成 | [t005](evidence/repeat-review-t005.zh.md) |
+| 只给任务也有长思考，并为了间隔检查调整发布 | [t006](evidence/repeat-review-t006.zh.md) |
+| 低负载门槛与倒计时促成一次使吞吐回退的改动 | [t009](evidence/repeat-review-t009.zh.md) |
+| 长思考中提前发现真实历史拼接错误 | [t012](evidence/repeat-review-t012.zh.md) |
+| 两张图的失败被混淆，思考反复围绕错误位置推演 | [t017](evidence/repeat-review-t017.zh.md) |
+| 十种策略实际测量，但队列时序与分析解释仍有遗漏 | [t021](evidence/repeat-review-t021.zh.md) |
+| 检查器促使补齐独立证据；新增文档脚本也触发重复测量 | [两次补齐](evidence/repeat-checker-review-01.zh.md)、[t032重测](evidence/repeat-checker-review-02.zh.md) |
+
+只读汇总命令不调用模型或重跑候选：
+
+```powershell
+python skill-effects/flashrt/summarize_repeats.py --manifest skill-effects/flashrt/materials/repeat-batch-recovery-v1.json --output .cache/flashrt-repeat-progress.json
+python skill-effects/flashrt/analyze_workflow.py --manifest skill-effects/flashrt/materials/repeat-batch-recovery-v1.json --output .cache/flashrt-workflow-progress.json
+python skill-effects/flashrt/analyze_enforcement.py --manifest skill-effects/flashrt/materials/repeat-batch-recovery-v1.json --output .cache/flashrt-enforcement-progress.json
+```
+
+## 文档处理材料
 
 [逐字材料清单](materials/verbatim-v1/manifest.json)保留四份原文及其目录优先级，按原有标题划出 90 个片段。每份文档的片段连接后与原文件逐字节一致。这一步用于追溯来源，尚未形成压缩版或按需加载方案。
 
