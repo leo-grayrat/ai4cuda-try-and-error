@@ -33,19 +33,21 @@ def summarize(manifest):
         row['independent_benchmark_completed'] = bool(result.get('final_evaluation', {}).get('benchmark', {}).get('ok'))
         row['protected_source_unchanged'] = not row['protected_files_changed']
         row['valid_backend'] = row['final_correctness'] is True and row['protected_source_unchanged']
-        row['submission_rejections'] = sum(e['type'] == 'tool'
+        row['submission_rejections'] = sum(e['type'] in ['tool', 'plain_final_submission']
             and e.get('result', {}).get('ok') is False
             and 'Submission requires' in e.get('result', {}).get('error', '') for e in events)
         usage = row.get('usage') or {}
-        if row['usage_records_complete'] and all(usage.get(key) is not None for key in
-                ['cached_input_tokens', 'uncached_input_tokens', 'output_tokens']):
-            row['current_offpeak_estimate_usd'] = (usage['cached_input_tokens'] * .003
+        if all(usage.get(key) is not None for key in
+                ['input_tokens', 'cached_input_tokens', 'uncached_input_tokens', 'output_tokens']):
+            row['observed_usage_offpeak_estimate_usd'] = (usage['cached_input_tokens'] * .003
                 + usage['uncached_input_tokens'] * .15 + usage['output_tokens'] * .6) / 1e6
-            row['cache_neutral_offpeak_estimate_usd'] = (usage['input_tokens'] * .15
+            row['observed_usage_cache_neutral_offpeak_estimate_usd'] = (usage['input_tokens'] * .15
                 + usage['output_tokens'] * .6) / 1e6
         else:
-            row['current_offpeak_estimate_usd'] = None
-            row['cache_neutral_offpeak_estimate_usd'] = None
+            row['observed_usage_offpeak_estimate_usd'] = None
+            row['observed_usage_cache_neutral_offpeak_estimate_usd'] = None
+        row['current_offpeak_estimate_usd'] = row['observed_usage_offpeak_estimate_usd'] if row['usage_records_complete'] else None
+        row['cache_neutral_offpeak_estimate_usd'] = row['observed_usage_cache_neutral_offpeak_estimate_usd'] if row['usage_records_complete'] else None
         rows.append(row)
     groups = defaultdict(list)
     for row in rows:
@@ -64,10 +66,13 @@ def summarize(manifest):
             population = eligible if field == 'seconds' else done
             values = [r[field] for r in population if r[field] is not None]
             summary[field + '_median'] = statistics.median(values) if values else None
-        summary['all_attempt_known_cost_usd_sum'] = sum(r['current_offpeak_estimate_usd'] or 0 for r in done)
-        summary['infrastructure_known_cost_usd_sum'] = sum(r['current_offpeak_estimate_usd'] or 0
+        summary['all_attempt_known_cost_usd_sum'] = sum(r['observed_usage_offpeak_estimate_usd'] or 0 for r in done)
+        summary['infrastructure_known_cost_usd_sum'] = sum(r['observed_usage_offpeak_estimate_usd'] or 0
             for r in done if not r['model_observation_eligible'])
-        values = [(r['usage'] or {}).get('output_tokens') for r in done]
+        summary['cost_usage_incomplete'] = any(not r['usage_records_complete']
+            or r['observed_usage_offpeak_estimate_usd'] is None for r in done)
+        summary['all_attempt_observed_generated_tokens_sum'] = sum((r['usage'] or {}).get('output_tokens') or 0 for r in done)
+        values = [(r['usage'] or {}).get('output_tokens') for r in eligible]
         values = [v for v in values if v is not None]
         summary['generated_tokens_median'] = statistics.median(values) if values else None
         summaries.append(summary)
@@ -76,6 +81,7 @@ def summarize(manifest):
             'pricing_source': 'https://api-docs.deepseek.com/quick_start/pricing/',
             'pricing_snapshot_date': '2026-10-19',
             'pricing_note': 'USD estimates at uniform off-peak rates; peak sensitivity is twice these values. Not account invoices.',
+            'partial_usage_policy': 'All-attempt known-cost sums include returned usage from interrupted requests. Missing response usage remains unknown; incomplete sums are flagged and never treated as complete invoices.',
             'missing_prose_policy': 'Absent prose remains missing; no invented quality score',
             'trials': rows, 'conditions': summaries}
 
