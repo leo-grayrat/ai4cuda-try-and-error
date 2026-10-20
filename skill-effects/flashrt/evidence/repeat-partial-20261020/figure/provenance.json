@@ -1,0 +1,27 @@
+{
+  "summary_sha256": "a42a621a7badd65ff9a56323acc8de09b2b8fd4b0cace394af4656a9c618691e",
+  "plot_script_sha256": "bcbee32a21909b8752556fef3f7e61d609ff77c5ef6d54ec6aed141118fbf5f5",
+  "source_csv_sha256": "4d7f1e916173879bda22fe3fc8609ca47aeec5c52c0f96b27e0e5a2b9a397943",
+  "all_attempts": 57,
+  "generation_observations": 37,
+  "performance_observations": 36,
+  "ceiling_200_count": 34,
+  "condition_complete_counts": {
+    "original": 3,
+    "formatted": 6,
+    "source_core": 5,
+    "task_only": 5,
+    "phase4": 4,
+    "phase4+permissions": 6,
+    "phase4+checker": 3,
+    "phase4+permissions+checker": 5
+  },
+  "backend": "Python/matplotlib",
+  "matplotlib_version": "3.10.0",
+  "missingness": "All attempts retained in CSV; panel inclusion and reasons explicit.",
+  "exports": {
+    "svg": "56830ecd28f991453fe757a003951ff302ec01e1c630c51e4eb21a15df70c885",
+    "pdf": "5060c94e6f7099dd3ca0c42ad05fafa11d72b41f78ceee8b429885d03388163e",
+    "png": "a0007f711b7a8d045e788725dd849166bf3c333560bfd21ebb9357c67ce5e780"
+  }
+}

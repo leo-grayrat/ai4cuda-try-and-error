@@ -21,6 +21,8 @@
 
 按用户确认，现有批次收完后直接切到[自然工作对照](NATURAL_WORK.zh.md)：同一真实任务配不同说明，模型正常实施和结束，用量由研究方在外记录。两阶段独立比较，不把前后变化全归因于预算提醒。分析口径见[分析计划](ANALYSIS_PLAN.zh.md)。
 
+[进行中快照及比较图](evidence/repeat-partial-20261020/figure/README.zh.md)保留37个完整观察的逐轮成本与最终性能；其余9次外部中断和11个未运行机会列入源数据，八组未齐。36个有效后端中34个通过旧负载最高档200请求/秒，图中明确这是测量上限。
+
 已经核对的具体过程如下；它们是逐例证据，不代表各条件的总体频率。
 
 | 观察 | 证据 |
@@ -33,6 +35,7 @@
 | 两张图的失败被混淆，思考反复围绕错误位置推演 | [t017](evidence/repeat-review-t017.zh.md) |
 | 十种策略实际测量，但队列时序与分析解释仍有遗漏 | [t021](evidence/repeat-review-t021.zh.md) |
 | 检查器促使补齐独立证据；新增文档脚本也触发重复测量 | [两次补齐](evidence/repeat-checker-review-01.zh.md)、[t032重测](evidence/repeat-checker-review-02.zh.md) |
+| 为满足未测入口清理规则，又因目录版本绑定而重新验证和测量 | [t042收尾](evidence/repeat-checker-review-03.zh.md) |
 
 只读汇总命令不调用模型或重跑候选：
 

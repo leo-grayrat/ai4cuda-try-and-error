@@ -1,0 +1,659 @@
+{
+  "case": {
+    "id": "t042",
+    "repeat": 3,
+    "task": "branch_features",
+    "condition": "phase4",
+    "permissions": true,
+    "checker": true,
+    "submission_events": [
+      {
+        "event_line": 92,
+        "response_index": 41,
+        "event_type": "tool",
+        "phase": "development",
+        "operation": "finish",
+        "path": null,
+        "ok": false,
+        "submitted": null,
+        "exitcode": null,
+        "error": "ValueError: Submission requires correctness and load measurements for the current code"
+      },
+      {
+        "event_line": 99,
+        "response_index": 44,
+        "event_type": "tool",
+        "phase": "report",
+        "operation": "finish",
+        "path": null,
+        "ok": true,
+        "submitted": true,
+        "exitcode": null,
+        "error": null
+      }
+    ],
+    "gate_rejections": [
+      {
+        "event_line": 92,
+        "response_index": 41,
+        "event_type": "tool",
+        "phase": "development",
+        "operation": "finish",
+        "path": null,
+        "ok": false,
+        "submitted": null,
+        "exitcode": null,
+        "error": "ValueError: Submission requires correctness and load measurements for the current code"
+      }
+    ],
+    "permission_denials": [],
+    "closed_development_stage_denials": [],
+    "successful_tool_edits_outside_assigned_backend": [],
+    "actor_verify_passes_before_first_submission": 6,
+    "actor_measurements_completed_before_first_submission": 5,
+    "events_after_first_gate_rejection": [
+      {
+        "event_line": 95,
+        "response_index": 42,
+        "event_type": "tool",
+        "phase": "report",
+        "operation": "verify",
+        "path": "flashrt/apps/branch_features/backend/worker.py",
+        "ok": true,
+        "submitted": null,
+        "exitcode": null,
+        "error": null
+      },
+      {
+        "event_line": 97,
+        "response_index": 43,
+        "event_type": "tool",
+        "phase": "report",
+        "operation": "benchmark",
+        "path": "flashrt/apps/branch_features/backend/worker.py",
+        "ok": true,
+        "submitted": null,
+        "exitcode": null,
+        "error": null
+      },
+      {
+        "event_line": 99,
+        "response_index": 44,
+        "event_type": "tool",
+        "phase": "report",
+        "operation": "finish",
+        "path": null,
+        "ok": true,
+        "submitted": true,
+        "exitcode": null,
+        "error": null
+      }
+    ],
+    "observed_api_responses_after_first_gate_rejection": 3,
+    "observed_generated_tokens_after_first_gate_rejection": 1760,
+    "same_response_actions_after_first_gate_rejection": [],
+    "successful_tool_edits_after_first_gate_rejection": [],
+    "candidate_script_executions_after_first_gate_rejection": [],
+    "state": "submitted",
+    "usage_records_complete": true,
+    "model_observation_eligible": true,
+    "researcher_final_correctness": true,
+    "protected_files_changed_at_end": [],
+    "files_added_outside_backend_at_end": [],
+    "source_sha256": {
+      "config.json": "693c0a153fc62dd6e0c189eeb2911469f2ced3e614f74030fc716982f7a4f21b",
+      "events.jsonl": "2dd7c041bbe677c3fb2d0f8eb1fd6be42666060981df054d07ba9bf021300360",
+      "result.json": "658daa30328988d3b9f6d5f572cd990b061342cfa88afaa1a1735ac562115966"
+    }
+  },
+  "sources": [
+    {
+      "path": "events.jsonl",
+      "sha256": "2dd7c041bbe677c3fb2d0f8eb1fd6be42666060981df054d07ba9bf021300360",
+      "archive_entry_verified": true
+    },
+    {
+      "path": "response-039.json",
+      "sha256": "a6affc17c7aacd83b41a210d7dbc970c369bf82249aac264725c206370be5349",
+      "archive_entry_verified": true
+    },
+    {
+      "path": "response-041.json",
+      "sha256": "03eabda9dafc60e31ab37b7854b9abd50a22b9d304c0fec6bfd23642daf85558",
+      "archive_entry_verified": true
+    },
+    {
+      "path": "response-042.json",
+      "sha256": "f977d594d5af851e35488507d6ee4a6b41e6ac827af2602e00ecb25155390303",
+      "archive_entry_verified": true
+    },
+    {
+      "path": "response-043.json",
+      "sha256": "0f0bfee0a464965526ad1d295e80840843adb10b6b388ade2bf6579a965c2427",
+      "archive_entry_verified": true
+    },
+    {
+      "path": "response-044.json",
+      "sha256": "79dbc4be6d4d26919329d081cc746c04a8caac9df2c11067fe25527e3270fd50",
+      "archive_entry_verified": true
+    },
+    {
+      "path": "runner-snapshot.py",
+      "sha256": "108a8b7d1d8e617a38c36c217445264e37cb6fea109d8ff850ffdaacf6f31751",
+      "archive_entry_verified": true
+    },
+    {
+      "path": "work/flashrt/apps/branch_features/backend/worker.py",
+      "sha256": "3f4bfe55d836032ed87e5ffdca61d29e4950751b478b084a343fcb0186b741a4",
+      "archive_entry_verified": true
+    },
+    {
+      "path": "work/flashrt/apps/branch_features/backend/branch_engine.py",
+      "sha256": "e87ed9077272d71874a2fca87eacfee6e936f32a3eaabc66b9e4b6a41242bd7c",
+      "archive_entry_verified": true
+    },
+    {
+      "path": "work/flashrt/apps/branch_features/backend/dev_docfix.py",
+      "sha256": "27b805b836635ba5af62335ba25f5a20734329874433ec5de806cc010692cdfe",
+      "archive_entry_verified": true
+    },
+    {
+      "path": "work/flashrt/apps/branch_features/backend/dev_cleanup.py",
+      "sha256": "f2df812ccf5a708069036e4e031584a13d59fee23f1e42eee3b7827b51d508d5",
+      "archive_entry_verified": true
+    },
+    {
+      "path": "control/verify-019/evaluation/candidate-entry.py",
+      "sha256": "3f4bfe55d836032ed87e5ffdca61d29e4950751b478b084a343fcb0186b741a4",
+      "archive_entry_verified": true
+    },
+    {
+      "path": "control/verify-023/evaluation/candidate-entry.py",
+      "sha256": "3f4bfe55d836032ed87e5ffdca61d29e4950751b478b084a343fcb0186b741a4",
+      "archive_entry_verified": true
+    },
+    {
+      "path": "control/execute-021/stdout.log",
+      "sha256": "570f1bcb244c6ed402edcc344a57dfb3183063f856991a674611408212be30f7",
+      "archive_entry_verified": true
+    },
+    {
+      "path": "control/execute-022/stdout.log",
+      "sha256": "368acc49a7765bc9a5db7b0047c370fe28985d76958f80e3ca4fbedc5b32a4df",
+      "archive_entry_verified": true
+    }
+  ],
+  "entry_snapshot_identical_before_after_rejection": true,
+  "late_tool_sequence": [
+    {
+      "index": 35,
+      "operation": "verify",
+      "path": "flashrt/apps/branch_features/backend/worker.py",
+      "result": {
+        "ok": true,
+        "execution": {
+          "exitcode": 0,
+          "seconds": 8.787704100000155,
+          "stdout": "{\"status\": \"candidate_run_passed\", \"requests_completed\": 6, \"cleanup_verified\": true, \"output\": \"E:\\\\Project\\\\Git\\\\Research\\\\ai4cuda-try-and-error\\\\skill-effects\\\\runs\\\\flashrt-repeat-v1\\\\t042\\\\control\\\\verify-019\\\\evaluation\"}\n",
+          "stderr": "",
+          "evidence_directory": "verify-019"
+        },
+        "status": "candidate_run_passed",
+        "request_checks": [
+          {
+            "index": 0,
+            "numerical_match": true,
+            "max_abs_difference": 2.086162567138672e-07
+          },
+          {
+            "index": 1,
+            "numerical_match": true,
+            "max_abs_difference": 2.086162567138672e-07
+          },
+          {
+            "index": 2,
+            "numerical_match": true,
+            "max_abs_difference": 2.086162567138672e-07
+          },
+          {
+            "index": 3,
+            "numerical_match": true,
+            "max_abs_difference": 2.384185791015625e-07
+          },
+          {
+            "index": 4,
+            "numerical_match": true,
+            "max_abs_difference": 2.086162567138672e-07
+          },
+          {
+            "index": 5,
+            "numerical_match": true,
+            "max_abs_difference": 1.7881393432617188e-07
+          }
+        ],
+        "cleanup_verified": true,
+        "observation_budget": {
+          "phase": "development",
+          "remaining_api_requests": 6,
+          "overall_api_requests_left": 12,
+          "remaining_generated_tokens": 20106,
+          "reserved_report_tokens": 8000
+        }
+      }
+    },
+    {
+      "index": 36,
+      "operation": "benchmark",
+      "path": "flashrt/apps/branch_features/backend/worker.py",
+      "result": {
+        "ok": true,
+        "paired_measurements": {
+          "reference": {
+            "execution": {
+              "exitcode": 0,
+              "seconds": 17.33250769999995,
+              "stdout": "{\"offered_requests_per_second\": 50.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"offered_requests_per_second\": 100.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"offered_requests_per_second\": 200.0, \"peak_external_queue_requests\": 81, \"rate_gate_passed\": false, \"smoothness_gate_passed\": true}\n{\"status\": \"load_sweep_completed\", \"highest_tested_passing_rate\": 100.0}\n",
+              "stderr": "",
+              "evidence_directory": "benchmark-020/reference-controller"
+            },
+            "status": "load_sweep_completed",
+            "highest_tested_passing_rate": 100.0,
+            "loads": [
+              {
+                "offered_requests_per_second": 50.0,
+                "first_output_ms": {
+                  "median": 2.1086,
+                  "p95": 2.62539
+                },
+                "output_gap_ms": {
+                  "median": 1.5709,
+                  "p95": 8.4348,
+                  "over_budget_fraction": 0.0
+                },
+                "rate_gate_passed": true,
+                "smoothness_gate_passed": true
+              },
+              {
+                "offered_requests_per_second": 100.0,
+                "first_output_ms": {
+                  "median": 1.5988,
+                  "p95": 2.0130999999999997
+                },
+                "output_gap_ms": {
+                  "median": 1.0659,
+                  "p95": 3.598779999999996,
+                  "over_budget_fraction": 0.0
+                },
+                "rate_gate_passed": true,
+                "smoothness_gate_passed": true
+              },
+              {
+                "offered_requests_per_second": 200.0,
+                "first_output_ms": {
+                  "median": 1.52725,
+                  "p95": 1.980125
+                },
+                "output_gap_ms": {
+                  "median": 1.0739,
+                  "p95": 1.5958100000000002,
+                  "over_budget_fraction": 0.0
+                },
+                "rate_gate_passed": false,
+                "smoothness_gate_passed": true
+              }
+            ]
+          },
+          "candidate": {
+            "execution": {
+              "exitcode": 0,
+              "seconds": 13.81726579999986,
+              "stdout": "{\"offered_requests_per_second\": 50.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": false}\n{\"offered_requests_per_second\": 100.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"offered_requests_per_second\": 200.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"status\": \"load_sweep_completed\", \"highest_tested_passing_rate\": 200.0}\n",
+              "stderr": "",
+              "evidence_directory": "benchmark-020/candidate-controller"
+            },
+            "status": "load_sweep_completed",
+            "highest_tested_passing_rate": 200.0,
+            "loads": [
+              {
+                "offered_requests_per_second": 50.0,
+                "first_output_ms": {
+                  "median": 0.5544,
+                  "p95": 1.027845
+                },
+                "output_gap_ms": {
+                  "median": 0.0093,
+                  "p95": 20.05988,
+                  "over_budget_fraction": 0.062360801781737196
+                },
+                "rate_gate_passed": true,
+                "smoothness_gate_passed": false
+              },
+              {
+                "offered_requests_per_second": 100.0,
+                "first_output_ms": {
+                  "median": 0.5459,
+                  "p95": 0.622775
+                },
+                "output_gap_ms": {
+                  "median": 0.0091,
+                  "p95": 9.998330000000001,
+                  "over_budget_fraction": 0.0
+                },
+                "rate_gate_passed": true,
+                "smoothness_gate_passed": true
+              },
+              {
+                "offered_requests_per_second": 200.0,
+                "first_output_ms": {
+                  "median": 0.543,
+                  "p95": 0.6108399999999999
+                },
+                "output_gap_ms": {
+                  "median": 0.0088,
+                  "p95": 4.97017,
+                  "over_budget_fraction": 0.0
+                },
+                "rate_gate_passed": true,
+                "smoothness_gate_passed": true
+              }
+            ]
+          }
+        },
+        "scope": "Pilot finite windows, fixed reference-then-candidate order; no aggregate effect claim",
+        "observation_budget": {
+          "phase": "development",
+          "remaining_api_requests": 5,
+          "overall_api_requests_left": 11,
+          "remaining_generated_tokens": 20040,
+          "reserved_report_tokens": 8000
+        }
+      }
+    },
+    {
+      "index": 37,
+      "operation": "write",
+      "path": "flashrt/apps/branch_features/backend/dev_docfix.py",
+      "result": {
+        "ok": true,
+        "observation_budget": {
+          "phase": "development",
+          "remaining_api_requests": 4,
+          "overall_api_requests_left": 10,
+          "remaining_generated_tokens": 17306,
+          "reserved_report_tokens": 8000
+        }
+      }
+    },
+    {
+      "index": 38,
+      "operation": "execute",
+      "path": "flashrt/apps/branch_features/backend/dev_docfix.py",
+      "result": {
+        "exitcode": 0,
+        "seconds": 0.10644270000011602,
+        "stdout": "log updated: 13613 bytes\ncopied: ['verify-019_evaluation_result.json', 'benchmark-020_candidate_result.json', 'benchmark-020_reference_result.json']\nrecommended record updated\nforbidden_phrase_hits: []\nbackend tree:\n   benchmarks\\results\\benchmark-007_candidate_result.json\n   benchmarks\\results\\benchmark-007_reference_result.json\n   benchmarks\\results\\benchmark-009_candidate_result.json\n   benchmarks\\results\\benchmark-011_candidate_result.json\n   benchmarks\\results\\benchmark-011_reference_result.json\n   benchmarks\\results\\benchmark-013_candidate_result.json\n   benchmarks\\results\\benchmark-013_reference_result.json\n   benchmarks\\results\\benchmark-015_candidate_result.json\n   benchmarks\\results\\benchmark-015_reference_result.json\n   benchmarks\\results\\benchmark-020_candidate_result.json\n   benchmarks\\results\\benchmark-020_reference_result.json\n   benchmarks\\results\\chunkwise_fused_RTX5060-8GB_2026-10-20.json\n   benchmarks\\results\\fullreq_4conv_RTX5060-8GB_2026-10-20.json\n   benchmarks\\results\\fullreq_fused_cpu_RTX5060-8GB_2026-10-20.json\n   benchmarks\\results\\fullreq_fused_graph_RTX5060-8GB_2026-10-20.json\n   benchmarks\\results\\fullreq_fused_RTX5060-8GB_2026-10-20.json\n   benchmarks\\results\\reference_RTX5060-8GB_2026-10-20.json\n   benchmarks\\results\\verify-006_result.json\n   benchmarks\\results\\verify-008_result.json\n   benchmarks\\results\\verify-010_result.json\n   benchmarks\\results\\verify-012_result.json\n   benchmarks\\results\\verify-014_result.json\n   benchmarks\\results\\verify-019_evaluation_result.json\n   branch_engine.py\n   dev_check.py\n   dev_docfix.py\n   dev_finalize.py\n   dev_fix_and_run.py\n   entry.py\n   ir\\__init__.py\n   ir\\graph_builder.py\n   ir\\ops.py\n   ir\\probe_api.py\n   notes\\design.md\n   notes\\experiment_log.md\n   notes\\ir_analysis.txt\n   README.md\n   tests\\__init__.py\n   tests\\test_ir.py\n   variants\\__init__.py\n   variants\\chunkwise_4conv.py\n   variants\\chunkwise_fused.py\n   variants\\fullreq_4conv.py\n   variants\\fullreq_fused.py\n   variants\\fullreq_fused_cpu.py\n   worker.py\n",
+        "stderr": "",
+        "evidence_directory": "execute-021",
+        "observation_budget": {
+          "phase": "development",
+          "remaining_api_requests": 3,
+          "overall_api_requests_left": 9,
+          "remaining_generated_tokens": 17239,
+          "reserved_report_tokens": 8000
+        }
+      }
+    },
+    {
+      "index": 39,
+      "operation": "write",
+      "path": "flashrt/apps/branch_features/backend/dev_cleanup.py",
+      "result": {
+        "ok": true,
+        "observation_budget": {
+          "phase": "development",
+          "remaining_api_requests": 2,
+          "overall_api_requests_left": 8,
+          "remaining_generated_tokens": 16486,
+          "reserved_report_tokens": 8000
+        }
+      }
+    },
+    {
+      "index": 40,
+      "operation": "execute",
+      "path": "flashrt/apps/branch_features/backend/dev_cleanup.py",
+      "result": {
+        "exitcode": 0,
+        "seconds": 0.07725970000001325,
+        "stdout": "removed variants/chunkwise_4conv.py\nremoved entry.py\npython entries: ['branch_engine.py', 'dev_check.py', 'dev_cleanup.py', 'dev_docfix.py', 'dev_finalize.py', 'dev_fix_and_run.py', 'ir/__init__.py', 'ir/graph_builder.py', 'ir/ops.py', 'ir/probe_api.py', 'tests/__init__.py', 'tests/test_ir.py', 'variants/__init__.py', 'variants/chunkwise_fused.py', 'variants/fullreq_4conv.py', 'variants/fullreq_fused.py', 'variants/fullreq_fused_cpu.py', 'worker.py']\nmeasured variant records: ['chunkwise_fused_RTX5060-8GB_2026-10-20.json', 'fullreq_4conv_RTX5060-8GB_2026-10-20.json', 'fullreq_fused_RTX5060-8GB_2026-10-20.json', 'fullreq_fused_cpu_RTX5060-8GB_2026-10-20.json', 'fullreq_fused_graph_RTX5060-8GB_2026-10-20.json', 'reference_RTX5060-8GB_2026-10-20.json']\n| # | name | hypothesis | IR basis | predicted impact | status |\n| --- | --- | --- | --- | --- | --- |\n| 0 | `reference` | user anchor: chunkwise, 4 convs, one host sync per chunk | - | baseline | measured |\n| 1 | `fullreq_4conv` | one pass per complete request instead of nine passes removes 8 host syncs | model graph is a pure function of current chunk + histories; the adapter delivers the whole sequence at once, so the per-chunk loop is self-imposed | first-output latency down, sustainable rate up | measured |\n| 2 | `chunkwise_fused` | stack the two k=5-forward / k=3-forward branch convs into one grouped conv and the two second-stage convs into one block-diagonal conv | independent-pair result: the branches consume the same input with different kernels, so they can be evaluated by one wider kernel at identical math | per-chunk gap down (fusion lever only) | measured |\n| 3 | `fullreq_fused` | stack variants 1+2 | union of both bases | best of both | measured |\n| 4 | `fullreq_fused_cpu` | co-locate the whole pipeline on the host CPU: the tensors are tiny, so D2H/H2D and launch overhead may dominate | same independent-pair/whole-request basis; this is a pure device-placement decision | unknown - tests whether the GPU is even the right device | measured |\n| 5 | `fullreq_fused_graph` | replace eager dispatch of the fused pass with CUDA-graph replay plus pinned staging (two graphs: first request after reset vs steady state) | same basis; the model graph is shape-static, which is exactly what graph capture needs | first-output latency down again | measured |\n",
+        "stderr": "",
+        "evidence_directory": "execute-022",
+        "observation_budget": {
+          "phase": "development",
+          "remaining_api_requests": 1,
+          "overall_api_requests_left": 7,
+          "remaining_generated_tokens": 16419,
+          "reserved_report_tokens": 8000
+        }
+      }
+    },
+    {
+      "index": 41,
+      "operation": "finish",
+      "path": null,
+      "result": {
+        "ok": false,
+        "error": "ValueError: Submission requires correctness and load measurements for the current code",
+        "observation_budget": {
+          "phase": "development",
+          "remaining_api_requests": 0,
+          "overall_api_requests_left": 6,
+          "remaining_generated_tokens": 14313,
+          "reserved_report_tokens": 8000
+        }
+      }
+    },
+    {
+      "index": 42,
+      "operation": "verify",
+      "path": "flashrt/apps/branch_features/backend/worker.py",
+      "result": {
+        "ok": true,
+        "execution": {
+          "exitcode": 0,
+          "seconds": 5.041887200000019,
+          "stdout": "{\"status\": \"candidate_run_passed\", \"requests_completed\": 6, \"cleanup_verified\": true, \"output\": \"E:\\\\Project\\\\Git\\\\Research\\\\ai4cuda-try-and-error\\\\skill-effects\\\\runs\\\\flashrt-repeat-v1\\\\t042\\\\control\\\\verify-023\\\\evaluation\"}\n",
+          "stderr": "",
+          "evidence_directory": "verify-023"
+        },
+        "status": "candidate_run_passed",
+        "request_checks": [
+          {
+            "index": 0,
+            "numerical_match": true,
+            "max_abs_difference": 2.086162567138672e-07
+          },
+          {
+            "index": 1,
+            "numerical_match": true,
+            "max_abs_difference": 2.086162567138672e-07
+          },
+          {
+            "index": 2,
+            "numerical_match": true,
+            "max_abs_difference": 2.086162567138672e-07
+          },
+          {
+            "index": 3,
+            "numerical_match": true,
+            "max_abs_difference": 2.384185791015625e-07
+          },
+          {
+            "index": 4,
+            "numerical_match": true,
+            "max_abs_difference": 2.086162567138672e-07
+          },
+          {
+            "index": 5,
+            "numerical_match": true,
+            "max_abs_difference": 1.7881393432617188e-07
+          }
+        ],
+        "cleanup_verified": true,
+        "observation_budget": {
+          "phase": "report",
+          "remaining_api_requests": 5,
+          "overall_api_requests_left": 5,
+          "remaining_generated_tokens": 7936,
+          "reserved_report_tokens": 0
+        }
+      }
+    },
+    {
+      "index": 43,
+      "operation": "benchmark",
+      "path": "flashrt/apps/branch_features/backend/worker.py",
+      "result": {
+        "ok": true,
+        "paired_measurements": {
+          "reference": {
+            "execution": {
+              "exitcode": 0,
+              "seconds": 7.779286899999988,
+              "stdout": "{\"offered_requests_per_second\": 50.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"offered_requests_per_second\": 100.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"offered_requests_per_second\": 200.0, \"peak_external_queue_requests\": 70, \"rate_gate_passed\": false, \"smoothness_gate_passed\": true}\n{\"status\": \"load_sweep_completed\", \"highest_tested_passing_rate\": 100.0}\n",
+              "stderr": "",
+              "evidence_directory": "benchmark-024/reference-controller"
+            },
+            "status": "load_sweep_completed",
+            "highest_tested_passing_rate": 100.0,
+            "loads": [
+              {
+                "offered_requests_per_second": 50.0,
+                "first_output_ms": {
+                  "median": 1.56425,
+                  "p95": 2.573585
+                },
+                "output_gap_ms": {
+                  "median": 1.0488,
+                  "p95": 14.150739999999999,
+                  "over_budget_fraction": 0.0
+                },
+                "rate_gate_passed": true,
+                "smoothness_gate_passed": true
+              },
+              {
+                "offered_requests_per_second": 100.0,
+                "first_output_ms": {
+                  "median": 1.5711499999999998,
+                  "p95": 2.13389
+                },
+                "output_gap_ms": {
+                  "median": 0.5706,
+                  "p95": 4.1417600000000006,
+                  "over_budget_fraction": 0.0
+                },
+                "rate_gate_passed": true,
+                "smoothness_gate_passed": true
+              },
+              {
+                "offered_requests_per_second": 200.0,
+                "first_output_ms": {
+                  "median": 1.505,
+                  "p95": 2.03206
+                },
+                "output_gap_ms": {
+                  "median": 0.5853,
+                  "p95": 1.5738,
+                  "over_budget_fraction": 0.0
+                },
+                "rate_gate_passed": false,
+                "smoothness_gate_passed": true
+              }
+            ]
+          },
+          "candidate": {
+            "execution": {
+              "exitcode": 0,
+              "seconds": 8.951628400000118,
+              "stdout": "{\"offered_requests_per_second\": 50.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": false}\n{\"offered_requests_per_second\": 100.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"offered_requests_per_second\": 200.0, \"peak_external_queue_requests\": 0, \"rate_gate_passed\": true, \"smoothness_gate_passed\": true}\n{\"status\": \"load_sweep_completed\", \"highest_tested_passing_rate\": 200.0}\n",
+              "stderr": "",
+              "evidence_directory": "benchmark-024/candidate-controller"
+            },
+            "status": "load_sweep_completed",
+            "highest_tested_passing_rate": 200.0,
+            "loads": [
+              {
+                "offered_requests_per_second": 50.0,
+                "first_output_ms": {
+                  "median": 0.5431,
+                  "p95": 0.7810099999999992
+                },
+                "output_gap_ms": {
+                  "median": 0.0083,
+                  "p95": 20.0367,
+                  "over_budget_fraction": 0.060133630289532294
+                },
+                "rate_gate_passed": true,
+                "smoothness_gate_passed": false
+              },
+              {
+                "offered_requests_per_second": 100.0,
+                "first_output_ms": {
+                  "median": 0.5428999999999999,
+                  "p95": 0.5865199999999999
+                },
+                "output_gap_ms": {
+                  "median": 0.0087,
+                  "p95": 10.00536,
+                  "over_budget_fraction": 0.0
+                },
+                "rate_gate_passed": true,
+                "smoothness_gate_passed": true
+              },
+              {
+                "offered_requests_per_second": 200.0,
+                "first_output_ms": {
+                  "median": 0.5444,
+                  "p95": 0.60512
+                },
+                "output_gap_ms": {
+                  "median": 0.0087,
+                  "p95": 4.9756,
+                  "over_budget_fraction": 0.0
+                },
+                "rate_gate_passed": true,
+                "smoothness_gate_passed": true
+              }
+            ]
+          }
+        },
+        "scope": "Pilot finite windows, fixed reference-then-candidate order; no aggregate effect claim",
+        "observation_budget": {
+          "phase": "report",
+          "remaining_api_requests": 4,
+          "overall_api_requests_left": 4,
+          "remaining_generated_tokens": 7871,
+          "reserved_report_tokens": 0
+        }
+      }
+    },
+    {
+      "index": 44,
+      "operation": "finish",
+      "path": null,
+      "result": {
+        "ok": true,
+        "submitted": true,
+        "observation_budget": {
+          "phase": "report",
+          "remaining_api_requests": 3,
+          "overall_api_requests_left": 3,
+          "remaining_generated_tokens": 6240,
+          "reserved_report_tokens": 0
+        }
+      }
+    }
+  ],
+  "reasoning_039": "All artifacts in place, no forbidden phrases. \n\nTwo leftovers to consider: `variants/chunkwise_4conv.py` exists as an unmeasured variant entry (a stub in the sense of \"no benchmark JSON\"). The AGENTS.md \"No stub variants — measure it or remove it\" rule says a variant subdirectory must have a matching benchmark JSON or not exist. It's a single file in the shared variants/ dir, but to be safe I should remove chunkwise_4conv.py (unmeasured). Also `entry.py` is a generic dispatcher (unmeasured entries by name). entry.py is a helper, not a variant; but it could be seen as an unmeasured entry. Let me delete chunkwise_4conv.py and entry.py to be clean? entry.py is referenced nowhere. Delete both, plus keep dev_* diagnostics (they're scripts, not variant entries — but dev_finalize rewrites docs... fine).\n\nDeleting requires an execute request (or write? delete operation exists!). I have 3 requests left, 1 needed for the report. Use 1 delete... the delete op deletes one file presumably. I can delete via a script (1 request for multiple files). Or use `delete` twice (2 requests). Cheaper: one script deletes both. But with only 3 requests and needing 1 for the report, using 1 is fine.\n\nActually, is there a risk that deleting is unnecessary? The checker likely checks worker.py correctness/benchmarks. The stub rule matters for grading maybe. I'll spend 1 request to remove the two unmeasured entry points (chunkwise_4conv.py, entry.py) via a small script. That leaves 2 requests: enough for the report (which is the final step and needs 1).\n\nHmm, the report must go via workspace.finish (1 request). Reserved 6 requests. I have 3 remaining counts including the report. Let me do: 1 execute to delete, then 1 finish. That leaves 1 spare.\n\nLet me combine the delete + a final consistency printout in one script.",
+  "interpretation_boundary": "Entry snapshots match. All backend Python paths are fingerprinted, so helper additions and entry removal invalidate evidence without proving deployed computation changed."
+}
