@@ -552,6 +552,36 @@
       "checker": false,
       "supplement_for": "t003",
       "supplement_reason": "External process interruption; original remains in cost ledger"
+    },
+    {
+      "id": "t052",
+      "repeat": 3,
+      "task": "causal_features",
+      "condition": "original",
+      "permissions": false,
+      "checker": false,
+      "supplement_for": "t038",
+      "supplement_reason": "External network reset; original trace and known costs retained"
+    },
+    {
+      "id": "t053",
+      "repeat": 3,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": true,
+      "checker": true,
+      "supplement_for": "t039",
+      "supplement_reason": "External network reset; original trace and known costs retained"
+    },
+    {
+      "id": "t054",
+      "repeat": 3,
+      "task": "causal_features",
+      "condition": "phase4",
+      "permissions": false,
+      "checker": true,
+      "supplement_for": "t040",
+      "supplement_reason": "External network reset; original trace and known costs retained"
     }
   ],
   "original_manifest_sha256": "784cd46d358a51103b387afed0e306daea7fdd4bb5d1624183cb1d74b5048188",
@@ -568,7 +598,57 @@
     {
       "original": "t003",
       "supplement": "t051"
+    },
+    {
+      "original": "t038",
+      "supplement": "t052"
+    },
+    {
+      "original": "t039",
+      "supplement": "t053"
+    },
+    {
+      "original": "t040",
+      "supplement": "t054"
     }
   ],
-  "recovery_policy": "Only external interruptions receive appended slots; ordinary model failures are not replaced"
+  "recovery_policy": "Only external process/network interruptions receive appended slots; ordinary model failures are not replaced",
+  "network_recovery": {
+    "created_utc": "2026-10-20T03:50:52.550712+00:00",
+    "host_processes_verified_absent": true,
+    "failures": [
+      {
+        "original": "t038",
+        "supplement": "t052",
+        "api_error": {
+          "utc": "2026-10-19T19:19:41.035391+00:00",
+          "type": "error",
+          "index": 29,
+          "error": "(\"Connection broken: ConnectionResetError(10054, '远程主机强迫关闭了一个现有的连接。', None, 10054, None)\", ConnectionResetError(10054, '远程主机强迫关闭了一个现有的连接。', None, 10054, None))"
+        }
+      },
+      {
+        "original": "t039",
+        "supplement": "t053",
+        "api_error": {
+          "utc": "2026-10-19T19:19:41.034981+00:00",
+          "type": "error",
+          "index": 20,
+          "error": "(\"Connection broken: ConnectionResetError(10054, '远程主机强迫关闭了一个现有的连接。', None, 10054, None)\", ConnectionResetError(10054, '远程主机强迫关闭了一个现有的连接。', None, 10054, None))"
+        }
+      },
+      {
+        "original": "t040",
+        "supplement": "t054",
+        "api_error": {
+          "utc": "2026-10-19T19:19:41.037114+00:00",
+          "type": "error",
+          "index": 5,
+          "error": "(\"Connection broken: ConnectionResetError(10054, '远程主机强迫关闭了一个现有的连接。', None, 10054, None)\", ConnectionResetError(10054, '远程主机强迫关闭了一个现有的连接。', None, 10054, None))"
+        }
+      }
+    ],
+    "complete_model_observation_target_unchanged": 48,
+    "original_partial_runs_not_replayed": true
+  }
 }

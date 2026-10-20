@@ -92,9 +92,23 @@
         "t003"
       ],
       "entry_hash_verification_on_creation": true
+    },
+    {
+      "manifest": "repeat-interruption-02/traces.manifest.json",
+      "manifest_sha256": "35606109bdabf145eb7969cca2c936544462ecfea57bb51f23d8a97093d0e850",
+      "archive": "repeat-interruption-02/traces.zip",
+      "archive_sha256": "2919e569f5308661a2ab4d488c34c02f3fec191e2f59ee0c58a245399140ee1d",
+      "bytes": 8179033,
+      "file_entries": 279,
+      "trials": [
+        "t038",
+        "t039",
+        "t040"
+      ],
+      "entry_hash_verification_on_creation": true
     }
   ],
-  "archived_trial_count": 26,
+  "archived_trial_count": 29,
   "archived_trial_ids": [
     "t001",
     "t002",
@@ -121,7 +135,10 @@
     "t023",
     "t024",
     "t025",
-    "t026"
+    "t026",
+    "t038",
+    "t039",
+    "t040"
   ],
   "excluded_source_clones": "Pinned public source clones are reconstructed from source manifests; candidate backend and controller records are included."
 }
