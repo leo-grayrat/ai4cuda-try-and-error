@@ -92,6 +92,52 @@
       "entry_hash_verification_on_creation": true
     },
     {
+      "manifest": "repeat-completed-06/t027-t031.manifest.json",
+      "manifest_sha256": "2f645fa4fa744274e2edbc3cafb1c767c600c9fbc283d36257b45a22b0ec476b",
+      "archive": "repeat-completed-06/t027-t031.zip",
+      "archive_sha256": "d0f149036e19bef88e74a1a854b29c3f2dc3f7002be00bcff5710dc3bab31c5f",
+      "bytes": 32122919,
+      "file_entries": 1288,
+      "trials": [
+        "t027",
+        "t028",
+        "t029",
+        "t030",
+        "t031"
+      ],
+      "entry_hash_verification_on_creation": true
+    },
+    {
+      "manifest": "repeat-completed-06/t033-t037.manifest.json",
+      "manifest_sha256": "879c00d930a7c4d7e20fc7bb4e6e9f8311f4186510fad009303937535781bd09",
+      "archive": "repeat-completed-06/t033-t037.zip",
+      "archive_sha256": "cc521df63d5f550058bbaaaa95af4279bff135cdbabe66d4f2adae685374b04d",
+      "bytes": 31064821,
+      "file_entries": 1222,
+      "trials": [
+        "t033",
+        "t034",
+        "t035",
+        "t036",
+        "t037"
+      ],
+      "entry_hash_verification_on_creation": true
+    },
+    {
+      "manifest": "repeat-completed-06/t041-t043.manifest.json",
+      "manifest_sha256": "c93d93dbf510ffb09da158acf58893f8e02d6a44284a14200f4abfedfeed735c",
+      "archive": "repeat-completed-06/t041-t043.zip",
+      "archive_sha256": "06e0df3faba01b0980d3edd81807510e4bd6204412b974098e78e39b32f0e926",
+      "bytes": 27014564,
+      "file_entries": 1205,
+      "trials": [
+        "t041",
+        "t042",
+        "t043"
+      ],
+      "entry_hash_verification_on_creation": true
+    },
+    {
       "manifest": "repeat-interruption-01/traces.manifest.json",
       "manifest_sha256": "d71923e2596d8d946de7e29bbce64a31751d09cf1d984458c645cfdea197f18b",
       "archive": "repeat-interruption-01/traces.zip",
@@ -134,7 +180,7 @@
       "entry_hash_verification_on_creation": true
     }
   ],
-  "archived_trial_count": 33,
+  "archived_trial_count": 46,
   "archived_trial_ids": [
     "t001",
     "t002",
@@ -162,10 +208,23 @@
     "t024",
     "t025",
     "t026",
+    "t027",
+    "t028",
+    "t029",
+    "t030",
+    "t031",
     "t032",
+    "t033",
+    "t034",
+    "t035",
+    "t036",
+    "t037",
     "t038",
     "t039",
     "t040",
+    "t041",
+    "t042",
+    "t043",
     "t044",
     "t045",
     "t046"
